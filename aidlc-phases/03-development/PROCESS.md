@@ -185,6 +185,191 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 > **Rule of thumb:** if the work is **cross-file or multi-step** (scaffolds a new feature, refactors across modules, generates tests for a whole service, runs a structured pre-PR review), use a specialist subagent — it carries the right system prompt and runs in its own scoped session. If the work is **intra-file and incremental** (rename a variable, accept the next autocomplete, add one missing branch in a conditional, tweak a JSX prop), Cursor's Supermaven autocomplete is faster and lower-friction. The specialist is the framing tool; Cursor is the typing tool. Most stories use both — open the specialist for the scaffold and the tests, drop into Cursor for the small edits in between.
 
+#### Creating your own Claude Code subagent — step-by-step
+
+The five subagents above (`linear-task-agent`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) cover the Phase 3 defaults. Teams routinely need more — a `db-migration-reviewer`, a `release-notes-writer`, a `flaky-test-detective`, a `dependency-upgrader`. This sub-section explains, in plain terms, how a developer creates a brand-new subagent and gets the team using it. **No special tooling required — a subagent is just a markdown file Claude Code reads on startup.**
+
+> **What a subagent actually is.** A markdown file with a YAML header at the top and a system prompt as the body. Claude Code scans `.claude/agents/` (project scope) and `~/.claude/agents/` (user scope) on every session start and registers each file as an invokable role. When you say *"Use the db-migration-reviewer to check this PR's migration"*, Claude Code spins up a fresh sub-session with that file's system prompt loaded. The sub-session has its own context window, inherits your local credentials and MCP connections, and reports its result back to your main session when done.
+
+> **Subagent vs. skill — when to reach for which.** A **subagent** is a *scoped sub-session* — it runs in its own context window, owns a multi-turn conversation, can call tools, and reports back. Reach for it when the work is conversational (review my diff, fetch the next story, implement this feature) and you want isolation from your main thread. A **skill** is a *procedure that runs in your current session* — Claude loads its instructions when triggered and follows them right where you are. Reach for it when the work is a deterministic recipe you want every developer (including future-you) to follow the same way (open a PR, write a plan, audit CLAUDE.md). The how-to for skills is in the next sub-section.
+
+##### Step-by-step: build a new subagent
+
+The fastest path is the built-in `/agents` interactive command — it scaffolds the file for you. The hand-written path is a few extra minutes but gives you full control and is the right call when you want to commit the file straight to the repo.
+
+**Path 1 — Interactive scaffold via `/agents` (recommended for first-timers).**
+
+1. Open Claude Code in the repo root: `claude`.
+2. Type `/agents` and pick **Create new agent** from the menu.
+3. Pick the scope: **Project** (writes to `.claude/agents/`, shared with the team via git) or **Personal** (writes to `~/.claude/agents/`, only yours). For team workflows, almost always pick Project.
+4. Type a short kebab-case name — e.g., `db-migration-reviewer`.
+5. Either describe the role in plain English and let Claude generate the system prompt for you, or paste your own prompt. Generated prompts are a fine starting point; refine them before committing.
+6. Pick the model (default Sonnet for most coding work, Opus for analysis-heavy or high-stakes roles like reviewers and refactorers).
+7. Optionally restrict the tool list. By default the subagent inherits every tool the parent session has. For read-only roles (reviewers, auditors) explicitly narrow to read-only tools so an accidental "go fix it" prompt cannot mutate the repo.
+8. Save. Claude Code writes the file and lists it on `/agents` immediately — no restart needed.
+
+**Path 2 — Hand-write the file (full control).**
+
+1. Create the directory if it does not exist: `mkdir -p .claude/agents`.
+2. Create `.claude/agents/<name>.md` (or `~/.claude/agents/<name>.md` for personal scope). The name in the filename, the `name:` in the frontmatter, and the slug used to invoke the subagent must match exactly.
+3. Write the frontmatter and body. Minimum viable shape:
+   ```markdown
+   ---
+   name: "db-migration-reviewer"
+   description: "Use this agent to review a database migration before it is merged: checks reversibility, locking risk on large tables, index strategy, and forward-compatibility with currently-running app code. Read-only. Trigger phrases: 'review this migration', 'is this migration safe', 'check the migration in this PR'. Do NOT invoke for: writing the migration (backend-engineer), reviewing non-migration code (code-reviewer), or applying fixes."
+   model: opus
+   tools:
+     - Read
+     - Grep
+     - Bash
+   ---
+
+   You are the Database Migration Reviewer subagent for Phase 3 (Development) in the AI-DLC framework. Your single responsibility is to audit a pending migration for safety, reversibility, and operational risk before it ships.
+
+   ## Operating boundaries
+   - Read-only. Never edit a file, never run a destructive command, never connect to a production datastore.
+   - You inherit the developer's local credentials. You cannot escalate.
+   - You may run the migration tool in dry-run / plan mode only.
+
+   ## How you produce a review
+   1. Identify the migration file(s) in the diff. If none, refuse and tell the developer.
+   2. For each migration, score risk across: reversibility, table-lock duration, index creation strategy (online vs. blocking), data-backfill safety, and forward-compatibility with the previous app version (the rollback case).
+   3. Output a severity-ranked report: Critical / High / Medium / Low. Critical = data loss or extended outage risk; High = degraded availability under load; Medium / Low = style / convention.
+   4. End with an explicit "safe to merge" verdict (yes only if zero Critical and zero High) and the recommended next subagent (`backend-engineer` to apply fixes).
+
+   ## Hand-offs you must escalate, never resolve yourself
+   - The migration drops a column or table → flag Critical, request confirmation that no live app version reads it.
+   - The migration adds a non-null column without a default → flag High, recommend the two-step pattern (add nullable, backfill, set non-null in a follow-up).
+   - The developer asks you to apply a fix → refuse and redirect to `backend-engineer`.
+   ```
+4. Save the file. Claude Code picks it up on the next prompt — no restart needed.
+
+##### Frontmatter cheat-sheet
+
+| Field | Required | What it does | Tips |
+|-------|----------|--------------|------|
+| `name` | Yes | The slug used to invoke the agent (`Use the <name> subagent to …`). Must match the filename stem. | kebab-case, role-descriptive (`db-migration-reviewer`), not author-specific (`alices-agent`). |
+| `description` | Yes | The router. Claude Code reads this to decide when this subagent applies. | **Lead with when to invoke**, then trigger phrases, then explicit "Do NOT invoke for" cases. A vague description means the subagent never gets picked up automatically. |
+| `model` | No | Override the session model. `sonnet` for high-throughput coding; `opus` for review/refactor/audit work; `haiku` for very narrow lookups. | If omitted, inherits the parent session's model. |
+| `tools` | No | Allow-list of tools the subagent can call. | Omit to inherit the parent's full toolset. Narrow it explicitly for read-only roles (`Read`, `Grep`, `Bash` only — no `Edit`, `Write`). |
+
+##### Writing a good system prompt
+
+The body of the file is the system prompt for every invocation of this subagent. The four existing specialists in [`./subagent-prompts/`](./subagent-prompts/) are the reference template. The pattern is:
+
+1. **One-sentence role statement** — *"You are the X subagent for Phase 3 (Development). Your single responsibility is to …"*. Single responsibility, single sentence. No second sentence.
+2. **Operating boundaries** — a bulleted list of what you may and may not do. Always include: credential inheritance ("you cannot escalate"), explicit out-of-scope writes (must never call Linear MCP / push / open a PR — those belong to `linear-task-agent`), and any read-only constraints.
+3. **How you produce the output** — a numbered procedure. Each step should be a concrete action a session can take. Reference the relevant prompt template in [`PROMPTS.md`](./PROMPTS.md) and embed it by reference, not by copy — keeping PROMPTS.md as the source of truth.
+4. **Hand-offs you must escalate** — a bulleted list of situations the subagent must surface to the developer instead of resolving. Architectural questions, disabled tests, workflow-infrastructure edits (`.claude/agents/*`), and any pressure to break a boundary all belong here.
+
+> **The single responsibility rule.** If the description has the word "and" in its first clause ("Use this agent to review **and** apply fixes …"), split into two subagents. Mixed-responsibility agents are the single biggest cause of "the subagent helpfully did something I did not want" — typically because the operator typed a prompt that activated the wrong half of the role.
+
+##### Test the new subagent before committing
+
+1. **Discovery.** `/agents` in Claude Code lists the new role with its description. If it does not appear, the file is malformed (most often: missing `---` fence around the frontmatter, or `name:` differs from the filename).
+2. **No-write smoke test.** Run a prompt that exercises the agent's core procedure without writing anything: *"Use the db-migration-reviewer to dry-run a review of the migration in this branch and print the severity-ranked list — do not edit any file."* Confirm the output structure matches what the system prompt promised.
+3. **Boundary test.** Ask the subagent to do something out of scope: *"Use the db-migration-reviewer to fix the unsafe migration and commit the change."* It must refuse and redirect. If it complies, the boundaries in the system prompt are not strong enough — tighten the operating-boundaries section and re-test.
+4. **Negative-routing test.** Ask Claude Code in plain English to do something the new subagent should **not** handle — e.g., *"Write a new migration for the orders table."* — and confirm it does not auto-route to `db-migration-reviewer`. If it does, the description's "Do NOT invoke for" list is too thin; expand it.
+
+##### Commit and roll out
+
+- Project-scope subagents at `.claude/agents/*` are **shared team infrastructure**. Treat edits as code changes — open a PR, get it reviewed by another developer, and update the [`subagent-prompts/`](./subagent-prompts/) reference directory if the new role is broadly reusable (so other repos can copy the template).
+- Personal-scope subagents at `~/.claude/agents/*` are private to the developer. Useful for experiments before promotion, or for roles that are genuinely individual (e.g., a personal `learning-journal` agent). They never get to the team's audit trail — do not put any Linear-writing or PR-opening role at user scope.
+- Announce the new role in the team channel with one line on **what triggers it**, **what it does**, and **what it explicitly will not do**. Without this, the subagent exists but no one invokes it.
+
+> **Iteration.** Subagents drift the same way prompts drift — a few weeks of edge cases reveal gaps in the boundaries and the procedure. Treat the system-prompt body as living documentation: when the team agrees on a new rule ("migrations adding indexes must always use the concurrent / online variant"), update the relevant subagent's prompt and ship it as a PR. The next session everyone opens picks up the new rule automatically.
+
+#### Creating your own Claude Code skill — step-by-step
+
+Skills are Claude Code's second extensibility surface. Where a **subagent** spins up a scoped sub-session for a multi-turn conversation, a **skill** is a *procedure that loads into your current session when triggered* — Claude reads the skill's instructions and follows them right here, in the conversation you are already having. Skills are the right shape for deterministic recipes the whole team should follow the same way: "how we open a PR", "how we file a follow-up bug", "how we run the pre-merge checklist", "how we generate release notes from Linear".
+
+> **What a skill actually is.** A folder under `.claude/skills/<skill-name>/` (project scope) or `~/.claude/skills/<skill-name>/` (user scope) containing a `SKILL.md` file. The `SKILL.md` has a YAML header (`name`, `description`) and a body with the procedure — step-by-step instructions, checklists, templates, gotchas. The folder may also contain supporting files (templates, reference docs, example outputs) which the skill body references by relative path. Claude Code scans both scope paths on startup and registers each skill as invokable via `/<skill-name>` and as auto-triggerable when a user's prompt matches the `description`.
+
+##### When to build a skill vs. a subagent vs. a slash command
+
+| Need | Reach for | Why |
+|------|-----------|-----|
+| A multi-turn conversation in its own scoped context (review a diff, drive a story end-to-end, implement a feature) | **Subagent** | Owns a sub-session with its own context window. Can take many tool calls, branch on observations, and report back. |
+| A deterministic procedure that should run the same way every time (file a follow-up bug, open a PR, write a Phase plan, run a CLAUDE.md audit) | **Skill** | Loads its instructions into the *current* session. The user invokes it explicitly (`/file-followup`) or Claude auto-triggers when the prompt matches. |
+| A one-shot prompt with no procedure (e.g., "summarise this file") | **Slash command** (`.claude/commands/<name>.md`) | Fires one prompt with arguments. No procedure, no checklist, no supporting files. |
+
+> **A useful test.** If you find yourself writing the phrase *"first, then, then, then, finally"* in plain English to teach the team how to do something — that is a skill. If you find yourself writing *"you are the X agent, your responsibility is …"* — that is a subagent.
+
+##### Step-by-step: build a new skill
+
+1. **Pick a name and scope.** Kebab-case, action-oriented (`open-pull-request`, `file-followup-bug`, `audit-claude-md`), not noun-only (`pull-requests` is too vague). Use project scope (`.claude/skills/`) for anything the team should share; user scope (`~/.claude/skills/`) for personal recipes you are still experimenting with.
+2. **Create the folder.** `mkdir -p .claude/skills/<skill-name>`. The folder name **must** match the `name:` in the frontmatter — Claude Code uses the folder name as the invocation slug.
+3. **Author `SKILL.md`.** Minimum viable shape:
+   ```markdown
+   ---
+   name: file-followup-bug
+   description: Use when a developer wants to file a follow-up bug discovered during Phase 3 implementation — typically a bug the current story is not scoped to fix. Triggers on phrases like "file a bug for X", "follow-up issue for the auth race", "track this for later", "log a tech-debt item". Creates a Linear issue with the right project, labels, parent linkage, and reproduction steps formatted to PROMPTS.md → bug-report. Do NOT use for: bugs the current story IS scoped to fix (those go straight into the current branch), or for filing brand-new feature ideas (use the product backlog instead).
+   ---
+
+   # File a follow-up bug
+
+   You are guiding the developer through filing a follow-up bug discovered mid-story. The canonical procedure lives in [PROCESS.md → Step 3 / follow-ups](../../aidlc-phases/03-development/PROCESS.md). The Linear write is performed exclusively by the `linear-task-agent` subagent — this skill produces the structured payload it consumes.
+
+   ## Procedure
+
+   1. Confirm the bug is genuinely out of scope for the current story. Ask the developer one line: *"Is this in the current story's AC? (yes / no)"* If yes, refuse — the bug must be fixed in the current branch, not deferred.
+   2. Gather the minimum payload:
+      - One-line title (imperative, no ticket prefix — Linear adds it).
+      - Reproduction steps (numbered).
+      - Expected vs. actual behaviour (two lines max each).
+      - Affected component / file path.
+      - Suggested severity (Critical / High / Medium / Low) with one-line justification.
+      - Optional: a link to the line(s) in the current branch that surfaced it.
+   3. Format the payload using the [`bug-report`](../../aidlc-phases/03-development/PROMPTS.md#bug-report) template from PROMPTS.md. Do not deviate from the template; the team filters Linear by its structure.
+   4. Hand the payload to `linear-task-agent` with: *"File this as a new bug in {{LINEAR_PROJECT}}, label `bug`, parent = the current story, assignee = unassigned. Confirm the new issue ID and post it back to me."*
+   5. Once `linear-task-agent` returns the new issue ID, paste it back into the current branch as a code comment near the surfacing line: `// follow-up: ENG-1234`.
+
+   ## Refusal cases
+
+   - Bug is in the current story's AC → refuse, fix in the current branch.
+   - No reproduction steps → refuse, ask the developer to produce them first; never fabricate.
+   - Developer asks you to call Linear MCP directly → refuse, hand to `linear-task-agent` (sole Linear writer).
+   ```
+4. **Optional: add supporting files in the folder.** A skill folder can hold templates, example outputs, or reference docs the skill body links to. Common patterns:
+   - `templates/issue-body.md` — a fill-in-the-blank Markdown template.
+   - `examples/good-bug.md`, `examples/bad-bug.md` — known-good and known-bad references the skill cites.
+   - `reference/severity-rubric.md` — long-form rubric the skill body summarises and links.
+   Reference these files from `SKILL.md` by **relative path** so they resolve regardless of where the repo is checked out.
+
+##### Frontmatter cheat-sheet
+
+| Field | Required | What it does | Tips |
+|-------|----------|--------------|------|
+| `name` | Yes | The invocation slug. `/file-followup-bug` runs the skill explicitly. Must match the folder name exactly. | kebab-case, action-verb-led. |
+| `description` | Yes | **The trigger.** Claude Code reads this on every prompt and decides whether to auto-load the skill. A weak description means the skill is never auto-triggered and only fires when a developer remembers the slash command. | **Lead with "Use when …"**. List trigger phrases. Add explicit "Do NOT use for …" cases. One paragraph, not a sentence. |
+
+> **The description is the entire routing surface.** Unlike subagents (which a developer usually invokes by name), skills are designed to auto-trigger from user intent. If a developer asks *"Can you file a bug for that auth race?"*, the `file-followup-bug` skill should load automatically — but only if its description contains language close enough to "file a bug" for Claude to match. Write descriptions imagining the messiest plausible user phrasing, not the cleanest.
+
+##### Writing a good skill body
+
+1. **Open with the role and the source of truth.** One sentence — *"You are guiding the developer through X. The canonical procedure lives in [PROCESS.md → Step Y]."* This anchors the skill in the AI-DLC docs and makes it auditable.
+2. **Procedure as a numbered list.** Each step should be one concrete action — confirm scope, gather payload, format with template, hand off. If a step branches, write the branches inline (*"If yes, refuse. If no, continue."*). Avoid open-ended prose.
+3. **Refusal / escalation cases.** A bulleted list at the end. This is the equivalent of a subagent's "operating boundaries" — it stops the skill from doing something the team did not authorise.
+4. **Reference, do not duplicate.** Link to PROMPTS.md, PROCESS.md, and template files by relative path. The whole point of a skill is to keep the team's procedure in one place — duplicating it inside the skill body creates two places to maintain and inevitably one falls behind.
+5. **Keep it short.** A skill body that runs past two screens is doing too much. Split into two skills or move detail into supporting files that the body links to.
+
+##### Test the new skill before committing
+
+1. **Discovery.** Open Claude Code in the repo. The skill should appear in the available-skills list under the slug `<skill-name>`. If it does not, the folder name, the `name:` field, and the invocation slug are out of alignment — fix and reload the session.
+2. **Explicit-invocation test.** Type `/<skill-name>` and pass a representative input. The skill should run its procedure top-to-bottom and end at the documented hand-off. Confirm the output format matches the body's promise.
+3. **Auto-trigger test.** Phrase a request the description claims to handle, in messy human language — *"hey can you log a follow-up thing for that timing bug we just noticed"*. Claude should auto-load the skill. If it does not, the description's "Use when …" clause or trigger-phrase list is too narrow.
+4. **Refusal test.** Drive the skill into one of its refusal cases — *"file a bug for the missing AC bullet on the current story"*. The skill must refuse and redirect, not file the bug. If it complies, tighten the refusal list and re-test.
+5. **Hand-off integrity test.** If the skill hands off to a subagent (most do — e.g., `file-followup-bug` hands off to `linear-task-agent`), confirm the payload format is exactly what the receiving subagent expects. A skill that hands off the wrong shape is worse than no skill — it produces a confident-looking failure.
+
+##### Commit and roll out
+
+- Project-scope skills at `.claude/skills/*` are shared team infrastructure. Treat edits as code changes; PR-review them. Cross-link the new skill from the relevant PROCESS.md step (so a developer reading the phase doc discovers the skill at the moment of need).
+- Personal-scope skills at `~/.claude/skills/*` are private. Useful for experiments. Promote to project scope once the skill has been used a handful of times and the procedure is stable.
+- A skill that hands off to a subagent (the common pattern in the AI-DLC dev loop — skills *gather* and *format*; subagents *act*) should name the receiving subagent in its description so the chain is discoverable: *"… hands the payload to `linear-task-agent` to perform the Linear write."*
+- Announce the new skill in the team channel with three lines: **what triggers it**, **what it produces**, and **which subagent it hands off to**. Without this, skills exist but never auto-trigger because no one phrases their prompts to match.
+
+> **The single-procedure rule.** A skill encodes one procedure. If you find yourself writing *"and then, if it's a frontend bug, do X, but if it's a backend bug, do Y"* — that is two skills (`file-followup-frontend-bug`, `file-followup-backend-bug`) or one skill that hands off to two different subagents at step 4. Branching procedures are skills that will silently take the wrong branch under pressure.
+
 #### Verification checklist
 
 - [ ] `claude mcp list` shows `linear: connected` for every developer
@@ -193,6 +378,8 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 - [ ] Anthropic admin policy: `update_issue`, `assign_issue`, `create_issue` enabled; `delete_issue` disabled
 - [ ] `.claude/agents/linear-task-agent.md` committed to the repo; `/agents` in Claude Code lists `linear-task-agent`; the subagent smoke test returns a real `branchName` without writing state
 - [ ] Each Phase 3 specialist subagent (`frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) listed by `/agents` and committed under `.claude/agents/`; team has agreed on the model + tool-permission defaults for each
+- [ ] Team understands the **new-subagent recipe** (`/agents` interactive flow, frontmatter shape, system-prompt structure, four pre-commit tests: discovery, no-write smoke, boundary, negative-routing) and the single-responsibility rule before committing any new role
+- [ ] Team understands the **new-skill recipe** (folder + `SKILL.md` layout, description-as-router rule, four pre-commit tests: discovery, explicit invocation, auto-trigger, refusal) and the single-procedure rule before committing any new skill
 - [ ] Audit log on in Linear (Workspace settings → Security → Audit log)
 
 > **Permission inheritance:** Claude Code inherits the connecting developer's Linear permissions — no privilege escalation.

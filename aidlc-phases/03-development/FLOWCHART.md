@@ -57,7 +57,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 ## Step 0: One-Time Setup
 
-One-off connector wiring per developer. Path A is the primary surface — Claude Code in the terminal. Path B is optional in-IDE Linear browsing through Cursor's MCP support. After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) that carry the role-scoped system prompts for actual implementation, pre-PR review, and refactoring. Phase 3 also widens the Anthropic Connectors policy from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled and the full subagent roster committed to the repo.
+One-off connector wiring per developer. Path A is the primary surface — Claude Code in the terminal. Path B is optional in-IDE Linear browsing through Cursor's MCP support. After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) that carry the role-scoped system prompts for actual implementation, pre-PR review, and refactoring. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens the Anthropic Connectors policy from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
 
 ```mermaid
 flowchart TD
@@ -81,7 +81,10 @@ flowchart TD
     S0_GIT --> S0_AGENT
 
     S0_AGENT[Commit local subagent roster under .claude/agents/<br/>linear-task-agent for workflow orchestration<br/>+ Phase 3 specialists: frontend-engineer, backend-engineer,<br/>code-reviewer, refactor-specialist<br/>verify with /agents and a no-write smoke test<br/>🤖 Claude Code + 👤 Tech Lead reviews]
-    S0_AGENT --> S0_VERIFY{Verification checklist:<br/>linear connected,<br/>branchName returns on smoke test,<br/>git integration ON,<br/>update_issue + assign_issue + create_issue scopes ON,<br/>delete_issue OFF,<br/>linear-task-agent + 4 Phase 3 specialists listed by /agents,<br/>linear-task-agent passes no-write smoke test,<br/>audit log on?}
+    S0_AGENT --> S0_RECIPES
+
+    S0_RECIPES[Adopt extensibility recipes<br/>new subagents at .claude/agents/&lt;name&gt;.md<br/>new skills at .claude/skills/&lt;name&gt;/SKILL.md<br/>shared frontmatter shape + system-prompt structure<br/>four pre-commit tests: discovery, smoke / explicit invocation,<br/>boundary / refusal, negative-routing / auto-trigger<br/>single-responsibility for agents, single-procedure for skills<br/>👤 Tech Lead walks team through the recipes]
+    S0_RECIPES --> S0_VERIFY{Verification checklist:<br/>linear connected,<br/>branchName returns on smoke test,<br/>git integration ON,<br/>update_issue + assign_issue + create_issue scopes ON,<br/>delete_issue OFF,<br/>linear-task-agent + 4 Phase 3 specialists listed by /agents,<br/>linear-task-agent passes no-write smoke test,<br/>team understands new-subagent recipe + four tests,<br/>team understands new-skill recipe + four tests,<br/>audit log on?}
 
     S0_VERIFY -- No --> S0_ANTH
     S0_VERIFY -- Yes --> S0_END([Setup complete<br/>Ready for Step 1: Sprint Planning])
@@ -91,6 +94,7 @@ flowchart TD
     style S0_ANTH fill:#5C2E8A,color:#fff
     style S0_GIT fill:#5C2E8A,color:#fff
     style S0_AGENT fill:#5C2E8A,color:#fff
+    style S0_RECIPES fill:#5C2E8A,color:#fff
     style S0_A3 fill:#3D6B9F,color:#fff
 ```
 
