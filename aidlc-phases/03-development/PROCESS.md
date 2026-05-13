@@ -16,9 +16,105 @@ This document defines the AI-assisted workflow for the Development phase, using 
 
 ## Process Steps
 
-### Step 0: One-Time Setup — Connect Claude Code to Linear via MCP
+### Step 0a: One-Time Setup — Bootstrap Claude Code Skills
 
-> Visual: [Step 0 flowchart](./FLOWCHART.md#step-0-one-time-setup)
+> Visual: [Step 0a flowchart](./FLOWCHART.md#step-0a-one-time-setup--bootstrap-claude-code-skills)
+
+| Attribute | Detail |
+|-----------|--------|
+| **Input** | Phase 2 handoff (chosen stack, ADRs, coding conventions, lint/format/test commands, component library path, OpenAPI spec, naming and folder conventions), Claude Code installed locally |
+| **Tool** | **Claude Code** authoring the skill files; **Cursor** optional for IDE preview of `SKILL.md`; the [`skill-bootstrap`](./PROMPTS.md#skill-bootstrap), [`skill-from-conventions`](./PROMPTS.md#skill-from-conventions), and [`skill-smoke-test`](./PROMPTS.md#skill-smoke-test) prompts |
+| **Output** | A committed `.claude/skills/` tree carrying the project's standards-and-stack skill bundle (test-runner, lint-and-format, scaffold-module, code-review-checklist, openapi-contract, and any project-specific skills the team agreed on), each with a clear trigger description, repo-relative supporting files, and a passing smoke test |
+| **Human** | Tech Lead defines the initial skill backlog, reviews every authored skill before commit, signs off on the trigger descriptions (auto-invocation hinges on them) |
+
+Claude Code Skills are project-scoped, version-controlled, lazy-loaded instruction bundles that Claude auto-invokes when the developer's prompt matches the skill's trigger description. They are the unit of repeatable knowledge for this codebase: the test command, the lint-and-format incantation, the project's component-scaffolding convention, the OpenAPI-contract review checklist — anything a developer would otherwise paste into the prompt every time they touched a recurring workflow. Step 0a is **preparatory**: it runs once per repo (and is re-run when the stack or conventions change), and it lands the skill bundle into source control before any story is picked up. Every later step in this phase will reach for these skills implicitly — the developer never has to remember the lint command if `lint-and-format` is in the bundle. Skip Step 0a and Step 3 becomes the place where everyone re-invents the same prompts; do Step 0a once and the team converges on a single set of trigger-driven workflows.
+
+> **Why this is "Step 0a", not just "Step 0":** the original Step 0 (now Step 0b) wires Linear MCP and the subagent roster. Both are one-time setup. They are co-equal, but Skills should land first: subagent system prompts (`frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) reference the skills the project commits — for example, a `backend-engineer` spawn will trigger the project's `scaffold-endpoint` skill, and a `code-reviewer` run will trigger the `code-review-checklist` skill. Authoring skills *before* committing the subagents avoids a chicken-and-egg authoring sequence where the agent prompts reference skills that do not yet exist.
+
+#### What a skill is, and where it lives
+
+A Claude Code Skill is a directory under `.claude/skills/<skill-name>/` containing a single required file, `SKILL.md`, with YAML frontmatter followed by markdown instructions:
+
+```markdown
+---
+name: lint-and-format
+description: Use when the developer asks to lint, format, type-check, or "clean up" a file or diff in this repo. Runs the exact lint/format/type-check toolchain configured for this project and reports findings in a fix-first order.
+allowed-tools: [Bash, Read, Edit]
+---
+
+You are running the project's lint, format, and type-check pass. The exact commands for this repo are:
+
+- Lint: `pnpm lint`
+- Format check: `pnpm format:check`
+- Format write: `pnpm format`
+- Type check: `pnpm typecheck`
+
+... (instructions, examples, escalation rules)
+```
+
+Three things make this a skill, not just a markdown file:
+
+1. **The `description` field is the auto-invocation hint.** Claude reads it (and only it, by default — the body is not loaded until the skill triggers) and decides whether the current user prompt warrants loading this skill. Vague descriptions ("does linting") fail to trigger; sharp descriptions that name **when** the skill applies ("Use when the developer asks to lint, format, type-check, or 'clean up' a file or diff in this repo") trigger reliably. **Trigger phrasing is the single highest-leverage edit on a skill** — treat it like an API contract.
+2. **`allowed-tools` (optional) narrows the tool surface** the skill is permitted to use. A skill that should never touch the filesystem can drop `Edit` and `Write`. A skill that runs analysis only can be limited to `[Bash, Read, Grep, Glob]`. This is the skill-level analogue of a subagent's tool permissions.
+3. **Supporting files are first-class.** Anything the skill references by relative path — checklists, reference templates, example diffs, schema snapshots — sits beside `SKILL.md` and ships with the skill. A `scaffold-component` skill might carry `templates/component.tsx.template` and `templates/component.test.tsx.template`; Claude loads those only when the skill triggers, keeping the base context lean.
+
+**Project scope vs user scope.** `.claude/skills/` at the repo root is project-scoped — committed to the repo, shared across the team, version-controlled like code. `~/.claude/skills/` is user-scoped — personal to one developer, not shared. **Phase 3 skills are project-scoped, always.** A skill that only one developer has is invisible to the team and silently re-introduces drift.
+
+> **Skill vs subagent vs prompt template — which is which?** A **prompt template** in [PROMPTS.md](./PROMPTS.md) is human-invoked (the developer pastes it). A **skill** is Claude-invoked when the prompt matches the skill's trigger description — same content, lazy-loaded into context. A **subagent** under `.claude/agents/` is a full role with its own scoped session and system prompt; it can itself trigger skills. The three layers stack: subagents are *who*, skills are *how this codebase does it*, prompts are *the human-facing recipe*. When a recurring workflow stabilises in a prompt template, promote it to a skill so the trigger fires automatically; when a role takes shape around several skills, promote it to a subagent.
+
+#### The initial skill bundle (recommended starting set)
+
+The Tech Lead defines the skill backlog from the Phase 2 handoff. Six skills cover ~80% of recurring Phase 3 work for a typical web-application stack and should be authored before the first story is picked up. Teams on other shapes (data pipeline, mobile, embedded) substitute equivalents but keep the count small — **a bloated skill catalogue degrades trigger accuracy** because too many overlapping descriptions compete for the same prompt.
+
+| Skill | When it triggers | What it loads |
+|-------|------------------|---------------|
+| **`test-runner`** | "Run the tests", "run unit tests", "run the test for X", "did the tests pass" | The exact test command(s), how to run a single test, coverage flag, how to interpret a failure, where test fixtures live |
+| **`lint-and-format`** | "Lint", "format", "type-check", "clean up this file", "is this clean" | Lint / format / type-check commands; rule overrides; how to fix the common findings |
+| **`scaffold-module`** (or `scaffold-component`, `scaffold-endpoint` — split if needed) | "Scaffold a new X", "create a new module / component / endpoint", "stub out X following our pattern" | Reference module path, folder convention, file naming, the template files under the skill directory, the AC-coverage rule |
+| **`code-review-checklist`** | "Review my diff", "self-review before PR", "what's wrong with this change" | The project's review checklist (file-path-level rules: where business logic must live, what controllers must not do, accessibility / security tripwires) |
+| **`openapi-contract`** | "Add an endpoint", "update the OpenAPI spec", "is this endpoint contract-consistent" | Where the spec lives, the naming convention for new operations, how request/response shapes are validated, how generated clients are kept in sync |
+| **`commit-message`** | "Write the commit message", "commit this", "what should the commit say" | Conventional-Commit format if used, the `[ENG-XXX]` convention if used in commits (not only PR titles), the rules on body length and breaking-change notation |
+
+Teams in regulated domains (healthcare, fintech, public sector) add a seventh **`compliance-check`** skill that loads the project's PII / PHI / financial-data handling rules whenever the developer touches a field or endpoint that surfaces regulated data. Teams running design-system-heavy frontends add an **`accessibility-check`** skill triggered on component work. **Do not exceed ~10 project-scoped skills** until the team has measured trigger precision in real use — beyond that the catalogue becomes noisier than helpful.
+
+#### Workflow
+
+**0a.1 — Inventory the recurring prompts.** Before authoring anything, the Tech Lead lists the prompts the team has been pasting repeatedly in Phase 2 spikes or early Phase 3 prototyping: lint commands, scaffold recipes, the OpenAPI-update sequence, the project-specific review checklist. This list is the skill backlog. If the list has fewer than four entries, the team is either too early in Phase 2 to bootstrap skills (do a spike first) or the project is small enough that skills are overhead — defer.
+
+**0a.2 — Draft each skill with the [`skill-bootstrap`](./PROMPTS.md#skill-bootstrap) prompt.** In Claude Code, run the prompt with the skill's name, intended trigger, the inputs the skill needs, and the exact commands or templates it must invoke. Claude returns a `SKILL.md` draft plus any supporting files (templates, checklists) the body references. The output **must** include the YAML frontmatter (`name`, `description`, optional `allowed-tools`) and an instructions body with at least: when to trigger, what to read first, the exact commands to run, how to report findings, and an explicit refusal rule for out-of-scope requests.
+
+**0a.3 — Refine the trigger description.** The description is the single most leveraged line in the skill. Run the [`skill-trigger-refine`](./PROMPTS.md#skill-trigger-refine) prompt against the draft — Claude critiques the description for vagueness, overlap with other skills, and missing trigger phrases. Iterate until the description (a) names **when** to use the skill in concrete developer-prompt terms, (b) does not collide with another skill's trigger, and (c) stays under ~200 characters so it scans cleanly in a list. **Rule of thumb:** if a skill's description does not contain at least one verb-phrase a developer would actually say out loud ("run the tests", "scaffold a component"), the trigger will under-fire.
+
+**0a.4 — Extract project-conventions skills from the existing repo.** For skills that codify standards already present in the repo (component naming, controller-vs-service boundaries, OpenAPI patterns), run the [`skill-from-conventions`](./PROMPTS.md#skill-from-conventions) prompt and point Claude at the relevant directories. It scans the existing code, extracts the actual patterns in use, and drafts the skill body around them — this is more reliable than authoring from memory of the style guide and reduces "guide says X, code does Y" drift.
+
+**0a.5 — Smoke-test each skill.** For every authored skill, run the [`skill-smoke-test`](./PROMPTS.md#skill-smoke-test) prompt with a representative trigger prompt the skill should fire on, **and** a near-miss prompt the skill should *not* fire on. A passing smoke test means the skill loaded on the trigger phrase, executed the documented instructions, returned the expected shape of output, and stayed silent on the near-miss. A failing smoke test means the description over-fires, under-fires, or the body is missing a step — fix and re-test before moving on.
+
+**0a.6 — Commit the bundle.** Stage `.claude/skills/**` with a single commit per skill (`feat(skills): add lint-and-format skill`) so the history reads cleanly and any one skill can be reverted independently. Skills are shared infrastructure: treat edits to a committed skill as a code change requiring review, same as `.claude/agents/*` edits.
+
+**0a.7 — Document the bundle in the repo README.** A two-line section under `## Claude Code Skills` listing the committed skills and how to add a new one keeps new joiners oriented. Long-form skill documentation lives **in the skills themselves** — `SKILL.md` is the source of truth, not the README.
+
+#### Verification checklist
+
+- [ ] `.claude/skills/` directory exists at the repo root and is committed
+- [ ] Each skill is its own directory under `.claude/skills/<skill-name>/` with at minimum `SKILL.md`
+- [ ] Every `SKILL.md` has YAML frontmatter with `name` and `description` set; `allowed-tools` declared where the skill should not have unfettered tool access
+- [ ] `name` field uses lowercase-kebab-case and matches the directory name exactly
+- [ ] `description` field names **when** the skill triggers (concrete developer-prompt phrasing), not only what it does; under ~200 characters; non-overlapping with other skills in the bundle
+- [ ] Supporting files (templates, checklists, reference docs) live under the skill's own directory and are referenced from `SKILL.md` by relative path
+- [ ] Each skill has been smoke-tested against a representative trigger prompt and a near-miss prompt; results captured in the commit message or a PR comment
+- [ ] Repo README mentions the skill bundle and how to extend it
+- [ ] Skill count is ≤ 10 (avoid trigger collision); regulated-industry teams may justify additional compliance / accessibility skills
+- [ ] Tech Lead has reviewed every skill before commit — auto-invocation means a bad skill silently degrades every story it triggers on
+
+> **Common pitfalls.** *Vague trigger descriptions* — "manages testing" never fires; "Use when the developer asks to run tests, run a single test, or check coverage" fires reliably. *Overlapping triggers* — two skills with descriptions that both match "run the tests" race; merge them or split the trigger phrase. *Skill body that re-paraphrases the README* — skills must be *operational* (exact commands, file paths, refusal rules), not descriptive. *Drift from code* — when conventions change, the skill ages silently; treat skill updates as part of any PR that changes a convention. *Skill-count creep* — every additional skill multiplies trigger surface; cap at ~10 unless measured precision justifies more.
+
+> **Maintenance cadence.** Review the skill bundle every cycle retro alongside AI-estimate variance: which skills triggered when expected, which over-fired, which never fired. Retire skills that never trigger; tighten descriptions on skills that over-fire; add skills for workflows the team paste-pumped during the cycle. A healthy bundle is one a new joiner can read in 20 minutes and have the same operational knowledge as a six-month veteran.
+
+---
+
+### Step 0b: One-Time Setup — Connect Claude Code to Linear via MCP
+
+> Visual: [Step 0b flowchart](./FLOWCHART.md#step-0b-one-time-setup--connect-claude-code-to-linear-via-mcp)
 
 | Attribute | Detail |
 |-----------|--------|
@@ -86,7 +182,7 @@ The subagent is a markdown file with YAML frontmatter under `.claude/agents/`. C
 
 #### Specialist subagents for Phase 3 roles (recommended)
 
-The `linear-task-agent` above is a **workflow orchestrator** — it drives the Linear writes, branch creation, and PR opening that wrap every story. It does not write production code. The four subagents in this sub-section are **role implementers**: each one is scoped to a specific Phase 3 contributor role (frontend, backend, pre-PR review, refactoring) and embeds the relevant PROMPTS.md templates so a developer can drop into a focused, role-aware Claude Code session in one invocation. The two layers are complementary — the typical day is `linear-task-agent` to fetch and start a story, then a specialist for the actual implementation, then `linear-task-agent` again to open the PR.
+The `linear-task-agent` above is a **workflow orchestrator** — it drives the Linear writes, branch creation, and PR opening that wrap every story. It does not write production code. The six subagents in this sub-section are **role implementers and utilities**: each one is scoped to a specific Phase 3 contributor role (per-story design, frontend, backend, pre-PR review, refactoring) or a focused utility (git-conflict resolution) and embeds the relevant PROMPTS.md templates or operating procedures so a developer can drop into a focused, role-aware Claude Code session in one invocation. The two layers are complementary — the typical day is `linear-task-agent` to fetch and start a story, then `software-architect` for non-trivial stories to design before scaffolding, then `frontend-engineer` / `backend-engineer` for the implementation, then `code-reviewer` before PR, then `linear-task-agent` again to open the PR — with `conflict-resolver` invoked on demand whenever a rebase, merge, or cherry-pick produces conflicts (typically when rebasing onto main before opening or merging the PR).
 
 Each specialist follows the same packaging pattern as `linear-task-agent`: a markdown file under `.claude/agents/` with YAML frontmatter (`name`, `description`, `model`) and a system-prompt body. Claude Code auto-discovers anything in that directory, so committing the file makes the role definition shared infrastructure — every developer (and every fresh clone) gets the same scoped prompt. Treat edits to these files as code changes requiring review, just like `linear-task-agent.md`.
 
@@ -95,13 +191,35 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 | Situation | Use |
 |-----------|-----|
 | Fetch next story, transition state, branch, kickoff/checkpoint/PR-opened comments, open PR | `linear-task-agent` |
+| Non-trivial story needs a design before scaffolding — schema change, new endpoint surface, new integration, cross-module touch | `software-architect` |
 | Implement a UI story — components, state, API integration, accessibility, component tests | `frontend-engineer` |
 | Implement a server story — endpoints, services, migrations, integrations, integration tests | `backend-engineer` |
 | Pre-PR self-review of the diff (Step 3.5) before invoking `linear-task-agent` to open the PR | `code-reviewer` |
 | Step 5 refactoring work against a `tech-debt` Linear issue | `refactor-specialist` |
+| Resolve git merge / rebase / cherry-pick conflicts on the working tree, complete the operation, and report what was decided | `conflict-resolver` |
 | Inline single-file edits, autocomplete, "rename this variable", small intra-file tweaks | Cursor autocomplete (Supermaven) — no subagent needed |
 
-> **Cross-cutting boundaries (apply to all four specialists):** each subagent inherits the developer's local credentials and repo permissions; it cannot escalate. None of them may transition Linear state, post Linear comments, or open PRs — those writes belong exclusively to `linear-task-agent` so the audit trail stays single-sourced. Specialists may run tests, lint, format, type-check, and read any file in the repo; they may write code only on the current branch. None of them may push, force-push, or merge — only the developer pushes after review. If a specialist hits an architectural question (new pattern, cross-service contract, technology choice), it must escalate by surfacing the question to the developer and recommending a Phase 2 system-architect-style review rather than inventing a design.
+> **Cross-cutting boundaries (apply to all six specialists):** each subagent inherits the developer's local credentials and repo permissions; it cannot escalate. None of them may transition Linear state, post Linear comments, or open PRs — those writes belong exclusively to `linear-task-agent` so the audit trail stays single-sourced. Implementation specialists (`frontend-engineer`, `backend-engineer`, `refactor-specialist`) may run tests, lint, format, type-check, and read any file in the repo; they may write code only on the current branch. The analysis specialists (`software-architect`, `code-reviewer`) are **read-only** by design — they produce reports, never patches. The utility specialist (`conflict-resolver`) sits between the two: it **modifies the working tree but only for git-operation completion** — resolving conflict markers in already-conflicted files, `git add`-ing the resolved files, and running `git merge --continue` / `git rebase --continue` / `git cherry-pick --continue` to drive the in-progress operation to completion. It must never `git push` (any form), never `git rebase --abort` / `git merge --abort` / `git cherry-pick --abort` without explicit developer instruction (lost work has caused real incidents), and never author new code, comments, or TODOs that were not on either side of the conflict — resolution is a selection-or-combination operation, not an authoring operation. None of them may push, force-push, or merge — only the developer pushes after review. If an implementation specialist hits an architectural question (new pattern, cross-service contract, technology choice), it must escalate by invoking `software-architect` (for per-story design within Phase 2's established patterns) or surfacing the question to the developer and recommending a Phase 2 system-architect-style review (for system-wide / new-tech / new-service-boundary decisions) rather than inventing a design. The `software-architect` itself owns the same escalation: per-story design stays in Phase 3; anything that crosses into Phase 2's remit is handed back up.
+
+##### `software-architect`
+
+**Purpose / when to invoke.** Designs the per-story technical plan for **non-trivial** stories *before* any implementation specialist is invoked — the new Step 3.0 of the workflow. Triggers on cross-module touch, schema change, new endpoint surface, new external integration, or any story that does not have a clear in-pattern reference module to copy. Produces a markdown architecture plan (component touchpoints, data flow, contract changes, test strategy, risks, rollback plan) following the [`architecture-design`](./PROMPTS.md#architecture-design) prompt format. **Read-only**: it never edits code. The plan is presented to the developer for explicit approval; only after approval do `frontend-engineer` / `backend-engineer` start scaffolding. Trigger phrases: "design the architecture for ENG-XXX", "scope the technical plan before I scaffold", "what's the design for this story", "design before I touch code".
+
+**When NOT to invoke.** In-pattern stories that follow an existing reference module — confirm the pattern in the kickoff comment and skip straight to scaffolding; no architect run required. Behaviour-preserving refactors → `refactor-specialist` (it scopes its own plan). Pre-PR review of completed code → `code-reviewer`. Linear writes → `linear-task-agent`. **System-wide architecture decisions, new-service boundaries, or new-technology evaluation → escalate to a Phase 2 system-architect-style review** rather than deciding inside Phase 3; the `software-architect`'s remit is per-story design *within* Phase 2's established patterns.
+
+**Suggested model.** `opus` — analysis-heavy, high-stakes; an unsound design propagates through every subsequent specialist's output. Same rationale as `code-reviewer` and `refactor-specialist`. Worth the cost.
+
+**Operating boundaries.**
+- **Read-only.** May not edit any file, stage changes, or run mutating commands. Linter and type-checker in dry-run mode are allowed.
+- May read any file in the repo, inspect git history, and run `WebSearch` / `WebFetch` for current library or framework documentation when the codebase reference is silent.
+- Must produce the plan in the [`architecture-design`](./PROMPTS.md#architecture-design) format and surface it to the developer for **explicit approval** before any implementation specialist is invoked. Implementation specialists must NOT be spawned until the developer approves.
+- Must check the proposed design against existing ADRs and the Phase 2 architecture; if the design would require a new ADR, a new service boundary, or a new technology, **escalate to a Phase 2 system-architect-style review** rather than deciding here.
+- May recommend a kickoff-comment summary of the approved plan, but must **not** call Linear MCP itself — `linear-task-agent` posts the comment.
+- Must never push, open a PR, or transition Linear state.
+
+**System-prompt template.** [`./subagent-prompts/software-architect.md`](./subagent-prompts/software-architect.md) — copy into `.claude/agents/software-architect.md` and commit. Repo-agnostic by design; placeholders (if any) are documented in the template file.
+
+**Source-of-truth pointers.** [PROCESS.md → Step 3.0](#step-3-feature-development) · [`architecture-design`](./PROMPTS.md#architecture-design) · cross-link to Phase 2 for system-wide escalations.
 
 ##### `frontend-engineer`
 
@@ -181,6 +299,28 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 **Source-of-truth pointers.** [PROCESS.md → Step 5](./PROCESS.md#step-5-refactoring) · [`refactoring`](./PROMPTS.md#refactoring) · [`test-generation`](./PROMPTS.md#test-generation).
 
+##### `conflict-resolver`
+
+**Purpose / when to invoke.** Drives a stuck git merge, rebase, or cherry-pick to completion: assesses what is conflicted, classifies each conflict, applies a documented resolution rule per hunk (favour feature completeness, take additive merges where both sides add disjoint content, surface deletion-vs-modification conflicts to the developer rather than silently picking a side, etc.), `git add`s the resolved files, and runs the appropriate `--continue` until the working tree is clean. Then reports — file by file, hunk by hunk — what was decided and why. **Utility specialist, invoked on demand**, not a fixed step in the linear flow. Most common touchpoints, in order of frequency: (1) Step 4.1 — rebasing onto main before opening the PR; (2) Step 4.5 — main moved during review and the merge is blocked on conflicts; (3) mid-Step-3 — pulling latest into a long-running feature branch; (4) Step 5 — refactor branches that need a rebase; (5) Step 7 cycle close — cleaning up abandoned branches with stale conflicts. Trigger phrases: "resolve these merge conflicts", "fix the conflicts on this rebase", "I'm stuck in a rebase, help me through it", "continue the rebase", "merge main into my branch", "the cherry-pick is conflicting".
+
+**When NOT to invoke.** Authoring new feature code → `frontend-engineer` / `backend-engineer`. Reviewing a clean diff → `code-reviewer`. Behaviour-preserving refactoring → `refactor-specialist`. Per-story design before implementation → `software-architect`. Opening PRs or any Linear write → `linear-task-agent`. **Semantically complex conflicts where both sides represent fundamentally different intent** (e.g., the same function rewritten two different ways for two different stories) → escalate to a human pair-programming session; this agent is for mechanical and rule-based resolution, not design arbitration.
+
+**Suggested model.** `opus` — wrong resolution = silent data loss (the test suite passes, the conflict is "fixed", but a hunk from main was dropped); analysis-heavy per-hunk reasoning across what each side intended. Same rationale as `code-reviewer` and `refactor-specialist`. Worth the cost.
+
+**Operating boundaries.**
+- **Modifies the working tree, but only for git-operation completion.** May edit conflicted files to remove conflict markers and apply the chosen resolution; may run `git add` on resolved files; may run `git merge --continue`, `git rebase --continue`, or `git cherry-pick --continue` to advance the in-progress operation. Must not edit any file that has no conflict markers, must not modify the conflict resolution after `git add`, and must not author new code, comments, or TODOs that were not present on either side of the conflict — resolution is a selection-or-combination operation, not an authoring operation.
+- **Never `git push`** in any form (no `push`, no `push --force`, no `push --force-with-lease`).
+- **Never `git rebase --abort`, `git merge --abort`, or `git cherry-pick --abort` without explicit developer instruction.** If resolution is ambiguous or the agent cannot apply a documented rule, it stops, leaves the working tree in its current state, and surfaces the conflict to the developer for a decision — discarding work silently is forbidden because lost developer hours have driven real post-incident reviews.
+- **Never blindly keep one side for every conflict.** Each hunk is analysed individually using documented rules (feature completeness, additive merges, deletion vs modification, contract changes vs implementation churn, etc.).
+- May read any file in the repo, inspect git history (`git log`, `git show`, `git diff`), and run the project's lint / type-check / test commands after resolution to sanity-check that the merged tree still builds and passes.
+- Must never call Linear MCP, open a PR, or transition issue state — `linear-task-agent` remains the single Linear writer.
+- Must produce a structured resolution report at the end: per-file, per-hunk, the resolution choice and the rule that justified it, plus an explicit "ready to push" or "needs developer decision on file:line" verdict.
+- Inherits the developer's local credentials and cannot escalate.
+
+**System-prompt template.** [`./subagent-prompts/conflict-resolver.md`](./subagent-prompts/conflict-resolver.md) — copy into `.claude/agents/conflict-resolver.md` and commit. Repo-agnostic by design.
+
+**Source-of-truth pointers.** [PROCESS.md → Step 4.1](./PROCESS.md#step-4-code-review) · [PROCESS.md → Step 4.5](./PROCESS.md#step-4-code-review) · [Git: `git-merge`](https://git-scm.com/docs/git-merge) · [Git: `git-rebase`](https://git-scm.com/docs/git-rebase) · [Git: `git-cherry-pick`](https://git-scm.com/docs/git-cherry-pick). No PROMPTS.md entry — this agent's "prompt" is its operational procedure (assess → understand → rule-based resolve → apply → continue → verify → report), not a reusable text block.
+
 ##### Choosing between a specialist and Cursor inline
 
 > **Rule of thumb:** if the work is **cross-file or multi-step** (scaffolds a new feature, refactors across modules, generates tests for a whole service, runs a structured pre-PR review), use a specialist subagent — it carries the right system prompt and runs in its own scoped session. If the work is **intra-file and incremental** (rename a variable, accept the next autocomplete, add one missing branch in a conditional, tweak a JSX prop), Cursor's Supermaven autocomplete is faster and lower-friction. The specialist is the framing tool; Cursor is the typing tool. Most stories use both — open the specialist for the scaffold and the tests, drop into Cursor for the small edits in between.
@@ -192,7 +332,7 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 - [ ] Linear → Settings → Integrations shows GitHub/GitLab/Bitbucket connected with PR auto-link on
 - [ ] Anthropic admin policy: `update_issue`, `assign_issue`, `create_issue` enabled; `delete_issue` disabled
 - [ ] `.claude/agents/linear-task-agent.md` committed to the repo; `/agents` in Claude Code lists `linear-task-agent`; the subagent smoke test returns a real `branchName` without writing state
-- [ ] Each Phase 3 specialist subagent (`frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`) listed by `/agents` and committed under `.claude/agents/`; team has agreed on the model + tool-permission defaults for each
+- [ ] Each Phase 3 specialist subagent (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) listed by `/agents` and committed under `.claude/agents/`; team has agreed on the model + tool-permission defaults for each
 - [ ] Audit log on in Linear (Workspace settings → Security → Audit log)
 
 > **Permission inheritance:** Claude Code inherits the connecting developer's Linear permissions — no privilege escalation.
@@ -249,7 +389,7 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 **2.3 — Create the local branch from Linear's `branchName`.** Claude Code reads the `branchName` field from the issue object (Linear computes it from team prefix + identifier + slugified title — e.g., `david/eng-247-oauth2-callback-handler`). Claude runs `git checkout -b <branchName>` in the working directory. Linear's git integration will recognise this name on PR open and auto-link the issue without any developer action. **Do not invent your own branch name** — drift between branch and issue breaks the integration.
 
-**2.4 — Pull dependent context.** Run the [`task-context`](./PROMPTS.md#task-context) prompt. Claude reads, in order: the PRD section the issue cites, the relevant ADR(s), the OpenAPI section for any endpoint touched, the existing tests in the affected module. This becomes the working context for Step 3 — no further Linear reads happen until the PR.
+**2.4 — Pull dependent context.** Run the [`task-context`](./PROMPTS.md#task-context) prompt. Claude reads, in order: the PRD section the issue cites, the relevant ADR(s), the OpenAPI section for any endpoint touched, the existing tests in the affected module. This becomes the working context for Step 3 — no further Linear reads happen until the PR. **For non-trivial stories** (cross-module, schema change, new endpoint surface, new integration, no clear in-pattern reference), the next stop is Step 3.0 (`software-architect` design) before Step 3.1 (scaffold); in-pattern stories skip Step 3.0 and go directly to Step 3.1.
 
 > **Convention:** the *only* Linear write between *In Progress* and PR open should be progress comments. Do not flip the issue back to Todo or Backlog mid-flight; if blocked, comment with the blocker and tag the blocker — Linear's blocker UI handles the rest.
 
@@ -270,6 +410,7 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 | Task | Tool | Why |
 |------|------|-----|
+| Non-trivial story design before scaffolding | **Claude Code** with `software-architect` | Read-only design pass; gates the implementation specialists. |
 | New feature with familiar pattern | **Cursor** Composer | Multi-file scaffolding in the IDE; autocomplete as you code |
 | Incremental coding, small edits | **Cursor** autocomplete (Supermaven) | Inline suggestions — fast and low-friction |
 | Complex multi-file refactoring or feature | **Claude Code** | Reads entire codebase, runs tests, iterates autonomously |
@@ -281,7 +422,9 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 **Workflow:**
 
-**3.1 — Scaffold the feature.** Run the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-cursor-composer-or-claude-code) prompt either in Cursor Composer (for in-pattern features) or Claude Code (for multi-module). Provide the story body, the relevant ADR, the reference module to follow.
+**3.0 — Design and approve architecture (non-trivial stories only).** Before any scaffolding, invoke the `software-architect` subagent with the story body, AC, the context pulled in Step 2.4, and the relevant ADRs. The architect runs the [`architecture-design`](./PROMPTS.md#architecture-design) prompt and returns a markdown plan covering component touchpoints, data flow, contract changes (OpenAPI deltas, schema migrations), test strategy, risks, and rollback. The architect is **read-only** — it never edits code. **Developer-approval gate:** the developer reviews the plan and either approves it, asks for revisions, or escalates to a Phase 2 system-architect-style review for system-wide / new-tech decisions. **Implementation specialists (`frontend-engineer`, `backend-engineer`) must NOT be invoked until the developer approves the plan.** Once approved, the developer asks `linear-task-agent` to post a 3–5 line summary of the approved plan as a Linear comment so the running narrative captures the design decision before any code lands. Skip rule: in-pattern stories that follow an existing reference module need only confirm the pattern in the kickoff comment — no architect run required. See [`software-architect`](#software-architect) for trigger phrases, boundaries, and the system-prompt template pointer.
+
+**3.1 — Scaffold the feature.** Run the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-cursor-composer-or-claude-code) prompt either in Cursor Composer (for in-pattern features) or Claude Code (for multi-module). Provide the story body, the relevant ADR, the reference module to follow. For stories that ran Step 3.0, the approved architect plan is the authoritative input — the scaffold must match the plan or the developer must explicitly re-approve a deviation.
 
 **3.2 — Code with autocomplete.** Cursor's Supermaven engine handles inline suggestions while typing. The Skill is to accept selectively — discard suggestions that hallucinate APIs, take ones that match repo patterns.
 
@@ -320,7 +463,7 @@ The industry framing for this shift, captured in O'Reilly's "Conductors to Orche
 
 ##### Pattern A — Claude Code subagents (in-process, already adopted)
 
-The four specialist subagents committed in [Step 0](#specialist-subagents-for-phase-3-roles-recommended) — `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist` — are already a multi-agent surface. Each runs in its own scoped session with its own system prompt; each reports back to the developer. They parallelise inside a single Claude Code session via the built-in Task tool: the developer (or `linear-task-agent`) can spawn `frontend-engineer` and `backend-engineer` in the same turn, and both run concurrently. Subagents always **report results back to the spawning session** — they do not message each other.
+The six specialist subagents committed in [Step 0b](#specialist-subagents-for-phase-3-roles-recommended) — `software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver` — are already a multi-agent surface. Each runs in its own scoped session with its own system prompt; each reports back to the developer. They parallelise inside a single Claude Code session via the built-in Task tool: the developer (or `linear-task-agent`) can spawn `frontend-engineer` and `backend-engineer` in the same turn, and both run concurrently. Subagents always **report results back to the spawning session** — they do not message each other. **[`conflict-resolver`](#conflict-resolver) is the exception to the parallelism story:** it must run by itself because git conflict resolution mutates the working tree and a single writer is the only safe pattern — never spawn it alongside another implementation specialist. If the developer has multiple specialists in flight in one session and a rebase becomes necessary mid-flow, **drain the in-flight specialists first** (let them complete and report back), then spawn `conflict-resolver` — never spawn it while another specialist's `Edit` / `Write` calls might still land, because two writers on the same working tree race and the rule-priority analysis the agent does becomes invalid against a moving file.
 
 **When to reach for this pattern.** Default for cross-layer stories where the frontend and backend slices are independent: spawn both specialists from the same Claude Code session at story-pickup time, let them work in parallel, then merge their findings in the developer's head before the self-review pass. No extra tooling, no extra terminals, lowest token overhead of the four patterns.
 
@@ -348,6 +491,8 @@ These are the multi-agent equivalent of the per-PR CI gate: enforce them in `.cl
 
 **Token cost.** Each teammate is a full Claude Code instance — token usage scales linearly with team size. Anthropic's own guidance is to start at 3 teammates and only scale up when the work genuinely benefits. A four-teammate session can easily 4–5× a single-session token bill; budget accordingly and prefer the `code-reviewer` specialist (read-only) over a fourth implementer when in doubt.
 
+**Conflict resolution inside a team.** If a teammate's task is "rebase the team's shared branch onto main", that teammate must NOT attempt the rebase in-line — it should hand off to [`conflict-resolver`](#conflict-resolver) via the in-process Task tool (or the developer manually invokes it in the lead session). The shared task list's file-locking does not extend across `git rebase`'s working-tree mutations, so concurrent teammates will trample each other's resolution. The `TaskCompleted` hook should NOT fire green for a rebase task until `git status` shows a clean tree — otherwise teammates pick up the next task on top of an unfinished rebase, which is the worst possible state.
+
 **Reference.** [Claude Code → Agent Teams](https://code.claude.com/docs/en/agent-teams).
 
 ##### Pattern C — Git worktrees for manual parallel sessions
@@ -371,6 +516,13 @@ The new directory is a fully checked-out copy on its own branch. Multiple worktr
 
 **Strongest fit.** Two to four siblings stories in the same cycle that the developer is happy to drive sequentially in attention but wants to run concurrently on the wall clock. Also the simplest path to "Claude Code is busy refactoring while I write the next story's tests" — the parallelism is in *time*, not in *coordination*.
 
+**Conflict resolution across worktrees.** Worktrees multiply the conflict surface, so [`conflict-resolver`](#conflict-resolver) becomes a recurring touchpoint — but the coordination rules are non-obvious:
+
+- **Run `conflict-resolver` *inside* the conflicted worktree's Claude Code session, never in another worktree or in the main repo's session.** Each worktree is its own working tree on its own branch — invoking the resolver in the wrong worktree resolves nothing useful and can confuse the agent's `git status` parsing. The worktree path is the resolver's working directory, full stop.
+- **Merge train discipline.** When 3–5 sibling worktrees all approach ready-to-land at the same time, merge serially: the first lands clean against main, each subsequent one rebases onto the new main and may produce conflicts. Realistic per-worktree rebase cost is N × (one worktree's conflict load) for the trailing worktrees — budget for it. The discipline that keeps this manageable is the file-scope rule already in the operational guardrails: the more disjoint the scopes at spawn time, the closer the trailing rebase cost trends to zero.
+- **Subagent-isolation worktrees.** If a `refactor-specialist` (or any subagent with `isolation: worktree` in its frontmatter) picks up an upstream change that conflicts mid-run, the right response is to **abandon the spawn** — the per-spawn worktree exists exactly so it can be discarded — surface the upstream change to the developer, then re-spawn against the new tip. **Do not invoke `conflict-resolver` inside an `isolation: worktree` spawn**; the discard-and-respawn flow is cleaner and the per-spawn cost is by design throwaway.
+- **Cross-worktree pattern drift.** When `conflict-resolver` runs in worktree A and resolves an architectural-migration conflict in favour of the newer pattern (Rule 2 of the resolver's rule set), that decision exists in worktree A only. Worktree B still on the old pattern will hit the same conflict on its next rebase. The developer's job is to propagate the decision across worktrees by either landing A first (A's resolution becomes the new baseline for everyone else) or by manually applying the same resolution in B before A lands. Otherwise B's rebase produces the same conflict and the resolver re-derives the same answer — wasteful but not unsafe.
+
 **Constraints.** The developer is the orchestrator — there is no team lead, no shared task list, no inter-agent messaging. Each session is fully isolated from the others, which is a feature for safety and a limit for collaboration. Practical upper bound is ~3–5 worktrees before context-switching between terminals becomes its own bottleneck.
 
 **Reference.** [Claude Code → Common workflows → Run parallel sessions with Git worktrees](https://code.claude.com/docs/en/common-workflows#run-parallel-claude-code-sessions-with-git-worktrees).
@@ -388,6 +540,8 @@ The new directory is a fully checked-out copy on its own branch. Multiple worktr
 - ⌘ N to spawn a new agent on a new worktree from anywhere in the app — the friction floor for trying a parallel run is one keystroke.
 
 **When to adopt.** Mac-only teams that already run 2+ Claude Code sessions on most stories and feel the friction of managing terminals and worktrees by hand. Sweet spot is 3–8 features in flight on the same repo with visual oversight — exactly the band where Pattern C starts to break down on terminal context-switching. Linux and Windows developers stay on Pattern C until Conductor (or an equivalent) ships cross-platform.
+
+**Conflict resolution inside Conductor.** Conductor's diff-first review UI is the early-warning system for conflicts: before invoking [`conflict-resolver`](#conflict-resolver) on any agent's branch, scan the diffs across agents in the dashboard — two agents touching the same file is the leading indicator. If the overlap is small or one agent's branch is redundant, **archive** that agent rather than running the resolver: archiving is free, conflict resolution costs analysis tokens. Reserve the resolver for the conflicts that actually need to land. When the PR is opened and main moves before merge, `conflict-resolver` runs in the worktree-backed session that produced the PR, exactly as in Pattern C — Conductor itself does not run the resolver, it surfaces the conflict and the developer invokes the agent. **`isolation: worktree` interaction with Conductor:** Conductor already gives every agent its own worktree, so `isolation: worktree` on a subagent inside a Conductor session creates a worktree-inside-a-worktree. This works in current Conductor builds but is unnecessary overhead — drop `isolation: worktree` on subagents spawned inside Conductor sessions.
 
 **Constraints.** macOS only (Apple Silicon and Intel) as of mid-2026 — verify before committing the team. The PR opening flow is Conductor's, not `linear-task-agent`'s, so teams adopting Conductor must make sure the PR title still includes `[ENG-XXX]` and the body still includes `Closes ENG-XXX` (configurable in Conductor's PR template) — otherwise Linear's git integration will not auto-transition. Treat Conductor's PR template as code-reviewed infrastructure, same as `.claude/agents/linear-task-agent.md`.
 
@@ -413,6 +567,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 - **One PR per Linear story, always.** Multi-agent does not change PR granularity. If a multi-agent run produces work for two stories, split the diff into two PRs against two issues. The agent fan-out is internal scaffolding; the audit trail stays one issue → one PR → one merge.
 - **`linear-task-agent` is still the only Linear writer.** Specialists, teammates, Conductor agents — none of them call Linear MCP. Single-source the Linear writes so audit logs do not fragment.
 - **File-scope every agent before spawn.** Each agent must own a disjoint set of files. The `frontend-engineer` / `backend-engineer` boundary already enforces this for Pattern A; for Patterns B/C/D, spell out the scope in the spawn prompt or branch plan. Two agents touching the same file is the leading cause of wasted multi-agent runs.
+- **Conflict resolution is a single-writer operation.** Across all four patterns, [`conflict-resolver`](#conflict-resolver) runs alone on the affected working tree — never spawned alongside an active implementation specialist (Pattern A), never alongside an actively-writing teammate on the same branch (Pattern B), always inside the affected worktree (Patterns C and D), and never inside an `isolation: worktree` subagent spawn (the discard-and-respawn flow handles that case). The agent's per-hunk rule analysis assumes a stable working tree; concurrent writers invalidate it.
 - **Plan approval for risky teammates (Pattern B).** For migrations, auth changes, and high-blast-radius refactors, spawn the teammate with a plan-approval requirement (`Spawn an architect teammate to refactor X. Require plan approval before any code changes.`). The teammate stays in plan mode until the lead approves; bad architecture is rejected before the code is written.
 - **Wire `TaskCompleted` hooks (Pattern B).** Block task completion until the local test suite is green and the linter is clean. Without this, agent teams routinely close tasks while CI would fail at PR open.
 - **Token budget per cycle.** A four-teammate Pattern B session can 4–5× a single-session token bill. Track per-cycle token spend in the retro alongside velocity; if multi-agent does not also lift PR throughput, it is a cost line, not a capability.
@@ -424,6 +579,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 | Pitfall | Mitigation |
 |---------|------------|
 | **Same-file overwrites.** Two agents edit the same file; the second silently wins. | File-scope at spawn (above). For Pattern B, the shared task list's file-locking helps — but the lead must split tasks at file granularity, not story granularity. |
+| **Merge-train rebase explosion.** Five worktrees all reach "ready" together; the first lands clean, but the trailing four each hit progressively worse conflicts as main moves under them. | Land worktrees serially with [`conflict-resolver`](#conflict-resolver) invoked inside each one before its rebase. Keep file scopes disjoint at spawn time so trailing worktrees touch fewer of the just-landed changes. If trailing-worktree conflict load is consistently high, the file-scope discipline is wrong, not the resolver — re-decompose at story granularity. |
 | **Unverified completion.** Agent declares "done" while tests are red or AC is unmet. | `TaskCompleted` hook on Pattern B; explicit `code-reviewer` pass on Pattern A; CI gate at Step 4 catches the rest — but pre-PR is much cheaper than post-PR. |
 | **Spec amplification.** Vague AC + N agents = N divergent implementations. | Bounce ambiguous stories to PM at Step 2.2. Multi-agent demands tighter specs, not the same specs faster. |
 | **Token budget surprises.** A Pattern B retro reveals the cycle spent 5× a normal Claude budget for marginal throughput gain. | Track per-cycle token spend in the cycle retro alongside velocity. Drop back to Pattern A or single-session for the next cycle if the lift is not there. |
@@ -456,7 +612,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 
 **Workflow:**
 
-**4.1 — Open the PR with the right title and description.** Run the [`pr-description`](./PROMPTS.md#pr-description) prompt. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
+**4.1 — Open the PR with the right title and description.** Before opening, rebase onto main; if conflicts arise, invoke [`conflict-resolver`](#conflict-resolver) to work through them — never `--abort` without explicit reason, since lost work has caused real incidents. Then run the [`pr-description`](./PROMPTS.md#pr-description) prompt. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
 
 **4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → SonarQube SAST → coverage gate (≥ 80% on new code). A failure here blocks CodeRabbit and human review until fixed.
 
@@ -464,7 +620,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 
 **4.4 — Human review.** A non-author teammate reviews architecture alignment, business-logic correctness, naming, cross-service impacts, and the AI-generated sections that the developer flagged in the PR description. **One human approval is the minimum**; high-blast-radius changes (auth, payments, schema migrations) require two.
 
-**4.5 — Merge.** Required before merge: CI green + CodeRabbit comments resolved + ≥ 1 human approval + Linear issue is the same one referenced in the PR title (sanity check — wrong identifier means an unrelated issue auto-closes).
+**4.5 — Merge.** Required before merge: CI green + CodeRabbit comments resolved + ≥ 1 human approval + Linear issue is the same one referenced in the PR title (sanity check — wrong identifier means an unrelated issue auto-closes). If main moves during review and the merge button is blocked by conflicts, invoke [`conflict-resolver`](#conflict-resolver) for the resolution before retrying the merge.
 
 **4.6 — Verify Linear auto-transition.** After merge, the Linear issue should be **Done** within ~30 seconds (Linear's webhook). If not, the developer manually closes it and files an issue against the Linear ↔ git integration.
 
@@ -541,6 +697,10 @@ Morning:
   3. Review story AC + ADRs + PRD section deep-link
   4. Claude Code transitions issue to In Progress, self-assigns,
      checks out Linear branchName, posts kickoff comment
+
+Design (for non-trivial stories):
+  4a. software-architect → plan → developer approves
+      → linear-task-agent posts plan summary as comment
 
 Coding (in Cursor, Claude Code for complex):
   5. Scaffold with Composer (or Claude Code for complex)
@@ -624,6 +784,14 @@ The Phase 1 workspace setup (Initiative → Project → Milestone → Issue, plu
 ```
 [Phase 2 handoff] Linear Project = approved PRD + ADRs + OpenAPI + wireframes
    │
+[Step 0a]      Bootstrap Claude Code Skills → author & smoke-test the
+               `.claude/skills/` bundle (test-runner, lint-and-format,
+               scaffold-module, code-review-checklist, openapi-contract,
+               commit-message) → commit
+[Step 0b]      Connect Claude Code to Linear MCP → commit the subagent
+               roster under `.claude/agents/` (linear-task-agent +
+               5 Phase 3 specialists)
+   │
 [Step 1.1-1.5] Claude Code + Linear MCP → pull backlog, estimate, post comments,
                decompose XXLs into sub-issues (parentId)
    │
@@ -632,10 +800,14 @@ The Phase 1 workspace setup (Initiative → Project → Milestone → Issue, plu
 [Step 2.1-2.4] linear-next-task → fetch issue → update_issue (In Progress, assignee=me)
                → git checkout <branchName> → kickoff comment → context pull
    │
+[Step 3.0]    software-architect → plan → developer approval gate
+              (non-trivial stories only; in-pattern stories skip)
+   │
 [Step 3.1-3.4] Cursor / Claude Code implement + test + checkpoint comments
 [Step 3.5] self-review → fix Critical/High before PR
    │
 [Step 4.1] Open PR with [ENG-XXX] title + Closes ENG-XXX
+              ↳ if rebase conflicts → conflict-resolver
            → Linear auto-transitions to In Review
 [Step 4.2] CI: lint + types + tests + SonarQube + coverage
 [Step 4.3] CodeRabbit AI review
@@ -668,7 +840,9 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 | **Silent state-change scope creep** — a Claude prompt accidentally moves backlog issues to In Progress | Anthropic admin policy keeps `update_issue` scoped to the dev team only; the audit log on Linear records every state change. Off-board old developers by revoking OAuth in Linear. |
 | **Hallucinated APIs / dependencies in AI-generated code** — Claude or Cursor invents a method that does not exist | Run tests after every AI edit (Step 3.3). CI catches imports of non-existent modules. CodeRabbit flags hallucinated APIs in 70%+ of cases (CodeRabbit telemetry). |
 | **Linear Agent over-assignment** — Tech Lead routes too many stories to the Linear Agent without human review-bandwidth | Cap agent-authored PRs in flight per cycle (e.g., ≤ 3). The `agent-authored` label triggers two human reviewers, not one. Agent quality is reviewed at cycle close; under-performing patterns roll back to human-only. |
+| **Architecture-by-implementer** — `frontend-engineer` or `backend-engineer` invents a design mid-implementation, drifting from the established pattern | Step 3.0 routes non-trivial stories through `software-architect` first; implementation specialists explicitly defer architectural questions to the architect or escalate to a Phase 2 system-architect-style review. The developer-approval gate on the architect plan blocks scaffolding until the design is sound. |
 | **Refactor PRs introduce features** — Claude generalises during a refactor and adds capability that nobody asked for | Step 5.4: PRs against `tech-debt` issues that introduce features are rejected at review and split. The reviewer checklist explicitly asks "is any new behaviour added?". |
+| **Lost work on `--abort`** — developer (or AI) hits a confusing rebase / merge state and runs `git rebase --abort` or `git merge --abort`, throwing away resolution work that has already been done across multiple hunks | `conflict-resolver` is forbidden from running `--abort` without explicit developer instruction; if resolution becomes ambiguous it stops and surfaces the conflict for human decision rather than discarding work silently. Developers should also default to invoking `conflict-resolver` over `--abort` when stuck — the agent's per-hunk report makes "what would I lose?" answerable before any destructive command runs. |
 | **Comment spam on Linear** — every Claude Code session posts a kickoff + checkpoint + EOD comment, drowning real discussion | Comment discipline: one kickoff, checkpoint comments only on substantive change, one EOD only if not merged. Aggregate progress in the PR description, not on the issue. |
 | **AI estimate anchoring** — team accepts Claude's estimate without calibration | Step 1.4 mandates a divergence reason captured as a comment. Cycle retro reviews variance. The team's velocity (not Claude's estimates) drives capacity. |
 

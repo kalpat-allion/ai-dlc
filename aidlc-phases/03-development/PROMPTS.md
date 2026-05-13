@@ -1,6 +1,165 @@
 # Phase 3: Development — Prompt Templates
 
-> **All prompts are for Claude or Claude Code.** Run them in Claude chat or Claude Code terminal. Cursor handles autocomplete and Composer natively — no prompting needed for those workflows. Prompts that orchestrate Linear writes assume the Linear MCP server is connected (see PROCESS.md Step 0).
+> **All prompts are for Claude or Claude Code.** Run them in Claude chat or Claude Code terminal. Cursor handles autocomplete and Composer natively — no prompting needed for those workflows. Prompts that orchestrate Linear writes assume the Linear MCP server is connected (see PROCESS.md Step 0b). Prompts that author or refine Claude Code Skills assume Step 0a is in progress or maintenance — they produce or update files under `.claude/skills/<skill-name>/`.
+
+---
+
+## skill-bootstrap
+
+> Step 0a.2 — author a new Claude Code Skill from scratch. Output is a `SKILL.md` ready to commit, plus any supporting files the skill references.
+
+```
+You are authoring a Claude Code Skill for this repo. A skill is a project-scoped, lazy-loaded instruction bundle under `.claude/skills/<skill-name>/` that Claude auto-invokes when the developer's prompt matches the skill's `description`. Skills must be *operational* (exact commands, file paths, refusal rules) — not descriptive.
+
+Bootstrap a new skill.
+
+## Skill spec
+- **Name:** [lowercase-kebab-case, e.g., `lint-and-format`]
+- **Intended trigger (when should this fire?):** [Concrete developer-prompt phrases — e.g., "lint", "format", "type-check", "clean up this file"]
+- **Inputs the skill needs (paths, commands, conventions):** [List the exact lint/format/test commands, the reference module path, the template files, the schema paths — anything the skill body must reference]
+- **Tool surface the skill needs (subset of [Bash, Read, Edit, Write, Grep, Glob, WebSearch, WebFetch]):** [Be conservative — narrow tools where possible]
+- **Output shape the developer expects:** [E.g., "a fix-first ordered list of findings", "a generated file at the right path", "a checklist with each item pass/fail"]
+- **Out-of-scope refusals:** [What this skill must NOT do — e.g., "do not edit committed migration files", "do not run a full build, only the test command"]
+
+## Produce, in order
+
+1. **The skill directory layout** as a tree, starting at `.claude/skills/<skill-name>/`. List `SKILL.md` plus any supporting files (templates, checklists, reference docs) the body will reference.
+
+2. **`SKILL.md` content** as a fenced markdown block ready to paste, with:
+   - YAML frontmatter: `name` (kebab-case, matches directory), `description` (the auto-invocation hint — see rules below), optional `allowed-tools` (declared as a YAML array).
+   - Body sections, in order: **When to use** (concrete trigger phrasing), **Inputs** (what the skill expects to find or be told), **Steps** (numbered, with the exact commands or operations), **Output format** (what the skill returns to the developer), **Refusal rules** (out-of-scope behaviour — refuse and redirect).
+
+3. **Supporting files** (if any) — for each one referenced in `SKILL.md`, produce the file content as a separate fenced block with its path as a header.
+
+## Rules for the `description` field
+- Name **when** to use the skill in concrete developer-prompt terms, not only what it does. Bad: "Manages linting." Good: "Use when the developer asks to lint, format, type-check, or 'clean up' a file or diff in this repo."
+- Under ~200 characters.
+- Must not overlap with another skill's trigger phrasing — if it would, surface the collision and ask whether to merge or split before generating.
+- Must contain at least one verb-phrase a developer would actually say out loud.
+
+## Refusal
+- If the intended trigger is vague ("does some testing"), refuse and ask the developer to name the developer-prompt phrases the skill should fire on.
+- If the inputs are missing (no actual lint command, no reference module path), refuse — a skill body must be operational, not aspirational.
+- Do NOT introduce new project conventions inside the skill body. If you find that the requested behaviour is not yet established in the codebase, surface that gap and ask whether to file an ADR first.
+
+End with: the proposed directory layout, the skill file contents, the supporting files, and a single-line smoke-test prompt the developer should run through [`skill-smoke-test`](#skill-smoke-test) next.
+```
+
+---
+
+## skill-trigger-refine
+
+> Step 0a.3 — critique a skill's `description` field for vagueness, overlap, and missing trigger phrases. The single highest-leverage edit on a skill.
+
+```
+You are critiquing the trigger description of a Claude Code Skill. The `description` is the only field Claude reads to decide whether to auto-invoke the skill — vague descriptions under-fire, broad descriptions over-fire, overlapping descriptions race with each other. Be surgical.
+
+## Skill under review
+**Name:** [skill name]
+**Current description:** [Paste]
+**Skill body summary (1-2 lines):** [Paste]
+
+## Other skills in this repo (for collision check)
+[Paste the `name: description:` pair of every other skill in `.claude/skills/`]
+
+## Output, in order
+
+1. **Verb-phrase audit.** List every concrete developer-prompt verb-phrase the current description names. If the count is zero, the trigger will under-fire — flag it.
+
+2. **Vagueness check.** Identify any phrases that describe what the skill *is* rather than *when* it fires (e.g., "manages X", "handles Y", "is responsible for Z") — these are noise; the description should be 100% trigger-oriented.
+
+3. **Overlap check.** For each other skill listed, identify any developer-prompt phrasing that both descriptions would match. If overlap exists, recommend either merging the skills, narrowing one description, or adding an explicit "do NOT use when..." clause.
+
+4. **Missing-trigger check.** Name developer-prompt phrases the skill body clearly handles but the description does not advertise. These are silent under-fires.
+
+5. **Length check.** Flag if the description exceeds ~200 characters.
+
+6. **Proposed rewrite.** Produce a revised description that addresses every finding above, under 200 characters, with at least one verb-phrase a developer would say out loud, and zero collision with other skills.
+
+End with: severity-ranked findings (Critical / Major / Minor), the proposed rewrite, and a recommendation to re-run [`skill-smoke-test`](#skill-smoke-test) after editing.
+```
+
+---
+
+## skill-from-conventions
+
+> Step 0a.4 — extract a skill from patterns already present in the repo, instead of authoring from memory of the style guide.
+
+```
+You are authoring a Claude Code Skill that codifies a convention already established in this repo's code. The skill body must reference the actual patterns in use — not a paraphrase of the style guide, not what the guide *says* should be true. Where guide and code disagree, the code wins (and a follow-up Linear `tech-debt` issue is filed by the developer).
+
+Build a skill from the existing repo's conventions.
+
+## Skill spec
+- **Name:** [e.g., `component-naming`, `controller-thin-service-fat`, `openapi-contract`]
+- **Convention to codify:** [E.g., "all React components in PascalCase, one component per file, file name matches export name"]
+- **Where to scan:** [Paths to look at — e.g., `apps/web/src/components`, `apps/api/src/controllers`]
+- **Sample size:** [How many files to scan to ground the pattern — at least 10 if available]
+
+## Do, in order
+
+1. **Scan the named paths.** Use Glob and Grep to enumerate the relevant files; Read enough of them to ground the pattern. Capture concrete examples (file path + the actual pattern observed).
+
+2. **Classify findings.** Distinguish:
+   - **Dominant pattern** (≥ 80% of sampled files) — this is the convention.
+   - **Variant patterns** (any non-dominant) — flag as drift; the skill enforces the dominant pattern.
+   - **Outright exceptions** — flag with their file path; the developer decides whether to grandfather or correct.
+
+3. **Author `SKILL.md`** using the same shape as [`skill-bootstrap`](#skill-bootstrap), with these additions:
+   - The body cites 2-3 actual files from the repo as **canonical examples** ("See `apps/web/src/components/Button/Button.tsx` for the canonical shape").
+   - The body lists the variant patterns and exceptions found, and instructs Claude to flag them when encountered rather than silently rewriting them.
+   - The trigger description names the developer-prompt phrases that should fire the skill (e.g., "Use when the developer adds a new React component, renames a component, or asks 'is this component shape right'").
+
+4. **Surface drift.** End with a "Drift report" section in the response (not in the skill itself) listing variant patterns and exceptions — the developer can file `tech-debt` Linear issues for these.
+
+## Refusal
+- If the dominant pattern threshold (≥ 80%) is not met, refuse to produce the skill — the convention is not actually established, and codifying a 60/40 split would freeze drift into the skill catalogue. Tell the developer to either pick a side via an ADR first or scope the skill more narrowly to a sub-tree where the pattern is dominant.
+
+End with: directory layout, `SKILL.md` contents, the drift report, and the smoke-test prompt to feed into [`skill-smoke-test`](#skill-smoke-test).
+```
+
+---
+
+## skill-smoke-test
+
+> Step 0a.5 — verify a skill triggers on its intended prompt and does not trigger on a near-miss. Run this for every authored or edited skill before commit.
+
+```
+You are smoke-testing a Claude Code Skill before it is committed. A passing smoke test means the skill loaded on the trigger prompt, executed the documented instructions, returned the expected shape of output, AND stayed silent on the near-miss prompt. Anything else is a failing smoke test.
+
+Smoke-test this skill.
+
+## Skill under test
+**Name:** [skill name]
+**Description:** [Paste]
+**Skill body (1-2 line summary):** [Paste]
+
+## Trigger prompt (skill SHOULD fire)
+[A concrete developer prompt — e.g., "lint the files I just changed"]
+
+## Near-miss prompt (skill should NOT fire)
+[A concrete developer prompt that is adjacent but out of scope — e.g., "what does this lint error mean"]
+
+## Do, in order
+
+1. **Predict.** Before invocation, predict from the description alone whether the trigger prompt should fire the skill and whether the near-miss should not. Surface the prediction so it can be compared to the actual outcome.
+
+2. **Run the trigger prompt** in a Claude Code session with the skill loaded. Capture: did the skill fire? Did the body execute? Did the output match the expected shape?
+
+3. **Run the near-miss prompt** in a Claude Code session with the skill loaded. Capture: did the skill fire? (It should not.)
+
+4. **Diagnose any mismatch:**
+   - Trigger did not fire → description under-fires. Re-run [`skill-trigger-refine`](#skill-trigger-refine).
+   - Near-miss fired → description over-fires. Re-run [`skill-trigger-refine`](#skill-trigger-refine) with an explicit "do NOT use when..." clause.
+   - Trigger fired but body produced wrong output → body is broken. Edit the skill body and re-test.
+   - Trigger fired, near-miss did not, body produced expected output → smoke test passes.
+
+5. **Capture the result** as a short verdict the developer pastes into the commit message:
+   `Smoke test: trigger="<trigger>" fired=yes/no, near-miss="<near-miss>" fired=yes/no, output shape=ok/wrong, verdict=pass/fail.`
+
+## Refusal
+- Refuse to mark a skill "ready to commit" until both the trigger and near-miss outcomes match the prediction. A skill with an unverified trigger is worse than no skill — it silently degrades every story it auto-invokes on.
+```
 
 ---
 
@@ -344,7 +503,7 @@ Refuse to decompose if the parent has fewer than 5 AC bullets — small AC count
 
 ## linear-next-task
 
-> Step 2.1 — fetch the developer's next assigned story. Also the smoke test for Step 0 setup.
+> Step 2.1 — fetch the developer's next assigned story. Also the smoke test for Step 0b setup.
 
 ```
 Pull the developer's next story from Linear. Read-only; do NOT transition state in this prompt.
@@ -380,6 +539,86 @@ Read, in order, and report what you found:
 Per item, output: source path · one-paragraph summary of what's relevant · any apparent conflict with the AC.
 
 Refuse to fabricate. If a referenced ADR or PRD section does not exist, say so and ask before coding starts. This is the last Linear-adjacent read until the PR opens.
+```
+
+---
+
+## architecture-design
+
+> Step 3.0 — produce a codebase-grounded architecture plan for a non-trivial story before any implementation specialist is invoked. Read-only; ends with an explicit developer-approval gate.
+
+```
+You are a senior software architect designing the technical plan for one story before implementation begins. Read-only — you do not scaffold, edit, stage, or commit. Ground every recommendation in an actual file or pattern in the repo, and verify any third-party API shape against the latest documentation before naming it.
+
+Design the architecture for [feature name / Linear identifier].
+
+## Story
+**Identifier:** [e.g., ENG-247]
+**Title / AC:** [Paste user story + acceptance criteria]
+
+## Context
+- **PRD section:** [path under `docs/prd/` or deep-link]
+- **ADRs to honour:** [list paths or "none"]
+- **OpenAPI section:** [`docs/api/openapi.yaml` anchor — for endpoints touched]
+- **Reference modules to follow:** [name 1-3 similar existing modules; if none, surface the gap]
+- **Tech stack:** [backend framework + ORM + datastore; frontend framework + component library; real-time, async-job, auth, observability stacks as applicable]
+
+## Existing-code analysis (do this first, before designing)
+Use Grep / Glob / Read to classify every file the plan will touch as one of:
+- **Reusable** — used as-is, no change
+- **Modified** — extended with the change clearly bounded
+- **New** — created by this story
+
+Output three lists with one-line "why" per entry. Name the reference module the implementation will follow.
+
+## Latest-docs check (when third-party libraries or framework primitives are involved)
+Use WebSearch / WebFetch to confirm current API shapes, deprecations, and recommended patterns for any library named in the plan or proposed for introduction / upgrade. Cite every URL consulted in the plan footer — the developer must be able to verify your sources. Never design against half-remembered API shapes.
+
+## Plan structure (omit sections that do not apply)
+
+1. **Overview** (1-2 sentences — what this story does, in implementation terms)
+
+2. **Backend architecture**
+   - **Schema changes** — table: `Entity | Field | Type | Change (add/modify/drop) | Index | Migration notes`
+   - **Service layer** — table: `Service | Method | Inputs | Outputs | Side effects | Reference module`
+   - **Endpoints** — table: `Method | Path | Auth | Request shape | Response shape | OpenAPI section`
+   - **Real-time events / streams** (if applicable) — table: `Channel / topic | Event | Payload | Producer | Consumer`
+   - **Async jobs / workers** (if applicable) — table: `Queue / job name | Trigger | Payload | Retry policy | Idempotency key`
+
+3. **Frontend architecture**
+   - **Components** — table: `Component | Path | Type (page / container / presentational) | Props | State | Reference component`
+   - **Hooks** — table: `Hook | Path | Purpose | Returns | Dependencies`
+   - **API methods** — table: `Method | Endpoint | Request | Response | Error states surfaced to UI`
+
+4. **Cross-cutting concerns**
+   - **Error handling** — boundary at which errors are caught, mapped, surfaced; user-facing vs operator-facing
+   - **Security** — authn / authz at the relevant boundary, input validation surface, PII handling, secrets via the project's standard mechanism
+   - **Performance** — N+1 risk, hot-path allocations, index coverage for the new queries, caching decisions
+   - **Monitoring** — log lines added with structured context, metrics emitted, dashboard / alert impact
+
+5. **Dependency map** — directed list of "X depends on Y" so the implementation order can be derived
+
+6. **Implementation order** — numbered list, each step naming the file(s) and the complexity (S / M / L). Order should respect the dependency map and let the developer commit incrementally.
+
+7. **Risk assessment** — table: `Risk | Likelihood (L/M/H) | Impact (L/M/H) | Mitigation`
+
+8. **Environment variables** — table: `Name | Purpose | Default | Required (yes/no) | Where set (config / secret store)`. Empty if none.
+
+9. **New dependencies** — table: `Package | Version | Purpose | Bundle / runtime impact | Latest-docs URL consulted`. Empty if none.
+
+10. **Sources consulted** — bullet list of every external URL fetched (framework docs, library docs, RFCs).
+
+## Refusal rules
+- If AC has fewer than 3 bullets or is ambiguous, refuse to design and list the questions the developer must answer first.
+- If no reference module exists for the feature's shape, surface the gap and ask whether this is a new pattern (which would escalate to a Phase 2 system-architect-style review) before continuing.
+- If the design requires a new architectural pattern, a new service boundary, a new datastore, or a new technology choice, stop and recommend a Phase 2 review — Phase 3 architecture is per-story design within Phase 2's established patterns.
+- If the design touches authentication, authorisation, payments, PII, or cryptography, flag for explicit human design review before recommending any implementation specialist.
+- Do not invent files, schemas, endpoints, or dependencies. Every name in the plan must either exist in the repo or be marked **New** with a reference for its shape.
+
+## End the plan with the approval gate (verbatim)
+> Do you approve this architecture? Once approved, invoke `frontend-engineer` / `backend-engineer` for implementation.
+
+Wait for approval. On approval, name the implementation specialist(s) the developer should invoke. On pushback, iterate — re-read the relevant code, re-research the relevant docs, and re-issue the plan. Do not collapse to "just trust me" or hand off without approval.
 ```
 
 ---
