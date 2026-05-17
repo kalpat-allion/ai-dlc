@@ -1,6 +1,26 @@
 # Phase 3: Development — Quality Gates
 
-## Gate 1: Per-Pull Request (Every PR)
+## Gate 1: Sprint Commitment
+
+### Cycle Commitment Criteria — Every Story
+- [ ] AC ≥ 3 bullets and unambiguous
+- [ ] Estimate set (T-shirt + Fibonacci) and calibrated against team velocity
+- [ ] No blocking dependencies (or blocker explicitly linked)
+- [ ] Clear owner assigned
+- [ ] Story decomposed into sub-issues if AI-estimated XXL (> 5 days)
+
+**Pass:** Tech Lead opens the Linear Cycle with all committed stories meeting the above.
+
+---
+
+## Gate 2: PR Merge
+
+### Per-Story Definition of Done
+- [ ] All AC verified (by tests or manual check)
+- [ ] Unit tests for all new business logic
+- [ ] Inline docs on new public functions
+- [ ] No known bugs introduced
+- [ ] READMEs updated for any module that crossed the documentation threshold
 
 ### Automated (CI Pipeline)
 - [ ] Linting passes
@@ -17,36 +37,19 @@
 - [ ] Each comment addressed or dismissed with justification
 
 ### Human Review
-- [ ] ≥ 1 human approval
+- [ ] ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations)
 - [ ] PR links story, describes approach, notes AI-generated sections
 - [ ] Architecture alignment verified
+- [ ] For non-trivial stories, the `software-architect` plan was approved by the developer at Step 3.0 and captured as a Linear comment before scaffolding (in-pattern stories that skipped Step 3.0 confirm the followed reference module in the kickoff comment instead)
 - [ ] Business logic correctness confirmed
 - [ ] No new patterns without team discussion
+- [ ] Branch is rebased onto current main and the merge button is unblocked (use `conflict-resolver` when conflicts arise; never `--abort` without explicit reason — reflexive aborts have lost completed resolution work in past incidents)
 
-**Pass:** All automated green + CodeRabbit addressed + human approval.
-
----
-
-## Gate 2: Per-Sprint (End of Sprint)
-
-### Definition of Done — Every Story
-- [ ] All AC verified (by tests or manual check)
-- [ ] Code reviewed and merged
-- [ ] Unit tests for all new business logic
-- [ ] Inline docs on new public functions
-- [ ] No known bugs introduced
-
-### Sprint Health
-- [ ] Velocity tracked; AI estimates compared to actuals for calibration
-- [ ] 0 Critical SonarQube issues on main
-- [ ] Tech debt items logged in backlog
-- [ ] READMEs updated for changed modules
-
-**Pass:** All committed stories meet DoD.
+**Pass:** All automated green + CodeRabbit addressed + human approval + DoD checked.
 
 ---
 
-## Gate 3: Phase Completion (Before Testing Handoff)
+## Gate 3: Phase Completion
 
 ### Code
 - [ ] All MVP stories implemented and merged
@@ -69,6 +72,11 @@
 - [ ] Health check endpoints
 - [ ] Structured logging (JSON, correlation IDs)
 - [ ] Meaningful error messages (no stack traces in prod)
+
+### Cycle Health
+- [ ] Velocity tracked; AI estimates compared to actuals for calibration
+- [ ] Tech debt items logged in backlog
+- [ ] Cycle retrospective filed with AI-estimate variance recorded
 
 **Pass:** All items checked. Ready for Testing & QA.
 
