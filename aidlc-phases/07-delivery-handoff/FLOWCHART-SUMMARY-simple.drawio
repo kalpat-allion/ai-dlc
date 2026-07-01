@@ -1,0 +1,79 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Phase 7 Summary (Simple)" id="phase7-summary-simple">
+    <mxGraphModel dx="1212" dy="671" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="Phase 7: Delivery &amp; Handoff — End-to-End Summary" vertex="1">
+          <mxGeometry height="25" width="800" x="240" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="🔌 MCP connector&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Navy = entry/exit · Purple = Step 0 setup · Blue = delivery step · Yellow = quality gate" vertex="1">
+          <mxGeometry height="18" width="1160" x="60" y="38" as="geometry" />
+        </mxCell>
+        <mxCell id="G1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 1:&lt;/b&gt;&amp;nbsp;Release Automation Operational" vertex="1">
+          <mxGeometry height="30" width="260" x="655" y="72" as="geometry" />
+        </mxCell>
+        <mxCell id="G2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 2:&lt;/b&gt;&amp;nbsp;Documentation Complete" vertex="1">
+          <mxGeometry height="30" width="260" x="945" y="72" as="geometry" />
+        </mxCell>
+        <mxCell id="START" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="&lt;b&gt;Phase 7 Entry&lt;/b&gt;&lt;br&gt;&lt;br&gt;From Phases 1-6 complete" vertex="1">
+          <mxGeometry height="120" width="260" x="75" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="S0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire docs MCP + GitHub MCP + Claude Code Action + 1Password CLI.&lt;br&gt;&lt;br&gt;· Docs MCP · GitHub MCP · 1Password CLI" vertex="1">
+          <mxGeometry height="150" width="260" x="365" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="S1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 1: Release Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;Conventional Commits + semantic-release.&lt;br&gt;Claude Code Action polishes release notes on every tag.&lt;br&gt;&lt;br&gt;· semantic-release · Claude Code Action" vertex="1">
+          <mxGeometry height="150" width="260" x="655" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: Documentation Finalisation&lt;/b&gt;&lt;br&gt;&lt;br&gt;Mintlify / Docusaurus over Docs MCP.&lt;br&gt;Claude generates from OpenAPI + repo.&lt;br&gt;&lt;br&gt;· Mintlify / Docusaurus · Claude Code" vertex="1">
+          <mxGeometry height="150" width="260" x="945" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: Handoff Document&lt;/b&gt;&lt;br&gt;&lt;br&gt;handoff-agent over Phase 1-6 artefacts.&lt;br&gt;Internal review + recipient iteration.&lt;br&gt;&lt;br&gt;· handoff-agent · Claude Code" vertex="1">
+          <mxGeometry height="150" width="260" x="945" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Knowledge Transfer&lt;/b&gt;&lt;br&gt;&lt;br&gt;Claude scripts + Fathom recording.&lt;br&gt;Auto-summary appended to handoff doc.&lt;br&gt;&lt;br&gt;· Claude Code · Firefiles AI" vertex="1">
+          <mxGeometry height="150" width="260" x="655" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="END" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="&lt;b&gt;Engagement Concluded&lt;/b&gt;&lt;br&gt;&lt;br&gt;Recipient owns the system" vertex="1">
+          <mxGeometry height="120" width="260" x="75" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="G3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 3:&lt;/b&gt;&amp;nbsp;Handoff Package Ready" vertex="1">
+          <mxGeometry height="30" width="260" x="945" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="G4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 4:&lt;/b&gt;&amp;nbsp;Handoff Execution" vertex="1">
+          <mxGeometry height="30" width="260" x="655" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="START" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="S0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="S0" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="S1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="S1" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="S2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="S2" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="S3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="S3" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="S4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="S4" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="END">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gA1" edge="1" parent="1" source="G1" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="S1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gA2" edge="1" parent="1" source="G2" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="S2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gA3" edge="1" parent="1" source="G3" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="S3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gA4" edge="1" parent="1" source="G4" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="S4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

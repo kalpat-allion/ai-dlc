@@ -1,0 +1,148 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Phase 7 Summary (Slide)" id="phase7-summary-slide">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Phase 7: Delivery &amp; Handoff — End-to-End Summary" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="240" y="10" width="800" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="legend" value="🔌 MCP connector&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Navy = entry/exit · Purple = Step 0 setup · Blue = delivery step · Yellow = quality gate" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="60" y="38" width="1160" height="18" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G1" value="&lt;b&gt;Gate 1:&lt;/b&gt;&amp;nbsp;Release Automation Operational" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="655" y="66" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G2" value="&lt;b&gt;Gate 2:&lt;/b&gt;&amp;nbsp;Documentation Complete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="925" y="66" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="START" value="&lt;b&gt;Phase 7 Entry&lt;/b&gt;&lt;br&gt;&lt;br&gt;From Phases 1-6 complete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="115" y="119" width="240" height="95" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire docs / KB / GitHub MCPs + Claude Code Action + 1Password CLI.&lt;br&gt;&lt;br&gt;· Docs MCP · KB MCP · 1Password CLI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="385" y="104" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S1" value="&lt;b&gt;Step 1: Release Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;Conventional Commits + semantic-release. Claude Code Action polishes notes on every tag.&lt;br&gt;&lt;br&gt;· semantic-release · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="655" y="104" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S2" value="&lt;b&gt;Step 2: Documentation Finalisation&lt;/b&gt;&lt;br&gt;&lt;br&gt;Mintlify / Docusaurus over Docs MCP. Claude generates from OpenAPI + repo.&lt;br&gt;&lt;br&gt;· Mintlify / Docusaurus · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="925" y="104" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G3" value="&lt;b&gt;Gate 3:&lt;/b&gt;&amp;nbsp;Handoff Package Ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="925" y="237" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S3" value="&lt;b&gt;Step 3: Handoff Document&lt;/b&gt;&lt;br&gt;&lt;br&gt;handoff-agent over Phase 1-6 artefacts. Internal review + recipient iteration.&lt;br&gt;&lt;br&gt;· handoff-agent · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="925" y="275" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S4" value="&lt;b&gt;Step 4: Knowledge Transfer&lt;/b&gt;&lt;br&gt;&lt;br&gt;Claude scripts + Fathom recording + auto-summary to handoff doc and KB.&lt;br&gt;&lt;br&gt;· Claude Code · Fathom" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="655" y="275" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S5" value="&lt;b&gt;Step 5: Credential &amp;amp; Access&lt;/b&gt;&lt;br&gt;&lt;br&gt;1Password CLI inventory. Role transfer preferred. Recipient verifies + rotates.&lt;br&gt;&lt;br&gt;· 1Password CLI · Pulumi ESC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="385" y="275" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S6" value="&lt;b&gt;Step 6: Infrastructure Handoff&lt;/b&gt;&lt;br&gt;&lt;br&gt;IaC repo + state migration. Recipient wires MCP roster + reproducibility demo.&lt;br&gt;&lt;br&gt;· Pulumi · GitHub · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="115" y="275" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G4" value="&lt;b&gt;Gate 4:&lt;/b&gt;&amp;nbsp;Handoff Execution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="115" y="408" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G5" value="&lt;b&gt;Gate 5:&lt;/b&gt;&amp;nbsp;Support Period Closure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="385" y="408" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="G6" value="&lt;b&gt;Gate 6:&lt;/b&gt;&amp;nbsp;90-Day Debrief Complete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="655" y="408" width="240" height="28" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S7" value="&lt;b&gt;Step 7: Knowledge Base&lt;/b&gt;&lt;br&gt;&lt;br&gt;Atlassian Rovo / Notion MCP. Claude seeds FAQ + glossary + troubleshooting.&lt;br&gt;&lt;br&gt;· KB MCP · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="115" y="446" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="S8" value="&lt;b&gt;Step 8: Post-Handoff Support&lt;/b&gt;&lt;br&gt;&lt;br&gt;30-day support. Seer triages inherited errors. Weekly paired Claude Code session.&lt;br&gt;&lt;br&gt;· Sentry Seer · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="385" y="446" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="SF" value="&lt;b&gt;Final: 90-Day Debrief&lt;/b&gt;&lt;br&gt;&lt;br&gt;Day-90 retro generated by Claude from support-period artefacts. Lessons learned.&lt;br&gt;&lt;br&gt;· Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="655" y="446" width="240" height="125" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="END" value="&lt;b&gt;🎉 Engagement Concluded&lt;/b&gt;&lt;br&gt;&lt;br&gt;Recipient owns the system + AI loop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" vertex="1" parent="1">
+          <mxGeometry x="925" y="461" width="240" height="95" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="START" target="S0">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S0" target="S1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S1" target="S2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e4" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="S2" target="S3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e5" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S3" target="S4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S4" target="S5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S5" target="S6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e8" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="S6" target="S7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e9" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S7" target="S8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="S8" target="SF">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e11" style="endArrow=classic;html=1;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="SF" target="END">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="gA1" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G1" target="S1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="gA2" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G2" target="S2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="gA3" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G3" target="S3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="gA4" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G4" target="S7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="gA5" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G5" target="S8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="gA6" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="G6" target="SF">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

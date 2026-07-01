@@ -1,13 +1,13 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Phase 1 Summary (Slide)" id="phase1-summary-slide">
-    <mxGraphModel dx="1212" dy="1391" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0">
+    <mxGraphModel dx="1373" dy="1480" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=17;fontStyle=1;" value="Phase 1: Requirement Gathering — End-to-End Summary" vertex="1">
           <mxGeometry height="25" width="800" x="240" y="-46" as="geometry" />
         </mxCell>
-        <mxCell id="legend" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="👤 Human-led&amp;nbsp;&amp;nbsp;🤖 AI-assisted&amp;nbsp;&amp;nbsp;🔌 Linear MCP call&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Navy = entry/exit · Purple = Step 0 setup · Blue = step with Linear MCP writes · White = chat-only&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Yellow = quality gate" vertex="1">
+        <mxCell id="legend" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" value="Navy = entry/exit · Purple = Step 0 setup · Blue = step with Linear MCP writes · White = chat-only · Yellow = quality gate" vertex="1">
           <mxGeometry height="18" width="1160" x="60" y="-18" as="geometry" />
         </mxCell>
         <mxCell id="G1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;arcSize=40;" value="&lt;b&gt;Gate 1&lt;/b&gt; — PRD approval in Linear" vertex="1">
@@ -16,32 +16,32 @@
         <mxCell id="START" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="Phase 1 Entry&lt;br&gt;Linear admin + Claude Pro/Max/Team/Enterprise" vertex="1">
           <mxGeometry height="115" width="260" x="60" y="135" as="geometry" />
         </mxCell>
-        <mxCell id="S0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;Wire Claude ↔ Linear MCP&lt;br&gt;Path A web/Desktop · Path B Claude Code CLI&lt;br&gt;Smoke test + verify connector&lt;br&gt;👤 Admins · 🤖 Claude · 🔌 MCP" vertex="1">
+        <mxCell id="S0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;Wire Claude ↔ Linear MCP&lt;br&gt;&lt;br&gt;· Admins · Claude · Linear MCP" vertex="1">
           <mxGeometry height="145" width="260" x="360" y="120" as="geometry" />
         </mxCell>
-        <mxCell id="S1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 1: Stakeholder Interviews&lt;/b&gt;&lt;br&gt;Fireflies.ai records + transcribes · PM validates&lt;br&gt;Optional Linear context pull (READ-ONLY)&lt;br&gt;Claude structures findings — chat only&lt;br&gt;👤 PM · 🤖 Fireflies + Claude · 🔌 MCP" vertex="1">
+        <mxCell id="S1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 1: Stakeholder Interviews&lt;/b&gt;&lt;br&gt;Fireflies.ai records + transcribes · PM validates&lt;br&gt;&lt;br&gt;· PM · Fireflies · Claude · Linear MCP" vertex="1">
           <mxGeometry height="145" width="260" x="660" y="120" as="geometry" />
         </mxCell>
-        <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: PRD Generation&lt;/b&gt;&lt;br&gt;Compile context → PRD v1 → self + PM review&lt;br&gt;prd-to-linear-document publishes Project + Document&lt;br&gt;Stakeholder review IN LINEAR&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" vertex="1">
+        <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: PRD Generation&lt;/b&gt;&lt;br&gt;Compile context → PRD v1 → self + PM review&lt;br&gt;prd-to-linear-document publishes Project + Document&lt;br&gt;&lt;br&gt;· PM · Claude · Linear MCP" vertex="1">
           <mxGeometry height="145" width="260" x="960" y="120" as="geometry" />
         </mxCell>
-        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: User Stories&lt;/b&gt;&lt;br&gt;3a Decompose epics (chat only)&lt;br&gt;3b prd-to-linear-scaffold → Milestones&lt;br&gt;3c Stories + AC → Triage Issues w/ PRD deep-links&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" vertex="1">
+        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: User Stories&lt;/b&gt;&lt;br&gt;Decompose into epics&lt;br&gt;Add Milestones to the Linear Project&lt;br&gt;Push stories with acceptance criteria&lt;br&gt;&lt;br&gt;· PM · Claude · Linear MCP" vertex="1">
           <mxGeometry height="145" width="260" x="960" y="410" as="geometry" />
         </mxCell>
-        <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Gap Analysis&lt;/b&gt;&lt;br&gt;gap-analysis prompt vs PRD Document&lt;br&gt;linear-gap-sweep posts ONE consolidated comment&lt;br&gt;Optional market check · Prioritise findings&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" vertex="1">
+        <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Gap Analysis&lt;/b&gt;&lt;br&gt;Run gap-analysis prompt with PRD link&lt;div&gt;Resolve gaps&lt;br&gt;&lt;br&gt;· PM · Claude · Linear MCP&lt;/div&gt;" vertex="1">
           <mxGeometry height="145" width="260" x="660" y="410" as="geometry" />
         </mxCell>
-        <mxCell id="S5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 5: Scalability &amp;amp; Cost&lt;/b&gt;&lt;br&gt;Extract scalability factors from PRD&lt;br&gt;Validate cost vs AWS / Azure / GCP calculators&lt;br&gt;Add NFRs to PRD Document&lt;br&gt;👤 PM · 🤖 Claude · 🔌 optional MCP" vertex="1">
+        <mxCell id="S5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 5: Scalability &amp;amp; Cost&lt;/b&gt;&lt;br&gt;Extract scalability factors from PRD&lt;br&gt;Validate cost vs AWS / Azure / GCP calculators&lt;br&gt;Add NFRs to PRD Document&lt;br&gt;&lt;br&gt;· PM · Claude · optional Linear MCP" vertex="1">
           <mxGeometry height="145" width="260" x="360" y="410" as="geometry" />
         </mxCell>
         <mxCell id="END" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="←&amp;nbsp;Phase 2: System Design&lt;br&gt;Handoff: single Linear Project URL&lt;br&gt;= PRD Document + Milestones + accepted Backlog" vertex="1">
           <mxGeometry height="115" width="260" x="60" y="425" as="geometry" />
         </mxCell>
-        <mxCell id="G2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 2:&amp;nbsp;&lt;/b&gt;Milestones approval (after Stage 3b)" vertex="1">
+        <mxCell id="G2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 2:&amp;nbsp;&lt;/b&gt;Milestones approval" vertex="1">
           <mxGeometry height="32" width="260" x="960" y="585" as="geometry" />
         </mxCell>
-        <mxCell id="G3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 3:&lt;/b&gt;&amp;nbsp;AI Inbox cleared (after Stage 3c)" vertex="1">
-          <mxGeometry height="32" width="260" x="960" y="625" as="geometry" />
+        <mxCell id="G3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=10;arcSize=40;" value="&lt;b&gt;Gate 3:&lt;/b&gt;&amp;nbsp;Per story apptoval" vertex="1">
+          <mxGeometry height="32" width="260" x="820" y="320" as="geometry" />
         </mxCell>
         <mxCell id="G4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;arcSize=40;" value="&lt;b&gt;Gate 4:&lt;/b&gt;&amp;nbsp;Gap severity reviewed" vertex="1">
           <mxGeometry height="32" width="260" x="660" y="585" as="geometry" />
@@ -76,7 +76,7 @@
         <mxCell id="gArrow2" edge="1" parent="1" source="G2" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.35;exitY=0;exitDx=0;exitDy=0;entryX=0.35;entryY=1;entryDx=0;entryDy=0;" target="S3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="gArrow3" edge="1" parent="1" source="G3" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;edgeStyle=orthogonalEdgeStyle;exitX=0.65;exitY=0;exitDx=0;exitDy=0;entryX=0.65;entryY=1;entryDx=0;entryDy=0;" target="S3">
+        <mxCell id="gArrow3" edge="1" parent="1" source="G3" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;edgeStyle=orthogonalEdgeStyle;exitX=0.426;exitY=0.956;exitDx=0;exitDy=0;entryX=0.346;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" target="S3">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="gArrow4" edge="1" parent="1" source="G4" style="endArrow=classic;html=1;rounded=0;strokeColor=#D6B656;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="S4">
