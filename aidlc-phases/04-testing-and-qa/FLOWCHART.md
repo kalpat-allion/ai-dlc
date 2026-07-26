@@ -21,7 +21,7 @@ The phase is split into nine per-step flowcharts so each can be navigated, embed
 | Symbol | Meaning |
 |--------|---------|
 | 🤖 | AI/tool-driven action (Claude Code, Playwright, k6, CodeRabbit, SonarQube, BrowserStack) |
-| 🔌 | Claude Code calling the **Linear MCP** or **Sentry MCP** connector (read or write) |
+| 🔌 | Claude Code calling the **Linear MCP** or **Sentry MCP** server (read or write) |
 | 🤝 | **Sentry Agent for Linear** acting as an assignable Linear Agent |
 | 🔁 | Auto-transition driven by Linear ↔ git integration (PR open / merge) |
 | 👤 | Human-led action |
@@ -70,12 +70,12 @@ One-off connector and integration wiring per workspace and per developer/QA. Lin
 
 ```mermaid
 flowchart TD
-    S0_START([Start: Phase 4 prerequisites<br/>Linear MCP from Phase 1 with Phase 3 scopes<br/>+ Sentry org admin<br/>+ Anthropic Connectors admin]) --> S0_ANTH
+    S0_START([Start: Phase 4 prerequisites<br/>Linear MCP from Phase 1 with Phase 3 scopes<br/>+ Sentry org admin<br/>+ Claude Code tool-permission settings]) --> S0_ANTH
 
-    S0_ANTH[Anthropic admin Team/Enterprise:<br/>Linear scopes - widen to allow Resolved/Done transitions<br/>and create_issue with parentId + regression-test label<br/>Sentry scopes - find_issues, get_issue, get_event,<br/>seer_status, seer_run<br/>delete_event and bulk ops DISABLED<br/>👤 Anthropic admin]
+    S0_ANTH[Tech Lead - Claude Code tool-permission settings:<br/>Linear - widen to allow Resolved/Done transitions<br/>and create_issue with parentId + regression-test label<br/>Sentry - allow find_issues, get_issue, get_event,<br/>seer_status, seer_run<br/>delete_event and bulk ops DENIED<br/>👤 Tech Lead]
     S0_ANTH --> S0_PA
 
-    S0_PA[Path A: Sentry MCP for Claude Code<br/>claude mcp add --transport http --scope user<br/>sentry https://mcp.sentry.dev/mcp<br/>then /mcp - select sentry - approve OAuth<br/>verify with find_issues smoke test<br/>🤖 Claude Code + 👤 each developer/QA]
+    S0_PA[Path A: Sentry MCP for Claude Code<br/>claude mcp add --transport http --scope project<br/>sentry https://mcp.sentry.dev/mcp<br/>then /mcp - select sentry - approve OAuth<br/>verify with find_issues smoke test<br/>🤖 Claude Code + 👤 each developer/QA]
     S0_PA --> S0_PB
 
     S0_PB[Path B: Sentry Agent for Linear<br/>Linear admin - Settings - Integrations - Sentry - Connect<br/>Sentry admin - map Sentry projects to Linear teams<br/>👤 Linear + Sentry admins]
@@ -107,7 +107,7 @@ flowchart TD
 
 ## Step 1: Test Plan Creation
 
-Entry point is the Phase 1 PRD Document and the Phase 2 architecture/ADRs/OpenAPI on Linear. Sub-stages 1.1 → 1.5 read inputs via Linear MCP, draft the test plan in chat, run a self-review gap-analysis, publish the plan as a Linear Document attached to the Project, and assign test ownership inside the Document. Gate 1 is QA Lead + Tech Lead approval — on No, the loop returns to 1.2 to regenerate. See [QUALITY-GATES.md → Gate 1](./QUALITY-GATES.md#gate-1-test-plan-approved).
+Entry point is the Phase 1 PRD Document and the Phase 2 architecture/ADRs/OpenAPI on Linear. Sub-stages 1.1 → 1.5 read inputs via Linear MCP, draft the test plan in Claude Code, run a self-review gap-analysis, publish the plan as a Linear Document attached to the Project, and assign test ownership inside the Document. Gate 1 is QA Lead + Tech Lead approval — on No, the loop returns to 1.2 to regenerate. See [QUALITY-GATES.md → Gate 1](./QUALITY-GATES.md#gate-1-test-plan-approved).
 
 ```mermaid
 flowchart TD

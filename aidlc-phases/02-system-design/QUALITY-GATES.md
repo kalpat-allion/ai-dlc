@@ -51,15 +51,16 @@ Four gates align with the four blocks in [PROCESS.md](./PROCESS.md) and the [FLO
 
 ## Gate 3: Wireframes & Tech Stack
 
-- [ ] Claude Design project link recorded in project README
-- [ ] Design system onboarded (from repo + brand) — every wireframe inherits it
-- [ ] frontend-design Skill enabled on the architect's Claude account
+- [ ] Wireframe screens committed to the repo (React + Tailwind + shadcn); deploy-preview or Storybook link recorded in README
+- [ ] Design system established in the repo (inferred from code, or bootstrapped) — every wireframe inherits its tokens
+- [ ] frontend-design Skill enabled in Claude Code
 - [ ] Wireframes exist for ALL key user flows from the PRD
 - [ ] All states shown per primary screen: loading, empty, error, success
 - [ ] Responsive: desktop (1440) + mobile (375) variants
 - [ ] Accessibility review passes WCAG 2.1 AA (0 Critical, 0 High)
-- [ ] For any flow handed off to code: branch created via Claude Design → Claude Code, PR opened, wireframe URL in PR description
-- [ ] Stakeholder sign-off captured as inline comment on the Claude Design canvas
+- [ ] For any component promoted to the shared library: props/variants tightened, render + a11y tests added, PR opened
+- [ ] Stakeholder sign-off captured on the previewed screens (deploy preview / Storybook / Figma)
+- [ ] If Figma was used: the Figma file link is recorded and its tokens are reconciled with the repo
 - [ ] Tech stack ADRs complete for every major decision (language, framework, datastore, cache, broker, IaC, observability, auth)
 - [ ] Each unfamiliar tech choice has a training plan attached to its ADR
 - [ ] Team reviewed and agreed (no unresolved objections)
@@ -77,7 +78,7 @@ Four gates align with the four blocks in [PROCESS.md](./PROCESS.md) and the [FLO
 - [ ] Mermaid `.mmd` files in `/docs/diagrams/mermaid/` (C4 Context + Container, ER, key sequences)
 - [ ] Database schema in source directory (`/src/db/` or `/prisma/`); migrations + seeds present
 - [ ] OpenAPI 3.1 spec at `/docs/api/openapi.yaml`; mock server URL in README
-- [ ] Claude Design project link + handoff branch(es) referenced from README
+- [ ] Wireframe screens in the repo + deploy-preview / Storybook link (and Figma file link if used) referenced from README
 - [ ] Accessibility report at `/docs/accessibility/wcag-aa-report.md`
 - [ ] Tech stack ADRs + training plans complete
 - [ ] Linear: every Phase 2 artifact URL linked from a `phase:design` Issue, and the Phase 1 PRD Document is still cited from each artifact
@@ -95,8 +96,8 @@ Four gates align with the four blocks in [PROCESS.md](./PROCESS.md) and the [FLO
 | Eraser diagram first-pass time (per diagram) | < 15 min |
 | Mermaid in-repo C4 generation | < 30 min total |
 | OpenAPI spec generation + Swagger walkthrough | < 1 day |
-| Claude Design wireframe per user flow (incl. iteration) | < 4 hours |
+| frontend-design Skill wireframe per user flow (incl. iteration) | < 4 hours |
 | Accessibility review issues at Gate 3 | 0 Critical, 0 High |
 | Design review issues at Gate 1 | 0 Critical, ≤ 3 High (resolved before pass) |
 | API contract change-requests after frontend start | 0 (any change requires PM approval + impact analysis) |
-| Fallback-tool use in Step 4 | ≤ 1 per sprint (more than that triggers Claude-Design-coverage retro) |
+| Fallback-tool use in Step 4 | ≤ 1 per sprint (more than that triggers a frontend-design-coverage retro) |

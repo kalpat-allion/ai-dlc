@@ -15,8 +15,8 @@ The phase is split into six per-step flowcharts so each can be navigated, embedd
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI-assisted step (Claude or Fireflies.ai) — no external write |
-| 🔌 | Claude calling the **Linear MCP connector** (read or write) |
+| 🤖 | AI-assisted step (Claude Code or Fireflies.ai) — no external write |
+| 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 👤 | Human-led step |
 | Diamond | Decision point / Quality gate |
 | Dark navy node | Phase / step entry or exit |
@@ -41,32 +41,26 @@ The phase is split into six per-step flowcharts so each can be navigated, embedd
 
 ## Step 0: One-Time Setup
 
-One-off connector wiring per workspace and per user. Path A covers Claude.ai web and Claude Desktop; Path B covers Claude Code (CLI / repo). Output is a verified Claude ↔ Linear MCP integration ready for Step 1's read-only context pull and Step 2's first write.
+One-off project-scoped MCP wiring in **Claude Code**. The Linear MCP server is registered per repo (committed to `.mcp.json`) and each user authenticates once per project — so concurrent projects each keep their own config and can even use a different Linear account. Output is a verified Claude Code ↔ Linear MCP integration ready for Step 1's read-only context pull and Step 2's first write.
 
 ```mermaid
 flowchart TD
-    S0_START([Start: Phase 1 prerequisites<br/>Linear admin + Claude Pro/Max/Team/Enterprise]) --> S0_ADMIN
+    S0_START([Start: Phase 1 prerequisites<br/>Linear admin + Claude Pro/Max/Team/Enterprise<br/>Claude Code installed]) --> S0_ADMIN
 
     S0_ADMIN[Workspace admin: confirm Linear plan exposes MCP<br/>+ allow-list mcp.linear.app + audit log on<br/>👤 Linear admin]
-    S0_ADMIN --> S0_ANTH
+    S0_ADMIN --> S0_ADD
 
-    S0_ANTH[Anthropic admin Team/Enterprise: enable Linear connector<br/>scopes read + create issues + create comments<br/>update / state-change DISABLED until team mature<br/>👤 Anthropic admin]
-    S0_ANTH --> S0_PATH{Choose surface}
+    S0_ADD[Add server at PROJECT scope from repo root<br/>claude mcp add --transport http --scope project<br/>linear https://mcp.linear.app/mcp<br/>writes committed .mcp.json - distinct name per account<br/>🤖 Claude Code]
+    S0_ADD --> S0_AUTH
 
-    S0_PATH -- claude.ai web / Desktop --> S0_A1
-    S0_PATH -- Claude Code CLI --> S0_B1
+    S0_AUTH[Authenticate once per project<br/>claude - /mcp - select linear - approve OAuth<br/>review scopes read + write:issues + write:comments<br/>token stored per project registration<br/>👤 each user]
+    S0_AUTH --> S0_VER
 
-    S0_A1[Path A 1: Settings - Connectors - Linear - Connect<br/>OAuth in new tab - sign in - approve scopes<br/>👤 each user]
-    S0_A1 --> S0_A2[Path A 2: Per-conversation toggle<br/>+ - Connectors - Linear ON<br/>off by default - explicit opt-in per chat<br/>👤 user]
-    S0_A2 --> S0_TEST
+    S0_VER[claude mcp list - linear connected<br/>🤖 Claude Code]
+    S0_VER --> S0_TEST
 
-    S0_B1[Path B 1: claude mcp add --transport http --scope user<br/>linear https://mcp.linear.app/mcp<br/>🤖 Claude Code]
-    S0_B1 --> S0_B2[Path B 2: claude - /mcp - select linear - approve OAuth<br/>👤 user]
-    S0_B2 --> S0_B3[Path B 3: claude mcp list - linear connected<br/>🤖 Claude Code]
-    S0_B3 --> S0_TEST
-
-    S0_TEST[Smoke test: prompt Claude<br/>List my Linear teams<br/>then create a draft issue labelled ai-generated<br/>🔌 Claude + Linear MCP]
-    S0_TEST --> S0_VERIFY{Verification checklist:<br/>connector Connected,<br/>smoke-test issue in Triage,<br/>teams + projects readable,<br/>audit log on,<br/>update scope disabled?}
+    S0_TEST[Smoke test: prompt Claude Code<br/>List my Linear teams<br/>then create a draft issue labelled ai-generated<br/>🔌 Claude Code + Linear MCP]
+    S0_TEST --> S0_VERIFY{Verification checklist:<br/>linear connected in repo,<br/>smoke-test issue in Triage,<br/>teams + projects readable,<br/>audit log on,<br/>writes limited to read + create?}
 
     S0_VERIFY -- No --> S0_ADMIN
     S0_VERIFY -- Yes --> S0_END([Setup complete<br/>Ready for Step 1: Stakeholder Interviews])
@@ -74,7 +68,7 @@ flowchart TD
     style S0_START fill:#1B3A5C,color:#fff
     style S0_END fill:#1B3A5C,color:#fff
     style S0_ADMIN fill:#5C2E8A,color:#fff
-    style S0_ANTH fill:#5C2E8A,color:#fff
+    style S0_ADD fill:#5C2E8A,color:#fff
     style S0_TEST fill:#3D6B9F,color:#fff
 ```
 
@@ -130,7 +124,7 @@ flowchart TD
 
 ## Step 3: User Stories — Milestones & Issues
 
-Entry point is the approved PRD Document URL + existing Linear Project from Step 2. Stage 3a decomposes epics in chat only. Stage 3b runs `prd-to-linear-scaffold` to add Milestones to the existing Project, gated by Gate 2. Stage 3c runs `stories-to-linear-push` to create Triage issues with PRD deep-links, gated per-story by Gate 3 (AI Inbox empty). On Gate 2 No, the loop returns to S3B to regenerate the scaffold; on Gate 3 No, the loop returns to per-story acceptance. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-user-story-completeness-incl-linear-scaffolding).
+Entry point is the approved PRD Document URL + existing Linear Project from Step 2. Stage 3a decomposes epics locally in Claude Code (no Linear write). Stage 3b runs `prd-to-linear-scaffold` to add Milestones to the existing Project, gated by Gate 2. Stage 3c runs `stories-to-linear-push` to create Triage issues with PRD deep-links, gated per-story by Gate 3 (AI Inbox empty). On Gate 2 No, the loop returns to S3B to regenerate the scaffold; on Gate 3 No, the loop returns to per-story acceptance. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-user-story-completeness-incl-linear-scaffolding).
 
 ```mermaid
 flowchart TD

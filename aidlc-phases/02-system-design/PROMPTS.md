@@ -1,6 +1,6 @@
 # Phase 2: System Design — Prompt Templates
 
-> **All prompts target Claude (chat or Code) or Claude Design.** Eraser.io is driven from Claude via MCP — the architect stays in Claude and Eraser receives the call. Mermaid is generated in chat and committed to the repo by hand. Cursor / v0 / Figma are escalation-only and have no prompts here.
+> **All prompts run in Claude Code.** Copy the prompt, replace `[PLACEHOLDERS]`, and run. The UI prompts (Design System Bootstrap, UI Wireframe, Production Component) use the **frontend-design Skill** to generate the interface as real code in the repo; when a project uses **Figma** as its canvas, Claude Code drives it over the official Figma MCP (design-to-code and code-to-design). Eraser.io is driven from Claude Code via its project-scoped MCP server. Mermaid is generated in Claude Code and committed to the repo. Bolt / Lovable / v0 remain escalation-only and have no prompts here.
 
 ---
 
@@ -19,7 +19,7 @@ You are a senior solutions architect designing a system.
 - **Timeline:** [MVP deadline]
 
 ## PRD Summary
-[Paste PRD executive summary + functional requirements, or reference the Linear Document via the Linear connector]
+[Paste PRD executive summary + functional requirements, or reference the Linear Document via the Linear MCP server]
 
 Generate **2-3 architecture options**, each with:
 1. **Name** — Descriptive label
@@ -83,7 +83,7 @@ Output as a numbered list matching the questions above. Be specific — "Postgre
 
 ## Eraser Architecture Diagram (via MCP)
 
-> Use with the Eraser MCP connector enabled.
+> Use with the Eraser MCP server connected in Claude Code (project scope).
 
 ```
 Via Eraser MCP, generate a [cloud architecture / system overview / sequence] diagram for the architecture below.
@@ -182,7 +182,7 @@ Generate an ADR:
 You are a domain modeller extracting entities from a product spec. Your output drives the database schema, so be precise about identity, ownership, and cardinality.
 
 ## PRD source
-[Paste the PRD functional-requirements + user-flow sections, or reference the Linear Document via the Linear connector]
+[Paste the PRD functional-requirements + user-flow sections, or reference the Linear Document via the Linear MCP server]
 
 ## Architecture context
 - **Bounded contexts from Step 1:** [List the contexts the architecture proposal carved, e.g., Identity, Catalog, Orders]
@@ -381,12 +381,12 @@ End with a one-line verdict: PASS / PASS WITH FIXES / FAIL, plus the count of Cr
 
 ---
 
-## Claude Design — System Bootstrap
+## Design System Bootstrap
 
-> Run once per project at Step 4.1, especially for greenfield work without an existing design system.
+> Run in Claude Code with the frontend-design Skill enabled, once per project at Step 4.1 — especially for greenfield work without an existing design system. Output is committed repo code, not a canvas.
 
 ```
-We are starting a new project that has no existing design system. Build a starter design system for it.
+Using the frontend-design Skill, build a starter design system for this project as real code in the repo.
 
 ## Product context
 - **Product:** [Name + one-line description]
@@ -394,23 +394,28 @@ We are starting a new project that has no existing design system. Build a starte
 - **Brand cues we have:** [logo URL or description, brand colours if any, voice/tone notes]
 - **Reference products we admire (and what we admire):** [3-5 examples]
 - **Reference products we explicitly want to avoid:** [3-5 examples + why]
+- **Repo conventions:** [framework, styling (Tailwind?), component library (shadcn?), where tokens live — infer from the repo if unstated]
 
-## What I need
-1. A primary + secondary + accent colour palette with hex values, justified against the audience
+## What I need (as committed code, matching repo conventions)
+1. A primary + secondary + accent colour palette with hex values, justified against the audience — expressed as design tokens (e.g., Tailwind theme / CSS variables)
 2. A typography pairing (display + body + mono) that is NOT Inter/Roboto/Open Sans/Lato (default-tier)
-3. Core component tokens: button (primary/secondary/ghost/destructive), input, card, modal, toast, table - with hover/focus/disabled states
-4. Spacing scale (4-8 stops) and radius scale
-5. One reference page (a representative dashboard or detail screen) that uses everything above
+3. Core components: button (primary/secondary/ghost/destructive), input, card, modal, toast, table - with hover/focus/disabled states, as shadcn-aligned components
+4. Spacing scale (4-8 stops) and radius scale as tokens
+5. One reference screen (a representative dashboard or detail screen) as a route or Storybook story that uses everything above, so it can be previewed in the dev server
 
-Render this as a live HTML/CSS preview in this Claude Design project. After I approve, this becomes the default design system every subsequent wireframe inherits.
+If the project already maintains its design system in **Figma**, first pull the existing tokens/variables via the Figma MCP (`get_variable_defs` / `get_design_context`) and reconcile to them rather than inventing new ones.
+
+After I approve the previewed reference screen, this becomes the default design system every subsequent wireframe inherits.
 ```
 
 ---
 
-## Claude Design — Wireframe per Flow
+## UI Wireframe
+
+> Run in Claude Code with the frontend-design Skill. Output is runnable screens committed to the repo and previewed in the dev server. For a designer-led flow, generate the same screen into Figma instead via `generate_figma_design` / `use_figma`, or implement an existing Figma frame with `get_design_context`.
 
 ```
-Generate a wireframe for the user flow below. Use this project's design system - do not introduce new fonts, colours, or components.
+Using the frontend-design Skill, generate a wireframe screen for the user flow below as code in this repo. Use this project's design system - do not introduce new fonts, colours, or components.
 
 ## Flow
 - **Name:** [e.g., "Therapist accepts a session request"]
@@ -421,11 +426,11 @@ Generate a wireframe for the user flow below. Use this project's design system -
 - **Error / edge cases:** [list]
 - **Data on screen:** [What information must be visible at each step]
 
-## Required deliverables
+## Required deliverables (as repo code, previewable in the dev server / Storybook)
 1. Desktop layout (1440 width) for every step in the happy path
 2. Mobile layout (375 width) for every step
 3. All states for the primary screen: loading, empty, error, success
-4. Inline annotations on the canvas pointing to non-obvious interactions
+4. Code comments (or a short MDX note) calling out non-obvious interactions
 
 ## Constraints
 - Tap targets ≥ 44px on mobile
@@ -433,20 +438,20 @@ Generate a wireframe for the user flow below. Use this project's design system -
 - All copy is real placeholder copy, not Lorem Ipsum
 - Use shadcn-aligned components where possible
 
-Render in this Claude Design project. I will refine via inline comments.
+Place the screen where the repo expects wireframe/prototype routes or stories, and tell me the dev-server URL / Storybook path to preview it. I will refine by prompt.
 ```
 
 ---
 
-## Claude Design — Production-Grade Component Generation
+## Production Component
 
-> Use when a wireframe component is mature enough to ship as code. Triggers Handoff to Claude Code.
+> Run in Claude Code when a wireframe component is mature enough to ship. It is already repo code — this promotes it into the shared component library.
 
 ```
-Promote this component from wireframe to production-grade code.
+Promote this wireframe component to a production-grade component in the shared library.
 
 ## Component
-[Click the component on the canvas, or describe it]
+[Path to the wireframe component in the repo, or describe it]
 
 ## Production requirements
 - **Stack:** React + TypeScript + Tailwind + shadcn/ui (match repo conventions)
@@ -457,11 +462,11 @@ Promote this component from wireframe to production-grade code.
 - **Tests:** at least one happy-path render test and one a11y assertion (axe or testing-library variant)
 
 ## Repo target
-- Branch name: feature/[component-name]-handoff
+- Branch name: feature/[component-name]
 - Path: [src/components/ui/[component-name].tsx]
 - Storybook story: [optional - include if repo uses Storybook]
 
-Hand off to Claude Code now. Open the PR with the wireframe URL in the description for review traceability.
+Refactor it into the shared library at the target path, wire the props/variants/tests above, and open the PR with the wireframe screen (dev-server route / Storybook path, or Figma link if used) referenced in the description for review traceability.
 ```
 
 ---
@@ -472,7 +477,7 @@ Hand off to Claude Code now. Open the PR with the wireframe URL in the descripti
 Review the component / page below against WCAG 2.1 Level AA.
 
 ## Component / page
-[Paste the rendered HTML, the React source, or the Claude Design canvas link]
+[Paste the React source, the rendered HTML, or the dev-server route / Storybook path (or the Figma frame link if used)]
 
 ## Context
 - **Stack:** [React + Tailwind + shadcn]

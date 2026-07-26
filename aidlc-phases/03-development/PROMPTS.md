@@ -268,7 +268,7 @@ Tasks:
 2. [Task 2]
 
 Do, in order:
-1. `claude mcp add ...` at the right scope (`--scope user` for personal, `--scope project` for team — explain which and why).
+1. `claude mcp add ... --scope project` — the framework standard: the server is committed to the repo's `.mcp.json` so the whole team shares it and each project stays isolated (independent config and auth per project, even a different account per project via distinct server names).
 2. Authenticate; run a no-write smoke test.
 3. Execute the listed tasks.
 4. Add a short section to the repo's README or `docs/mcp.md`: server URL, scope, auth method, smoke-test command, off-boarding steps.

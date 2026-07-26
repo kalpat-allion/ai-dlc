@@ -61,7 +61,7 @@ This document defines the AI-assisted workflow for the Security & Compliance pha
 | **Input** | GitHub org with Code Security licence (or Snyk CLI auth), Anthropic API key, Semgrep account (free tier OK), Trivy installed, GitGuardian workspace + ggshield, Claude Code installed; for compliance-certifying orgs: Vanta or Drata workspace |
 | **Tools** | **Claude Code `/security-review`**, **`anthropics/claude-code-security-review` GitHub Action**, **Semgrep MCP**, **Trivy MCP**, **ggshield AI hook**, GitHub Advanced Security or Snyk CLI, OPA / Conftest, Vanta or Drata MCP (optional) |
 | **Output** | Every developer's Claude Code can scan diffs locally and via PR; SAST + SCA + container + secrets all run in CI; AI hook intercepts secrets at prompt and tool-use time; compliance-cert orgs have agent-driven evidence pipelines |
-| **Human** | Security Champion authorises org-level connectors; each developer authenticates once via OAuth; Tech Lead expands Anthropic admin policies for security-review write scopes |
+| **Human** | Security Champion authorises the org-level MCP servers; each developer authenticates once per project via OAuth; Tech Lead grants the security-review workflow its write permissions (PR comments, issue creation) via the GitHub Action token scopes and Claude Code's tool-permission settings |
 
 This step is done **once per project**. Skipping it means paying the security tax by hand on every PR for the rest of the phase.
 
@@ -84,15 +84,15 @@ curl -sL https://raw.githubusercontent.com/anthropics/claude-code-security-revie
 # anthropics/claude-code-security-review (pin to a tagged release)
 ```
 
-In the Anthropic admin console expand the connector tool permissions for the security-review workflow: **post comments on PRs** and **create issues** (kept disabled by default). Keep `delete` operations off — humans close findings, the agent does not.
+Grant the security-review workflow its write permissions — **post comments on PRs** and **create issues** — through the GitHub Action's `GITHUB_TOKEN` scopes (in the workflow YAML) and Claude Code's tool-permission settings; keep both withheld by default and enable only when the team is ready. Keep `delete` operations off — humans close findings, the agent does not.
 
 #### 0.2 — Connect Claude Code to the Semgrep MCP server
 
-The Semgrep MCP server (`https://github.com/semgrep/mcp`) exposes `security_check`, `semgrep_scan`, `semgrep_scan_with_custom_rule`, `get_abstract_syntax_tree`, `semgrep_findings`, `supported_languages`, `semgrep_rule_schema`, plus the built-in `write_custom_semgrep_rule` prompt. It works in Cursor / VS Code / Windsurf / Claude Desktop and (via Claude Code's MCP support) in Claude Code itself.
+The Semgrep MCP server (`https://github.com/semgrep/mcp`) exposes `security_check`, `semgrep_scan`, `semgrep_scan_with_custom_rule`, `get_abstract_syntax_tree`, `semgrep_findings`, `supported_languages`, `semgrep_rule_schema`, plus the built-in `write_custom_semgrep_rule` prompt. In the AI-DLC it runs in **Claude Code** via its project-scoped MCP support (the server is also broadly compatible with other MCP clients such as Cursor / VS Code / Windsurf).
 
 ```bash
-# Add Semgrep MCP at user scope so it is available in every repo
-claude mcp add --scope user semgrep -- npx -y @semgrep/mcp-server@latest
+# Add Semgrep MCP at project scope (committed to the repo's .mcp.json) — the framework standard, so each project stays isolated and concurrent projects keep independent config
+claude mcp add --scope project semgrep -- npx -y @semgrep/mcp-server@latest
 # Verify
 claude mcp list   # semgrep: connected
 # Smoke test
@@ -106,7 +106,7 @@ Trivy's official `aquasecurity/trivy-mcp` plugin enables natural-language scanni
 
 ```bash
 trivy plugin install mcp                           # install Trivy MCP plugin
-claude mcp add --transport stdio --scope user trivy -- trivy mcp
+claude mcp add --transport stdio --scope project trivy -- trivy mcp
 # Smoke test
 claude
 > Via Trivy MCP, scan the current Dockerfile and the lockfile; summarise Critical and High CVEs and propose digest-pinned base-image upgrades.
@@ -171,10 +171,10 @@ Author starter Rego policies under `/policy-packs/` (no-public-S3, required-tags
 
 ```bash
 # Vanta Agents (March 2026: Compliance / TPRM / Customer Trust agents)
-claude mcp add --transport http --scope user vanta https://mcp.vanta.com/mcp
+claude mcp add --transport http --scope project vanta https://mcp.vanta.com/mcp
 
 # Drata MCP (2026 launch)
-claude mcp add --transport http --scope user drata https://mcp.drata.com/mcp
+claude mcp add --transport http --scope project drata https://mcp.drata.com/mcp
 
 # Smoke test
 claude

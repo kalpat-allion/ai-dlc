@@ -1,8 +1,8 @@
 # Phase 1: Requirement Gathering — Prompt Templates
 
-> **All prompts in this file are designed for Claude.** Copy the prompt, replace `[PLACEHOLDERS]` with your project content, and run. Each prompt produces a structured output that requires human review.
+> **All prompts in this file are designed for Claude Code.** Copy the prompt, replace `[PLACEHOLDERS]` with your project content, and run. Each prompt produces a structured output that requires human review.
 >
-> Prompts marked **Linear-aware** require the **Linear connector to be enabled** in the conversation (claude.ai web/desktop) or the Linear MCP server to be connected (Claude Code). See [PROCESS.md → Step 0](./PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp) for setup.
+> Prompts marked **Linear-aware** require the **project-scoped Linear MCP server to be connected in Claude Code** (`.mcp.json` + `/mcp` OAuth). See [PROCESS.md → Step 0](./PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp) for setup.
 
 ---
 
@@ -141,7 +141,7 @@ Every criterion must be testable — a QA engineer should write a test directly 
 
 ## Gap Analysis
 
-> If the PRD has already been published to a Linear Document (Step 2.4 onwards), provide the Document URL and ask Claude to read it via the Linear connector instead of pasting. The pasted-PRD form remains valid for the pre-publish self-review in Step 2.3.
+> If the PRD has already been published to a Linear Document (Step 2.4 onwards), provide the Document URL and ask Claude Code to read it via the Linear MCP server instead of pasting. The pasted-PRD form remains valid for the pre-publish self-review in Step 2.3.
 
 ```
 You are a Chief Product Officer reviewing this PRD for completeness.
@@ -209,7 +209,7 @@ Format as structured sections ready to feed into the PRD generation prompt.
 **Linear-aware.** Run before drafting a PRD on an existing product to ground Claude in the current backlog state.
 
 ```
-Using the Linear connector, pull a context bundle for an upcoming PRD on [FEATURE / PRODUCT NAME].
+Using the Linear MCP server, pull a context bundle for an upcoming PRD on [FEATURE / PRODUCT NAME].
 
 Search scope:
 - Initiative(s): [name(s) or "auto-detect from feature description"]
@@ -225,7 +225,7 @@ For each of the following, return a compact summary (no raw dumps):
 
 Output as a structured Markdown bundle ready to paste into the PRD generation prompt. Include the Linear IDs verbatim so the PRD can cite them.
 
-If the Linear connector is not available, or if any of the inputs above are still unfilled placeholders, stop and ask — do not invent initiative names, project names, or issue IDs.
+If the Linear MCP server is not connected, or if any of the inputs above are still unfilled placeholders, stop and ask — do not invent initiative names, project names, or issue IDs.
 
 Do NOT create, update, or comment on anything in Linear in this step. Read-only.
 ```
@@ -237,7 +237,7 @@ Do NOT create, update, or comment on anything in Linear in this step. Read-only.
 **Linear-aware. Writes to Linear.** Run during Step 2.4 — after PM self-review but **before** stakeholder review. Creates a Linear Project (Planned state) and publishes the PRD as a Linear Document attached to that Project. Stakeholders then review and comment on the Document directly in Linear.
 
 ```
-Using the Linear connector, publish the PRD below to Linear.
+Using the Linear MCP server, publish the PRD below to Linear.
 
 ## PRD (Markdown)
 [Paste the full PRD draft. Use ATX headings (## , ### ) so anchors are stable.]
@@ -280,7 +280,7 @@ Using the Linear connector, publish the PRD below to Linear.
 **Linear-aware. Writes to Linear.** Run after Gate 1 (PRD Document approved) and before any stories are pushed. The Linear Project already exists from Step 2.4 — this prompt only adds Milestones.
 
 ```
-Using the Linear connector, add Milestones to an existing Linear Project for the approved PRD.
+Using the Linear MCP server, add Milestones to an existing Linear Project for the approved PRD.
 
 ## Inputs
 - Linear Project URL (must already exist, must be out of `Planned` state): [URL]
@@ -310,7 +310,7 @@ Using the Linear connector, add Milestones to an existing Linear Project for the
 **Linear-aware. Writes to Linear.** Run after Gate 2 (milestone scaffold approved). Creates Triage-state issues with full AC and clickable PRD-section deep-links into the Linear Document.
 
 ```
-Using the Linear connector, push the approved user stories below into the Linear Project.
+Using the Linear MCP server, push the approved user stories below into the Linear Project.
 
 ## Stories with Acceptance Criteria
 [Paste the stories produced by the user story + AC prompts. Each story must include: title, As-a/I-want/So-that, Given/When/Then AC, priority, size, and the PRD section it traces to (e.g., §3.2).]
@@ -363,7 +363,7 @@ Rules:
 **Linear-aware. Writes a single comment to Linear.** Run during Step 4 to diff the Linear Project against the PRD Document.
 
 ```
-Using the Linear connector, perform a gap sweep against the approved PRD.
+Using the Linear MCP server, perform a gap sweep against the approved PRD.
 
 ## Inputs
 - Linear Project URL: [URL]

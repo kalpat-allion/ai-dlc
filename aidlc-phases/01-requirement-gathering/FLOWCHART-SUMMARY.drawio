@@ -13,15 +13,15 @@
           <mxGeometry x="400" y="50" width="320" height="60" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;Wire Claude ↔ Linear MCP&lt;br&gt;Path A web/Desktop · Path B Claude Code CLI&lt;br&gt;Smoke test + verify connector&lt;br&gt;👤 Admins · 🤖 Claude · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;Wire Claude Code ↔ Linear MCP (project scope)&lt;br&gt;claude mcp add --scope project → committed .mcp.json&lt;br&gt;Auth once per project · smoke test + verify&lt;br&gt;👤 Admins · 🤖 Claude Code · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="160" width="320" height="110" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S1" value="&lt;b&gt;Step 1: Stakeholder Interviews&lt;/b&gt;&lt;br&gt;Fireflies.ai records + transcribes · PM validates&lt;br&gt;Optional Linear context pull (READ-ONLY)&lt;br&gt;Claude structures findings — chat only&lt;br&gt;👤 PM · 🤖 Fireflies + Claude · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S1" value="&lt;b&gt;Step 1: Stakeholder Interviews&lt;/b&gt;&lt;br&gt;Fireflies.ai records + transcribes · PM validates&lt;br&gt;Optional Linear context pull (READ-ONLY)&lt;br&gt;Claude Code structures findings — local only&lt;br&gt;👤 PM · 🤖 Fireflies + Claude Code · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="320" width="320" height="110" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S2" value="&lt;b&gt;Step 2: PRD Generation&lt;/b&gt;&lt;br&gt;Compile context → PRD v1 → self + PM review&lt;br&gt;prd-to-linear-document publishes Project + Document&lt;br&gt;Stakeholder review IN LINEAR&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S2" value="&lt;b&gt;Step 2: PRD Generation&lt;/b&gt;&lt;br&gt;Compile context → PRD v1 → self + PM review&lt;br&gt;prd-to-linear-document publishes Project + Document&lt;br&gt;Stakeholder review IN LINEAR&lt;br&gt;👤 PM · 🤖 Claude Code · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="480" width="320" height="110" as="geometry"/>
         </mxCell>
 
@@ -29,7 +29,7 @@
           <mxGeometry x="440" y="640" width="240" height="90" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S3" value="&lt;b&gt;Step 3: User Stories&lt;/b&gt;&lt;br&gt;3a Decompose epics (chat only)&lt;br&gt;3b prd-to-linear-scaffold → Milestones&lt;br&gt;3c Stories + AC → Triage Issues w/ PRD deep-links&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S3" value="&lt;b&gt;Step 3: User Stories&lt;/b&gt;&lt;br&gt;3a Decompose epics (local only)&lt;br&gt;3b prd-to-linear-scaffold → Milestones&lt;br&gt;3c Stories + AC → Triage Issues w/ PRD deep-links&lt;br&gt;👤 PM · 🤖 Claude Code · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="780" width="320" height="110" as="geometry"/>
         </mxCell>
 
@@ -41,7 +41,7 @@
           <mxGeometry x="430" y="1080" width="260" height="100" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S4" value="&lt;b&gt;Step 4: Gap Analysis&lt;/b&gt;&lt;br&gt;gap-analysis prompt vs PRD Document&lt;br&gt;linear-gap-sweep posts ONE consolidated comment&lt;br&gt;Optional market check · Prioritise findings&lt;br&gt;👤 PM · 🤖 Claude · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S4" value="&lt;b&gt;Step 4: Gap Analysis&lt;/b&gt;&lt;br&gt;gap-analysis prompt vs PRD Document&lt;br&gt;linear-gap-sweep posts ONE consolidated comment&lt;br&gt;Optional market check · Prioritise findings&lt;br&gt;👤 PM · 🤖 Claude Code · 🔌 MCP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="1230" width="320" height="110" as="geometry"/>
         </mxCell>
 
@@ -53,7 +53,7 @@
           <mxGeometry x="820" y="1380" width="280" height="100" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S5" value="&lt;b&gt;Step 5: Scalability &amp;amp; Cost&lt;/b&gt;&lt;br&gt;Extract scalability factors from PRD&lt;br&gt;Validate cost vs AWS / Azure / GCP calculators&lt;br&gt;Add NFRs to PRD Document&lt;br&gt;👤 PM · 🤖 Claude · 🔌 optional MCP for nfr issues" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S5" value="&lt;b&gt;Step 5: Scalability &amp;amp; Cost&lt;/b&gt;&lt;br&gt;Extract scalability factors from PRD&lt;br&gt;Validate cost vs AWS / Azure / GCP calculators&lt;br&gt;Add NFRs to PRD Document&lt;br&gt;👤 PM · 🤖 Claude Code · 🔌 optional MCP for nfr issues" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="400" y="1520" width="320" height="110" as="geometry"/>
         </mxCell>
 

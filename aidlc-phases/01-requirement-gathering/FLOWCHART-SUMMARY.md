@@ -6,8 +6,8 @@ A three-row, horizontal end-to-end view of the six per-step flowcharts in [FLOWC
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI-assisted step (Claude or Fireflies.ai) — no external write |
-| 🔌 | Claude calling the **Linear MCP connector** (read or write) |
+| 🤖 | AI-assisted step (Claude Code or Fireflies.ai) — no external write |
+| 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 👤 | Human-led step |
 | Diamond | Decision point / Quality gate |
 | Dark navy node | Phase entry or exit |
@@ -19,8 +19,8 @@ A three-row, horizontal end-to-end view of the six per-step flowcharts in [FLOWC
 
 ```mermaid
 flowchart LR
-    START([Phase 1 Entry<br/>Linear admin + Claude Pro/Max/Team/Enterprise]) --> S0[Step 0: One-Time Setup<br/>Wire Claude ↔ Linear MCP<br/>Path A web/Desktop · Path B Claude Code CLI<br/>Smoke test + verify connector<br/>👤 Admins · 🤖 Claude · 🔌 MCP]
-    S0 --> S1[Step 1: Stakeholder Interviews<br/>Fireflies.ai records + transcribes · PM validates<br/>Optional Linear context pull READ-ONLY<br/>Claude structures findings - chat only<br/>👤 PM · 🤖 Fireflies + Claude · 🔌 MCP]
+    START([Phase 1 Entry<br/>Linear admin + Claude Pro/Max/Team/Enterprise]) --> S0[Step 0: One-Time Setup<br/>Wire Claude Code ↔ Linear MCP - project scope<br/>claude mcp add --scope project → committed .mcp.json<br/>Auth once per project · Smoke test + verify<br/>👤 Admins · 🤖 Claude Code · 🔌 MCP]
+    S0 --> S1[Step 1: Stakeholder Interviews<br/>Fireflies.ai records + transcribes · PM validates<br/>Optional Linear context pull READ-ONLY<br/>Claude Code structures findings - local only<br/>👤 PM · 🤖 Fireflies + Claude Code · 🔌 MCP]
     S1 --> S2[Step 2: PRD Generation<br/>Compile context → PRD v1 → self + PM review<br/>prd-to-linear-document publishes Project + Document<br/>Stakeholder review IN LINEAR<br/>👤 PM · 🤖 Claude · 🔌 MCP]
     S2 --> G1{GATE 1<br/>PRD Approved in Linear?}
     G1 -- No --> S2
@@ -68,17 +68,19 @@ flowchart LR
     style RETRY fill:#7A5C1B,color:#fff
 ```
 
-## How to view this as a Claude.ai artifact
+## How to view these diagrams
 
-1. Open a new chat at [claude.ai](https://claude.ai).
-2. Paste the Mermaid block above (including the triple backticks and `mermaid` tag).
-3. Ask: *"Render this as an artifact."* Claude returns an interactive `application/vnd.ant.mermaid` artifact you can pan, zoom, and export as SVG/PNG.
+The Mermaid blocks above render natively in any Mermaid-compatible viewer:
+
+1. **GitHub / GitLab** — the blocks render inline when this Markdown file is viewed in the repo.
+2. **VS Code** — with the built-in Markdown preview plus a Mermaid extension, or the Markdown Preview Mermaid Support extension.
+3. **[mermaid.live](https://mermaid.live)** — paste a single `flowchart` block (without the triple backticks) to pan, zoom, and export as SVG/PNG.
 
 ## What this summary collapses
 
 | Source diagram | Collapsed to |
 |----------------|--------------|
-| Step 0: One-Time Setup (Path A + Path B + smoke test + verify) | Single node `S0` |
+| Step 0: One-Time Setup (project-scoped `claude mcp add` + auth + smoke test + verify) | Single node `S0` |
 | Step 1: I1 → I5 (prep, record, validate, context pull, structure) | Single node `S1` |
 | Step 2: 2.1 → 2.6 (compile → draft → review → publish → stakeholder review → approve) | Single node `S2` + Gate 1 |
 | Step 3: 3a, 3b, 3c (epics → milestones → stories) | Single node `S3` + Gate 2 + Gate 3 |
