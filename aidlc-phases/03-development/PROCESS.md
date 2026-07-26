@@ -27,7 +27,7 @@ This document defines the AI-assisted workflow for the Development phase, using 
 | **Output** | Claude Code can read & write Linear issues, sub-issues, comments, projects, and milestones; Linear's git integration auto-transitions issues on PR open/merge |
 | **Human** | Each developer authorises Claude Code once via OAuth; Tech Lead expands tool scopes for dev (state changes + sub-issue creation) |
 
-The Linear MCP server set up in Phase 1 is the same server. Phase 3 only adds **two changes** on top: (1) every developer connects Claude Code (not just chat) to it, and (2) the Anthropic Connectors policy is widened to allow `update issue state`, `assign issue`, and `create sub-issue` — operations the PM kept disabled in Phase 1 to prevent scope creep on requirements.
+The Linear MCP server set up in Phase 1 is the same server (the same committed `.mcp.json`). Phase 3 only adds **two changes** on top: (1) every developer authenticates Claude Code to it in their project, and (2) Claude Code's tool-permission settings are widened to allow `update issue state`, `assign issue`, and `create sub-issue` — operations the PM kept withheld in Phase 1 to prevent scope creep on requirements.
 
 **In this step:**
 
@@ -43,11 +43,11 @@ The Linear MCP server set up in Phase 1 is the same server. Phase 3 only adds **
 
 This is the primary surface for Phase 3. Every developer runs through it once.
 
-1. **Add the server** at user scope (so it works in every repo):
+1. **The server is already registered at project scope** in the repo's committed `.mcp.json` from Phase 1 — so most developers just clone and authenticate. If you are starting a fresh repo, add it from the repo root:
    ```bash
-   claude mcp add --transport http --scope user linear https://mcp.linear.app/mcp
+   claude mcp add --transport http --scope project linear https://mcp.linear.app/mcp
    ```
-   Use `--scope project` instead if the team wants the server committed to the repo's `.mcp.json`. CI runners that cannot do interactive OAuth should not push to Linear directly — gate Linear writes behind interactive Claude Code sessions.
+   Project scope keeps each project's Linear wiring and auth isolated, so developers can work across multiple projects concurrently — even under different Linear accounts (use a distinct server name per account). CI runners that cannot do interactive OAuth should not push to Linear directly — gate Linear writes behind interactive Claude Code sessions.
 2. **Authenticate:** open Claude Code (`claude`) → `/mcp` → select **linear** → approve OAuth in the browser.
 3. **Verify available tools.** In a session, prompt: `Via Linear MCP, list_teams and then search_issues assigned to me with state Backlog ordered by priority.` Claude Code should return your teams and your top-priority backlog. If it fails, run `claude mcp list` — `linear: connected` must appear.
 4. **Enable the git integration on Linear's side.** In Linear → **Settings → Integrations → GitHub / GitLab / Bitbucket**, connect the provider and enable: (a) **Open PRs auto-link by branch name** (matches `feature/eng-123-…` to `ENG-123`), (b) **Auto-update issue status to "In Review" on PR open**, (c) **Auto-update issue status to "Done" on PR merge**. With this on, Claude Code only needs to set *In Progress* — the PR lifecycle drives the rest.
@@ -59,14 +59,14 @@ Cursor 0.45+ supports MCP servers. Adding the same Linear server inside Cursor l
 
 #### Phase 3 scope expansion (Tech Lead, Team/Enterprise only)
 
-In the Anthropic admin console → **Connectors → Linear → Tool Permissions**, **enable** the following (kept disabled in Phase 1):
+In Claude Code's tool-permission settings for the Linear MCP server, **allow** the following (kept withheld in Phase 1):
 
 - `update_issue` (state changes — required for "Move to In Progress")
 - `assign_issue` (so Claude can self-assign or reassign during pickup)
 - `create_issue` with `parentId` (sub-issue creation for story decomposition)
-- `create_comment` (already on from Phase 1 — unchanged)
+- `create_comment` (already allowed from Phase 1 — unchanged)
 
-Keep `delete_issue` **disabled** workspace-wide. If a story is wrong, a human cancels it in Linear; Claude does not delete.
+Keep `delete_issue` **denied**. If a story is wrong, a human cancels it in Linear; Claude does not delete.
 
 #### Bundle the recurring workflow into a local Claude Code subagent (recommended)
 
@@ -409,7 +409,7 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
 - [ ] `claude mcp list` shows `linear: connected` for every developer
 - [ ] Smoke test: `Via Linear MCP, fetch my next In-Progress issue and print its branchName.` returns a real issue with a `branchName` field
 - [ ] Linear → Settings → Integrations shows GitHub/GitLab/Bitbucket connected with PR auto-link on
-- [ ] Anthropic admin policy: `update_issue`, `assign_issue`, `create_issue` enabled; `delete_issue` disabled
+- [ ] Claude Code tool-permissions: `update_issue`, `assign_issue`, `create_issue` allowed; `delete_issue` denied
 - [ ] `.claude/agents/linear-task-agent.md` committed to the repo; `/agents` in Claude Code lists `linear-task-agent`; the subagent smoke test returns a real `branchName` without writing state
 - [ ] Each Phase 3 specialist subagent (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) listed by `/agents` and committed under `.claude/agents/`; team has agreed on the model + tool-permission defaults for each
 - [ ] Team understands the **new-subagent recipe** (`/agents` interactive flow, frontmatter shape, system-prompt structure, four pre-commit tests: discovery, no-write smoke, boundary, negative-routing) and the single-responsibility rule before committing any new role
@@ -925,7 +925,7 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 |------|------------|
 | **PR-to-issue drift** — developer invents a branch name, Linear's git integration fails to auto-link, the issue stays *In Progress* after merge | Step 2.3 mandates `branchName` from Linear MCP. Linear's git integration is the authority — broken links surface in the **In Progress** view as stale issues; the Tech Lead sweeps it weekly. |
 | **Wrong issue closed** — PR title typo (`ENG-274` vs `ENG-247`) auto-closes an unrelated issue | Step 4.5 sanity-check: reviewer confirms the linked issue matches the diff before merging. The Linear `update_issue` audit log + git diff together identify the mistake within hours; reopen and fix forward. |
-| **Silent state-change scope creep** — a Claude prompt accidentally moves backlog issues to In Progress | Anthropic admin policy keeps `update_issue` scoped to the dev team only; the audit log on Linear records every state change. Off-board old developers by revoking OAuth in Linear. |
+| **Silent state-change scope creep** — a Claude prompt accidentally moves backlog issues to In Progress | Claude Code's tool-permission settings (committed per project) keep `update_issue` to the dev team's repos only; the audit log on Linear records every state change. Off-board old developers by revoking OAuth in Linear. |
 | **Hallucinated APIs / dependencies in AI-generated code** — Claude or Cursor invents a method that does not exist | Run tests after every AI edit (Step 3.3). CI catches imports of non-existent modules. CodeRabbit flags hallucinated APIs in 70%+ of cases (CodeRabbit telemetry). |
 | **Linear Agent over-assignment** — Tech Lead routes too many stories to the Linear Agent without human review-bandwidth | Cap agent-authored PRs in flight per cycle (e.g., ≤ 3). The `agent-authored` label triggers two human reviewers, not one. Agent quality is reviewed at cycle close; under-performing patterns roll back to human-only. |
 | **Refactor PRs introduce features** — Claude generalises during a refactor and adds capability that nobody asked for | Step 5.4: PRs against `tech-debt` issues that introduce features are rejected at review and split. The reviewer checklist explicitly asks "is any new behaviour added?". |

@@ -394,7 +394,7 @@ Draft an MCP enforcement policy for this project.
 
 ## Inventory (current)
 - **MCP servers in use:** [list — Linear, GitHub, Pulumi, Datadog, Sentry, Semgrep, Trivy, Vanta, Drata, custom internal, etc.]
-- **For each: scope (read / write / state-changing), auth (OAuth / token), connecting clients (Claude Code, Cursor, Claude Desktop)]
+- **For each: MCP scope (project / user), tool scope (read / write / state-changing), auth (OAuth / token), connecting clients (Claude Code, Cursor)]
 
 ## Project / agent intended capabilities
 [What the agent legitimately needs to do — read issues, propose code, scan diffs, run tests, etc.]
@@ -407,7 +407,7 @@ Produce:
 2. **Per-server scope policy** — for each server: which operations are allowed (e.g., Linear `update_issue` allowed; `delete_issue` denied workspace-wide)
 3. **Off-boarding procedure** — how OAuth grants are revoked when developers leave; verification step
 4. **Audit log requirement** — what must be logged per tool call (timestamp, user, server, tool, args summary)
-5. **Detection rules** — Semgrep / `ggshield` / Cycode rules that catch MCP config drift (e.g., a new `claude_desktop_config.json` server entry not in the allow-list)
+5. **Detection rules** — Semgrep / `ggshield` / Cycode rules that catch MCP config drift (e.g., a new committed `.mcp.json` server entry not in the allow-list)
 6. **Cycode AI Governance hooks** (if Cycode is in scope) — three-layer governance config: see / govern / enforce
 
 Cite the GitGuardian 2026 finding: 24,008 unique secrets found in MCP config files in 2025; the ggshield AI hook is the runtime safety net but allow-listing is the primary control.

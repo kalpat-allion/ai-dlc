@@ -19,7 +19,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 | Symbol | Meaning |
 |--------|---------|
 | 🤖 | AI/tool-driven action (Cursor, Claude Code, CodeRabbit, SonarQube, Linear Agent) |
-| 🔌 | Claude Code calling the **Linear MCP connector** (read or write) |
+| 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 🔁 | Auto-transition driven by Linear's git integration (PR open / merge) |
 | 👤 | Human-led action |
 | Diamond | Decision point or quality gate |
@@ -57,19 +57,19 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 ## Step 0: One-Time Setup
 
-One-off connector wiring per developer. Path A is the primary surface — Claude Code in the terminal. Path B is optional in-IDE Linear browsing through Cursor's MCP support. After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens the Anthropic Connectors policy from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
+One-off MCP wiring per developer. Path A is the primary surface — Claude Code in the terminal. Path B is optional in-IDE Linear browsing through Cursor's MCP support. After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens Claude Code's Linear tool-permission settings from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
 
 ```mermaid
 flowchart TD
     S0_START([Start: Phase 3 prerequisites<br/>Linear connected from Phase 1<br/>+ Claude Code installed]) --> S0_ANTH
 
-    S0_ANTH[Anthropic admin Team/Enterprise: widen Linear scopes<br/>enable update_issue, assign_issue,<br/>create_issue with parentId<br/>keep delete_issue DISABLED workspace-wide<br/>👤 Anthropic admin]
+    S0_ANTH[Tech Lead: widen Linear tool-permissions in Claude Code settings<br/>allow update_issue, assign_issue,<br/>create_issue with parentId<br/>keep delete_issue DENIED<br/>👤 Tech Lead]
     S0_ANTH --> S0_PATH{Choose surface}
 
     S0_PATH -- Claude Code CLI primary --> S0_A1
     S0_PATH -- Cursor in-IDE optional --> S0_B1
 
-    S0_A1[Path A 1: claude mcp add --transport http --scope user<br/>linear https://mcp.linear.app/mcp<br/>🤖 Claude Code]
+    S0_A1[Path A 1: claude mcp add --transport http --scope project<br/>linear https://mcp.linear.app/mcp<br/>🤖 Claude Code]
     S0_A1 --> S0_A2[Path A 2: claude - /mcp - select linear - approve OAuth<br/>👤 each developer]
     S0_A2 --> S0_A3[Path A 3: verify with linear-next-task prompt<br/>response includes branchName field<br/>🤖 Claude Code + 🔌 Linear MCP]
     S0_A3 --> S0_GIT

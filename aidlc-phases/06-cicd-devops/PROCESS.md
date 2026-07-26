@@ -56,7 +56,7 @@ This document defines the AI-assisted workflow for the CI/CD & DevOps phase of t
 | **Input** | Pulumi Cloud account (Team or above), GitHub org with Copilot Pro / Copilot Business licences, Anthropic API key (or Bedrock / Vertex / Foundry credentials), Datadog OR Grafana Cloud workspace, Docker Desktop 4.61+, Claude Code installed |
 | **Tools** | **Pulumi MCP server**, **Anthropic Claude Code Action**, **Pulumi ESC**, **Datadog/Grafana MCP**, **Sentry MCP**, **Docker Gordon** |
 | **Output** | Every developer's Claude Code can read Pulumi state, every PR is reviewed by Claude Code Action, ESC manages all CI secrets, observability MCP servers connected for incident workflows |
-| **Human** | DevOps Lead authorises org-level connectors; each developer authenticates once via OAuth |
+| **Human** | DevOps Lead authorises the org-level MCP servers; each developer authenticates once per project via OAuth |
 
 This step is done **once per project**. The cost of skipping it is paying the "AI tax" by hand on every story for the rest of the phase.
 
@@ -68,11 +68,11 @@ Two installation paths — pick the **remote MCP** path for organisations standa
 
 ```bash
 # Path A — remote (recommended): hosted MCP, OAuth, no Node.js required
-claude mcp add --transport http --scope user pulumi https://mcp.ai.pulumi.com/mcp
+claude mcp add --transport http --scope project pulumi https://mcp.ai.pulumi.com/mcp
 # Then: claude → /mcp → pulumi → approve OAuth → enter Pulumi Access Token + select org
 
 # Path B — local: npm package, stdio transport
-claude mcp add --scope user pulumi -- npx -y @pulumi/mcp-server@latest
+claude mcp add --scope project pulumi -- npx -y @pulumi/mcp-server@latest
 # Auth uses the local PULUMI_ACCESS_TOKEN environment variable
 ```
 
@@ -112,13 +112,13 @@ Wire ESC into GitHub Actions via the `pulumi/esc-action@v1` step or the OIDC-bas
 
 ```bash
 # Grafana Cloud (Grafana Assistant + Sift via MCP)
-claude mcp add --transport http --scope user grafana https://<workspace>.grafana.net/api/mcp
+claude mcp add --transport http --scope project grafana https://<workspace>.grafana.net/api/mcp
 
 # Sentry MCP server (for Seer-driven local debugging + PR review)
-claude mcp add --transport http --scope user sentry https://mcp.sentry.dev/mcp
+claude mcp add --transport http --scope project sentry https://mcp.sentry.dev/mcp
 
 # Datadog (via Datadog MCP)
-claude mcp add --transport http --scope user datadog https://mcp.datadoghq.com/mcp
+claude mcp add --transport http --scope project datadog https://mcp.datadoghq.com/mcp
 ```
 
 Smoke test each: `Via Sentry MCP, list issues in project web-frontend ranked by event-count last 24h, then ask Seer for a root-cause analysis on the top one.`

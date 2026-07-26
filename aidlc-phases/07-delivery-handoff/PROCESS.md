@@ -35,7 +35,7 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 | **Docs platform (internal/dev)** | Docusaurus + Claude Code over the repo | Mintlify with auth-gated MCP at `/authed/mcp` | Docusaurus free |
 | **API reference** | Mintlify OpenAPI integration / `docusaurus-plugin-openapi-docs` | Redoc, Scalar, Bump.sh | Free for OSS plugins |
 | **Doc gen agent** | Claude Code with docs-platform MCP + repo `--add-dir` | Cursor over the docs repo | Already in Phase 3 stack |
-| **Handoff doc synthesis** | Claude Code with `--add-dir` across PRD repo, code repo, IaC repo, docs site MCP | Claude Projects (claude.ai) with bulk file upload | API usage-based |
+| **Handoff doc synthesis** | Claude Code with `--add-dir` across PRD repo, code repo, IaC repo, docs site MCP | NotebookLM Enterprise for oversized multi-repo corpora | API usage-based |
 | **KT recording (meetings)** | Fathom (best action-item extraction; 9.4 vs Loom 7.2 in 2026 G2) | Otter, Granola, Jamie | Fathom Free covers most; Premium $19/mo |
 | **KT recording (screen)** | Loom AI (auto chapters + auto CTA + summaries) | Fathom screen-recorder mode | Loom Business $15/user/mo |
 | **KT post-processing** | NotebookLM Enterprise (multi-source ingest, 300 sources / 500K words each) | Claude Code with transcript paste | NotebookLM Enterprise via Gemini Enterprise |
@@ -66,9 +66,11 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 | **Input** | Phase 3 Linear MCP setup (carries over), Phase 6 Pulumi/observability MCP setup (carries over), GitHub org access, chosen docs-platform tenancy (Mintlify / GitBook / Docusaurus), chosen KB tenancy (Confluence / Notion), 1Password Business workspace, Anthropic API key already provisioned in Phase 6 |
 | **Tools** | **Mintlify MCP** (or **GitBook MCP**), **Atlassian Remote MCP** (or **Notion MCP**), **GitHub MCP**, **Anthropic Claude Code Action**, **1Password CLI**, **AGENTS.md** extension |
 | **Output** | Every delivery-team developer's Claude Code can read the docs site, the KB, and GitHub releases via MCP; release-note polish runs automatically on every tag; AGENTS.md carries handoff-specific context; a handoff subagent (optional) is committed under `.claude/agents/` for the recurring synthesis workflow |
-| **Human** | Delivery Lead authorises org-level OAuth grants on the docs/KB/credential platforms; each developer authenticates once; recipient counterparts authorise on their side at handoff time |
+| **Human** | Delivery Lead authorises org-level OAuth grants on the docs/KB/credential platforms; each developer authenticates once per project via `/mcp`; recipient counterparts authorise on their side at handoff time |
 
 This step is done **once per engagement**. Skipping it means hand-authoring release notes, hand-synthesising the handoff document, and chasing every dashboard URL by Slack — the same "AI tax" Phase 3 and Phase 6 already eliminated for development and ops.
+
+> **All servers below register at `--scope project`** — the registrations live in the engagement repo's committed `.mcp.json`, and each person authenticates per project via `/mcp`. This is what makes handoff clean: when the repo transfers, the recipient re-authenticates the same server roster **under their own accounts** (Step 6.3) without disturbing any other engagement the delivery team still has open. Different account per project is the norm here, so keep server names stable and, where the same backend serves two engagements under different accounts, use distinct names.
 
 #### 0.1 — Connect Claude Code to the docs-platform MCP
 
@@ -79,12 +81,12 @@ Pick the path that matches the chosen platform:
 ```bash
 # Path A — Mintlify (recommended for customer-facing API + product docs)
 # Public docs site:
-claude mcp add --transport http --scope user mintlify-docs https://<your-docs>.mintlify.app/mcp
+claude mcp add --transport http --scope project mintlify-docs https://<your-docs>.mintlify.app/mcp
 # Authenticated docs site (private/internal):
-claude mcp add --transport http --scope user mintlify-docs https://<your-docs>.mintlify.app/authed/mcp
+claude mcp add --transport http --scope project mintlify-docs https://<your-docs>.mintlify.app/authed/mcp
 
 # Path B — GitBook (recommended when content authors are non-technical)
-claude mcp add --transport http --scope user gitbook-docs https://<your-site>.gitbook.io/docs/~gitbook/mcp
+claude mcp add --transport http --scope project gitbook-docs https://<your-site>.gitbook.io/docs/~gitbook/mcp
 
 # Path C — Docusaurus (OSS, no hosted MCP — pair Claude Code with the docs repo directly)
 # No MCP needed. Claude Code reads the docs repo via --add-dir, edits Markdown, commits.
@@ -100,12 +102,12 @@ The KB is where long-form troubleshooting, glossary, FAQ, onboarding, and archit
 
 ```bash
 # Path A — Atlassian Confluence + Jira (Atlassian Rovo MCP, GA Feb 2026, 72+ tools)
-claude mcp add --transport http --scope user atlassian https://mcp.atlassian.com/v1/sse
+claude mcp add --transport http --scope project atlassian https://mcp.atlassian.com/v1/sse
 # Note: the v1/sse endpoint is deprecated after 30 June 2026 — migrate to the new endpoint
 # documented at https://support.atlassian.com/atlassian-rovo-mcp-server/ before that date.
 
 # Path B — Notion (official, makenotion/notion-mcp-server)
-claude mcp add --transport http --scope user notion https://mcp.notion.com/mcp
+claude mcp add --transport http --scope project notion https://mcp.notion.com/mcp
 # Or use the bundled Claude Code Notion plugin which ships MCP + Skills + slash commands together:
 # https://github.com/makenotion/claude-code-notion-plugin
 ```
@@ -117,7 +119,7 @@ Smoke test for Confluence: `Via Atlassian MCP, search Confluence space "PROJECT"
 Release management runs through GitHub Releases and the repo's tags. The GitHub MCP server (v1.0.2 as of April 2026) gives Claude Code direct access to draft releases, post comments on the release PR, attach artefacts, and inspect the merged-PR list since the last tag.
 
 ```bash
-claude mcp add --transport http --scope user github https://api.githubcopilot.com/mcp/
+claude mcp add --transport http --scope project github https://api.githubcopilot.com/mcp/
 # Authenticate via GitHub OAuth in the browser when /mcp prompts you in Claude Code.
 ```
 
@@ -478,13 +480,13 @@ The Security Champion **revokes the delivery team's access to "Engagement Handof
 
 ```bash
 # Recipient side — re-establish the full Phase 6+7 MCP roster
-claude mcp add --transport http --scope user pulumi    https://mcp.ai.pulumi.com/mcp
-claude mcp add --transport http --scope user github    https://api.githubcopilot.com/mcp/
-claude mcp add --transport http --scope user sentry    https://mcp.sentry.dev/mcp
-claude mcp add --transport http --scope user grafana   https://<workspace>.grafana.net/api/mcp   # or datadog
-claude mcp add --transport http --scope user linear    https://mcp.linear.app/mcp
-claude mcp add --transport http --scope user mintlify-docs https://<your-docs>.mintlify.app/mcp   # or gitbook
-claude mcp add --transport http --scope user atlassian https://mcp.atlassian.com/v1/sse           # or notion
+claude mcp add --transport http --scope project pulumi    https://mcp.ai.pulumi.com/mcp
+claude mcp add --transport http --scope project github    https://api.githubcopilot.com/mcp/
+claude mcp add --transport http --scope project sentry    https://mcp.sentry.dev/mcp
+claude mcp add --transport http --scope project grafana   https://<workspace>.grafana.net/api/mcp   # or datadog
+claude mcp add --transport http --scope project linear    https://mcp.linear.app/mcp
+claude mcp add --transport http --scope project mintlify-docs https://<your-docs>.mintlify.app/mcp   # or gitbook
+claude mcp add --transport http --scope project atlassian https://mcp.atlassian.com/v1/sse           # or notion
 ```
 
 Verify with `claude mcp list` on the recipient's machine — every server connected. **Smoke test:** `Via Pulumi MCP list_stacks for our org and run resource-search for tag:Environment=prod.` If the recipient's Claude Code returns real production stacks, the inheritance is live.

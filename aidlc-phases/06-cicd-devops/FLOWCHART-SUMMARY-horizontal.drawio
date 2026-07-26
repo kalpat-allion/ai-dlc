@@ -9,7 +9,7 @@
           <mxGeometry x="240" y="10" width="800" height="25" as="geometry"/>
         </mxCell>
 
-        <mxCell id="legend" value="🔌 MCP connector&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Navy = entry/exit · Purple = Step 0 setup · Blue = CI/CD step · Yellow = quality gate" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" vertex="1" parent="1">
+        <mxCell id="legend" value="🔌 MCP server&amp;nbsp;&amp;nbsp;·&amp;nbsp;&amp;nbsp;Navy = entry/exit · Purple = Step 0 setup · Blue = CI/CD step · Yellow = quality gate" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#555555;" vertex="1" parent="1">
           <mxGeometry x="60" y="38" width="1160" height="18" as="geometry"/>
         </mxCell>
 

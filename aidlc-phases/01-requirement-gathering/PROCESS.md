@@ -6,9 +6,9 @@ This document defines the AI-assisted workflow for the Requirement Gathering pha
 
 **Phase Duration:** 1–2 weeks (varies by project size)
 **Phase Owner:** Product Manager / Business Analyst
-**Tools Used:** Claude, Fireflies.ai, **Linear** (project management spine, integrated with Claude via MCP)
+**Tools Used:** Claude Code, Fireflies.ai, **Linear** (project management spine, integrated with Claude Code via MCP)
 
-> **Tool Philosophy:** Claude handles ALL AI reasoning in this phase — PRD generation, user stories, acceptance criteria, gap analysis, and cost estimation. **Linear is the single home for both the PRD and the work breakdown.** The PRD lives as a **Linear Document** attached to the Linear Project; epics become Milestones; stories become Issues. Claude reads from and writes to Linear directly through the official Linear connector (Model Context Protocol), so the PRD, the backlog, the gap analysis, and the stakeholder sign-off all live on one continuous, traceable thread inside Linear. No separate documentation tool (Notion, Confluence, repo `/docs/`) is needed for the PRD itself.
+> **Tool Philosophy:** Claude Code handles ALL AI reasoning in this phase — PRD generation, user stories, acceptance criteria, gap analysis, and cost estimation. **Linear is the single home for both the PRD and the work breakdown.** The PRD lives as a **Linear Document** attached to the Linear Project; epics become Milestones; stories become Issues. Claude Code reads from and writes to Linear directly through the official Linear MCP server (Model Context Protocol), so the PRD, the backlog, the gap analysis, and the stakeholder sign-off all live on one continuous, traceable thread inside Linear. No separate documentation tool (Notion, Confluence, repo `/docs/`) is needed for the PRD itself.
 
 ---
 
@@ -20,44 +20,40 @@ This document defines the AI-assisted workflow for the Requirement Gathering pha
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Linear workspace admin access, Claude account (Pro / Max / Team / Enterprise) |
-| **Tool** | **Linear MCP server** (`https://mcp.linear.app/mcp`) — official, hosted by Linear, OAuth 2.1 |
-| **Output** | Claude (web/desktop) and Claude Code can read & write Linear issues, projects, comments, initiatives |
-| **Human** | Workspace admin enables the connector; each user authorises once via OAuth |
+| **Input** | Linear workspace admin access, Claude subscription that funds Claude Code (Pro / Max / Team / Enterprise), Claude Code installed |
+| **Tool** | **Linear MCP server** (`https://mcp.linear.app/mcp`) — official, hosted by Linear, OAuth 2.1, wired into Claude Code at **project scope** |
+| **Output** | Claude Code can read & write Linear issues, projects, comments, and initiatives from inside the repo |
+| **Human** | Workspace admin confirms the MCP endpoint is reachable; each user authorises once per project via OAuth (`/mcp`) |
 
-The Linear MCP server is **the** integration mechanism — do not build a custom Linear API wrapper. It is centrally hosted, OAuth-authenticated, and supported across every Claude surface. Set this up once per workspace, then once per user.
+The Linear MCP server is **the** integration mechanism — do not build a custom Linear API wrapper. It is centrally hosted, OAuth-authenticated, and driven entirely from **Claude Code**. Register it once per repo (the registration is committed to `.mcp.json`), then each user authenticates once per project.
 
-#### Path A — claude.ai (web) and Claude Desktop
+#### Set up the project-scoped Linear MCP server in Claude Code
+
+All Claude interaction in the AI-DLC runs through **Claude Code**, and the Linear MCP server is wired **per project** so each repo carries its own committed MCP config. This is what lets one person work on several projects concurrently — each repo authenticates independently, and can even sign in with a **different Linear account per project**.
 
 1. **Workspace admin (Linear):** confirm the workspace is on a plan that exposes the MCP endpoint and that no IP allow-list blocks `mcp.linear.app`. No additional install is required on Linear's side — the server is hosted by Linear.
-2. **Workspace admin (Anthropic, Team/Enterprise only):** in the Anthropic admin console, **enable Linear** under organisation Connectors. Set tool permissions — for Phase 1 we recommend **read + create issues + create comments**, with **update / state-change disabled** until the team is confident (see [Risks & Guardrails](#risks--guardrails)).
-3. **Each user (Claude.ai):** open **Settings → Connectors** (or `/` in chat → "Manage connectors"). Find **Linear** in the directory and click **Connect**.
-4. **OAuth flow:** Linear opens in a new tab. Sign in. **Review the requested scopes** — at minimum `read`, `write:issues`, `write:comments`. Approve. Linear redirects back to Claude; the connector shows as Connected.
-5. **Per-conversation toggle:** open a chat, click **+** (or `/`) → **Connectors**, toggle **Linear** on for that conversation. (Off by default — explicit opt-in per conversation prevents accidental writes.)
-6. **Smoke test:** prompt Claude with `List my Linear teams.` — Claude should call the Linear MCP `list_teams` tool and return your teams. Then `Create a draft issue in team <X> titled "MCP smoke test", label "ai-generated".` Confirm it appears in Linear's Triage.
-
-#### Path B — Claude Code (developer / CLI use)
-
-Use Claude Code when generating stories or pushing them to Linear from inside the repo (e.g., during PRD authoring in markdown).
-
-1. **Add the server** (run from repo root for project scope, or anywhere for user scope):
+2. **Add the server at project scope** (run from the repo root). This writes the registration to the repo's committed `.mcp.json`:
    ```bash
-   claude mcp add --transport http --scope user linear https://mcp.linear.app/mcp
+   claude mcp add --transport http --scope project linear https://mcp.linear.app/mcp
    ```
-   Use `--scope project` instead of `--scope user` if you want the server committed to the repo's `.mcp.json` so the team shares it.
-2. **Authenticate:** open Claude Code (`claude`). Run `/mcp`, select **linear**, approve OAuth in the browser that opens.
-3. **Verify:** `claude mcp list` should show `linear: connected`. Inside a session prompt: `Via Linear MCP, fetch issue ALN-123 and summarise it.`
-4. **Revoke when done** (e.g., off-boarding): `claude mcp remove linear`, and revoke the OAuth grant in Linear under **Settings → Security & access → OAuth applications**.
+   Because `.mcp.json` is committed, the whole team shares one per-project MCP config — nobody re-derives the setup. If a repo needs Linear under a **different account** than another project you already have open, give it a **distinct server name** so the two registrations (and their OAuth tokens) never collide:
+   ```bash
+   claude mcp add --transport http --scope project linear-acmeco https://mcp.linear.app/mcp
+   ```
+3. **Authenticate once per project:** open Claude Code (`claude`) in the repo. Run `/mcp`, select **linear** (or the distinct name from step 2), and approve OAuth in the browser. **Review the requested scopes** — at minimum `read`, `write:issues`, `write:comments`. The token is stored against this project's server registration, so authenticating one project never disturbs another — concurrent projects each keep their own identity.
+4. **Smoke test:** in a session prompt `List my Linear teams.` — Claude Code should call the Linear MCP `list_teams` tool and return your teams. Then `Create a draft issue in team <X> titled "MCP smoke test", label "ai-generated".` Confirm it appears in Linear's Triage.
+5. **Restrain write scope until the team is confident.** For Phase 1, keep Claude Code to **read + create issues + create comments**, with **update / state-change actions withheld** — enforced through Claude Code's tool-permission settings and the confirm-before-write design of this phase's Linear-writing prompts (see [Risks & Guardrails](#risks--guardrails)). Promote to update / state-change scopes only when the team is confident.
+6. **Revoke when done** (e.g., off-boarding): `claude mcp remove linear`, and revoke the OAuth grant in Linear under **Settings → Security & access → OAuth applications**.
 
 #### Verification checklist
 
-- [ ] Linear connector shows **Connected** in Claude settings
+- [ ] `claude mcp list` shows `linear: connected` in the repo (registration committed to `.mcp.json`)
 - [ ] Smoke-test issue created in Triage with the `ai-generated` label
-- [ ] Claude can list teams, projects, and initiatives the user has access to
+- [ ] Claude Code can list teams, projects, and initiatives the user has access to
 - [ ] Audit logging is on in Linear (Workspace settings → Security → Audit log)
-- [ ] Anthropic admin tool-permission policy reviewed (Team/Enterprise)
+- [ ] Claude Code tool-permission settings keep Linear to read + create until the team matures
 
-> **Permission inheritance:** Claude inherits the connecting user's Linear permissions. A user can only read/write what they themselves can read/write — there is no privilege escalation.
+> **Permission inheritance:** Claude Code inherits the connecting user's Linear permissions. A user can only read/write what they themselves can read/write — there is no privilege escalation.
 
 ---
 
@@ -76,10 +72,10 @@ Use Claude Code when generating stories or pushing them to Linear from inside th
 1. Prepare an interview guide with key questions. Share the agenda with stakeholders.
 2. Fireflies.ai auto-joins and records. Focus on the conversation, not note-taking.
 3. After the meeting, review the AI summary. Correct errors and extract requirements-relevant statements.
-4. **Pull related Linear context** (optional but recommended for ongoing products): in a Claude conversation with the **Linear connector enabled**, run the [`linear-context-pull`](./PROMPTS.md#linear-context-pull) prompt to fetch relevant initiatives, active projects, and prior issues. This grounds the PRD in real backlog state instead of starting from a blank page.
-5. Feed the structured interview findings **plus** the Linear context bundle into Claude for PRD generation (Step 2).
+4. **Pull related Linear context** (optional but recommended for ongoing products): in Claude Code with the **Linear MCP server connected**, run the [`linear-context-pull`](./PROMPTS.md#linear-context-pull) prompt to fetch relevant initiatives, active projects, and prior issues. This grounds the PRD in real backlog state instead of starting from a blank page.
+5. Feed the structured interview findings **plus** the Linear context bundle into Claude Code for PRD generation (Step 2).
 
-**For formal user research (if needed):** Use Claude to structure and synthesise interview transcripts — paste transcripts into Claude with the interview structuring prompt from [PROMPTS.md](./PROMPTS.md#interview-summary-structuring). This replaces dedicated research tools for most projects.
+**For formal user research (if needed):** Use Claude Code to structure and synthesise interview transcripts — paste transcripts into Claude Code with the interview structuring prompt from [PROMPTS.md](./PROMPTS.md#interview-summary-structuring). This replaces dedicated research tools for most projects.
 
 > **No writes to Linear in this step.** Stakeholder capture is read-only against Linear. Issue creation begins after PRD approval (Step 3).
 
@@ -92,7 +88,7 @@ Use Claude Code when generating stories or pushing them to Linear from inside th
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Interview summaries, project brief, competitive analysis, technical constraints, **Linear context bundle from Step 1** |
-| **Tool** | **Claude** with the **Linear connector enabled** (read in 2.1–2.3, write in 2.4) |
+| **Tool** | **Claude Code** with the **Linear MCP server connected** (read in 2.1–2.3, write in 2.4) |
 | **Output** | A Linear **Project** (Planned state) with the PRD published as an attached **Linear Document** — the canonical PRD location |
 | **Human** | Provide complete context, review and refine AI output, run stakeholder review in Linear, mark Document approved |
 
@@ -100,9 +96,9 @@ Use Claude Code when generating stories or pushing them to Linear from inside th
 
 **2.1 — Gather context.** Compile all inputs — interview summaries, business objectives, competitive data, technical constraints, and the Linear context bundle from Step 1.
 
-**2.2 — Draft in Claude.** Use Claude with the [PRD generation prompt](./PROMPTS.md#prd-generation). Feed ALL context in a single prompt (leverage the 200K+ token context window). Where the Linear bundle includes existing initiatives or related issues, ask Claude to **cite the Linear IDs** in the relevant PRD sections so traceability is established from day one. The draft stays in chat (Markdown) — no Linear write yet.
+**2.2 — Draft in Claude Code.** Use Claude Code with the [PRD generation prompt](./PROMPTS.md#prd-generation). Feed ALL context in a single prompt (leverage the 200K+ token context window). Where the Linear bundle includes existing initiatives or related issues, ask Claude Code to **cite the Linear IDs** in the relevant PRD sections so traceability is established from day one. The draft stays local (Markdown) — no Linear write yet.
 
-**2.3 — Self-review with Claude.** Paste the draft back into Claude with the [gap analysis prompt](./PROMPTS.md#gap-analysis) to get a "second opinion" on completeness. Refine. Then run a PM review against the PRD completeness checklist (see [QUALITY-GATES.md](./QUALITY-GATES.md#gate-1-prd-completeness)) and remove any hallucinated requirements.
+**2.3 — Self-review with Claude Code.** Run the draft back through Claude Code with the [gap analysis prompt](./PROMPTS.md#gap-analysis) to get a "second opinion" on completeness. Refine. Then run a PM review against the PRD completeness checklist (see [QUALITY-GATES.md](./QUALITY-GATES.md#gate-1-prd-completeness)) and remove any hallucinated requirements.
 
 **2.4 — Publish to Linear.** Run the [`prd-to-linear-document`](./PROMPTS.md#prd-to-linear-document) prompt. Claude calls the Linear MCP to:
    - Create the **Linear Project** under the appropriate Initiative, in **Planned** state (no Milestones, no Issues yet).
@@ -128,14 +124,14 @@ Use Claude Code when generating stories or pushing them to Linear from inside th
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Approved PRD (Linear Document URL from Step 2.4), persona definitions, the Linear Project (already exists in Planned/Backlog state) |
-| **Tool** | **Claude** with the **Linear connector enabled** (read + create) |
+| **Tool** | **Claude Code** with the **Linear MCP server connected** (read + create) |
 | **Output** | **Milestones** (epics) and **Issues** (stories in Triage state) added to the existing Linear Project, fully labelled and deep-linked to PRD sections in the Document |
 | **Human** | Validate completeness, approve milestone scaffold, accept stories one-by-one out of the AI Inbox view |
 
 This step is a three-stage write to Linear, with a human approval between each stage. The Project already exists — Step 3 only adds Milestones and Issues to it. Nothing reaches an Active state automatically.
 
 **Stage 3a — Decompose into epics**
-1. Use Claude with the [epic decomposition prompt](./PROMPTS.md#epic-decomposition). Reference the PRD by Linear Document URL — Claude can read the Document directly via MCP. Output stays in chat — no Linear write yet.
+1. Use Claude Code with the [epic decomposition prompt](./PROMPTS.md#epic-decomposition). Reference the PRD by Linear Document URL — Claude Code can read the Document directly via MCP. Output stays local — no Linear write yet.
 
 **Stage 3b — Add Milestones to the existing Project (with human approval)**
 1. Run the [`prd-to-linear-scaffold`](./PROMPTS.md#prd-to-linear-scaffold) prompt against the existing Linear Project. Claude calls the Linear MCP to:
@@ -168,7 +164,7 @@ This step is a three-stage write to Linear, with a human approval between each s
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Complete PRD, the Linear project + issue set produced in Step 3 |
-| **Tool** | **Claude** with the **Linear connector enabled** (read + comment) |
+| **Tool** | **Claude Code** with the **Linear MCP server connected** (read + comment) |
 | **Output** | Gap analysis report posted as a comment on the Linear Project, plus prioritised findings list |
 | **Human** | Validate findings, decide which gaps to address, update PRD, trigger another Step 3 cycle for accepted gaps |
 
@@ -264,7 +260,7 @@ The PM should configure these once per workspace before running Phase 1 on a new
 ```
 [Step 1] Stakeholder interviews (Fireflies) + Linear context pull (read-only)
    │
-[Step 2.1-2.3] Claude drafts PRD in chat → self-review → PM review (Markdown only)
+[Step 2.1-2.3] Claude Code drafts PRD locally → self-review → PM review (Markdown only)
    │
 [Step 2.4] prd-to-linear-document → Claude creates Linear Project (Planned)
            and publishes PRD as a Linear Document with section anchors
@@ -305,7 +301,7 @@ Three explicit human gates ensure that **no Claude-authored Linear item reaches 
 | Risk | Mitigation |
 |------|------------|
 | **Duplicate issues** — Claude is re-run and pushes the same stories twice | The `stories-to-linear-push` prompt **must** call `linear-context-pull` first and report any title or AC matches before creating. PM rejects duplicates in the AI Inbox. |
-| **Silent state changes / scope creep** — Claude moves issues to In Progress or edits AC on existing tickets | At admin level, **disable update / state-change scopes** in the Anthropic Connectors policy. Claude can create issues and post comments, not mutate existing ones. Promote scopes only when team maturity justifies it. |
+| **Silent state changes / scope creep** — Claude moves issues to In Progress or edits AC on existing tickets | **Withhold update / state-change actions** in Claude Code's tool-permission settings for the Linear MCP server. Claude Code can create issues and post comments, not mutate existing ones. Promote scopes only when team maturity justifies it. |
 | **Hallucinated stories** — fabricated personas or features that never appeared in the PRD | `needs-human-review` gate label + the `**PRD section: §X.Y**` citation rule. Stories without a valid citation are deleted at Gate 3. The AI Inbox view enforces a daily sweep. |
 | **Permission escalation surprises** | Claude inherits the connecting user's Linear permissions only — no escalation. Off-board users by revoking the OAuth grant in Linear (Settings → Security & access → OAuth applications) and `claude mcp remove linear` on their machine. |
 
@@ -323,5 +319,4 @@ Three explicit human gates ensure that **no Claude-authored Linear item reaches 
 
 - [Linear MCP server docs](https://linear.app/docs/mcp) — server URL, OAuth, available tools
 - [Claude × Linear integration page](https://linear.app/integrations/claude)
-- [Anthropic — Use connectors to extend Claude's capabilities](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities)
-- [Claude Code MCP setup](https://code.claude.com/docs/en/mcp)
+- [Claude Code MCP setup](https://code.claude.com/docs/en/mcp) — `claude mcp add`, project vs user scope, `.mcp.json`, `/mcp` authentication

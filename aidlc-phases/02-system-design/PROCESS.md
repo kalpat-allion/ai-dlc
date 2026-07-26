@@ -6,9 +6,9 @@ This document defines the AI-assisted workflow for the System Design phase, usin
 
 **Phase Duration:** 1–2 weeks (varies with system complexity)
 **Phase Owner:** Tech Lead / Solutions Architect
-**Tools Used:** Claude (chat + Code), **Claude Design** (UI/UX), **Eraser.io** (diagrams, integrated with Claude via MCP), Mermaid (in-repo diagram-as-code), free Swagger UI + Prism (OpenAPI viewing & mocking)
+**Tools Used:** Claude Code (design reasoning + the **frontend-design Skill** for UI), **Figma** (design canvas / handoff via the official Figma MCP), **Eraser.io** (diagrams, via the Eraser MCP), Mermaid (in-repo diagram-as-code), free Swagger UI + Prism (OpenAPI viewing & mocking)
 
-> **Tool Philosophy:** Claude does **all** of the design reasoning — architecture proposals, ADRs, schema generation, OpenAPI specs, tech-stack trade-offs, and design review. **Eraser.io is the single specialist visual tool**, and it is driven from inside Claude through the official Eraser MCP server, so the architect never context-switches into a separate diagram app to do the first draft. **Claude Design** ([anthropic.com/news/claude-design-anthropic-labs](https://www.anthropic.com/news/claude-design-anthropic-labs)) is the primary surface for UI/UX wireframing and prototyping — it generates live HTML/CSS/React (not pixel mockups), inherits the project's design system, and hands off directly into Claude Code. Cursor, v0, and Figma remain only as escalation paths when Claude Design genuinely cannot meet a requirement (see Step 4.7). Mermaid stays in scope for diagrams that must live in git.
+> **Tool Philosophy:** Claude Code does **all** of the design reasoning — architecture proposals, ADRs, schema generation, OpenAPI specs, tech-stack trade-offs, and design review. **Eraser.io is the single specialist visual tool** for architecture and data diagrams, and it is driven from inside Claude Code through the official Eraser MCP server, so the architect never context-switches into a separate diagram app to do the first draft. For UI/UX, the **frontend-design Skill runs inside Claude Code and generates the interface as real code in the repo** (React + Tailwind + shadcn), inheriting the project's design system directly from the codebase — there is no separate canvas surface to round-trip through. When a design canvas is genuinely needed (designer-led flows, pixel-perfect brand work, or a shared design file), **Figma is the paired tool, connected over the official Figma MCP** so Claude Code reads designs out of Figma and writes them back without leaving the terminal. v0 / Bolt / Cursor+shadcn remain narrower escalation paths (see Step 4.7). Mermaid stays in scope for diagrams that must live in git.
 
 ---
 
@@ -20,45 +20,39 @@ This document defines the AI-assisted workflow for the System Design phase, usin
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Eraser.io workspace admin access (Business tier recommended for SOC 2 Type II + audit logs), Claude account (Pro / Max / Team / Enterprise) |
-| **Tool** | **Eraser MCP server** (`https://app.eraser.io/api/mcp`) — official, hosted by Eraser, OAuth 2.1; API-key fallback for CLI/CI |
-| **Output** | Claude (web/desktop) and Claude Code can `generate`, `generateEdit`, `export`, `search`, `create`, `update`, and `delete` Eraser diagrams, files, folders, and presets |
-| **Human** | Workspace admin enables the connector; each user authorises once via OAuth |
+| **Input** | Eraser.io workspace admin access (Business tier recommended for SOC 2 Type II + audit logs), Claude subscription that funds Claude Code (Pro / Max / Team / Enterprise), Claude Code installed |
+| **Tool** | **Eraser MCP server** (`https://app.eraser.io/api/mcp`) — official, hosted by Eraser, OAuth 2.1, wired into Claude Code at **project scope**; API-key fallback for CI |
+| **Output** | Claude Code can `generate`, `generateEdit`, `export`, `search`, `create`, `update`, and `delete` Eraser diagrams, files, folders, and presets from inside the repo |
+| **Human** | Workspace admin confirms the MCP endpoint is reachable; each user authorises once per project via OAuth (`/mcp`) |
 
-The Eraser MCP is the integration mechanism — do **not** wrap the Eraser REST API by hand. It is centrally hosted, OAuth-authenticated, and supported across every Claude surface ([docs.eraser.io/docs/mcp](https://docs.eraser.io/docs/mcp)). Set this up once per workspace, then once per user.
+The Eraser MCP is the integration mechanism — do **not** wrap the Eraser REST API by hand. It is centrally hosted, OAuth-authenticated, and driven entirely from **Claude Code** ([docs.eraser.io/docs/mcp](https://docs.eraser.io/docs/mcp)). Register it once per repo (the registration is committed to `.mcp.json`), then each user authenticates once per project.
 
-#### Path A — claude.ai (web) and Claude Desktop
+#### Set up the project-scoped Eraser MCP server in Claude Code
+
+All Claude interaction in the AI-DLC runs through **Claude Code**, and the Eraser MCP server is wired **per project** so each repo carries its own committed MCP config — letting you keep multiple projects open concurrently, each authenticated independently (even under a **different Eraser account per project**).
 
 1. **Workspace admin (Eraser):** confirm the workspace is on a plan that exposes the MCP endpoint and that no IP allow-list blocks `app.eraser.io`. Enable the audit log under **Settings → Security**.
-2. **Workspace admin (Anthropic, Team/Enterprise only):** in the Anthropic admin console, **enable Eraser** under organisation Connectors. Set tool permissions — for Phase 2 we recommend **`generate` + `generateEdit` + `export` + `search`** with **`delete` disabled** until the team is confident (see [Risks & Guardrails](#risks--guardrails)).
-3. **Each user (Claude.ai):** open **Settings → Connectors** → find **Eraser** in the directory → **Connect**. OAuth opens in a new tab; sign in to Eraser, review the requested scopes, approve.
-4. **Per-conversation toggle:** open a chat, click **+** → **Connectors**, toggle **Eraser** on. (Off by default — explicit opt-in per conversation.)
-5. **Smoke test:** prompt Claude with `Via Eraser MCP, list my workspaces and create a new sequence diagram titled "MCP smoke test" with two participants A and B.` Confirm the diagram appears in your Eraser workspace.
-
-#### Path B — Claude Code (developer / CLI use)
-
-Use Claude Code when generating diagrams from inside a repo (e.g., a Mermaid handoff or a CI-driven architecture refresh).
-
-1. **Add the server** (run from repo root for project scope, or anywhere for user scope):
+2. **Add the server at project scope** (run from the repo root). This writes the registration to the repo's committed `.mcp.json`:
    ```bash
-   claude mcp add --transport http --scope user eraser https://app.eraser.io/api/mcp
+   claude mcp add --transport http --scope project eraser https://app.eraser.io/api/mcp
    ```
-   Use `--scope project` if you want the server committed to the repo's `.mcp.json` so the team shares it. For agentic CI pipelines that cannot do interactive OAuth, use the API-key path: `claude mcp add eraser -- npx -y @eraserlabs/eraser-mcp` with `ERASER_API_KEY` in the environment.
-2. **Authenticate:** open Claude Code (`claude`) → `/mcp` → select **eraser** → approve OAuth.
-3. **Verify:** `claude mcp list` should show `eraser: connected`. In a session: `Via Eraser MCP, generate a cloud architecture diagram for an AWS-based three-tier web app and export it as PNG.`
-4. **Revoke when done:** `claude mcp remove eraser`, and revoke the OAuth grant in Eraser under **Settings → Security → Connected applications**.
+   Because `.mcp.json` is committed, the whole team shares one per-project MCP config. For a **different Eraser account per project**, give it a **distinct server name** (e.g., `eraser-acmeco`) so registrations and OAuth tokens never collide. For agentic CI pipelines that cannot do interactive OAuth, use the API-key path: `claude mcp add eraser -- npx -y @eraserlabs/eraser-mcp` with `ERASER_API_KEY` in the environment.
+3. **Authenticate once per project:** open Claude Code (`claude`) in the repo → `/mcp` → select **eraser** (or the distinct name from step 2) → approve OAuth. The token is stored against this project's server registration, so authenticating one project never disturbs another.
+4. **Verify:** `claude mcp list` should show `eraser: connected`. In a session: `Via Eraser MCP, generate a cloud architecture diagram for an AWS-based three-tier web app and export it as PNG.` Confirm the diagram appears in your Eraser workspace.
+5. **Restrain write scope until the team is confident.** For Phase 2, keep Claude Code to **`generate` + `generateEdit` + `export` + `search`**, with **`delete` withheld** — enforced through Claude Code's tool-permission settings (see [Risks & Guardrails](#risks--guardrails)).
+6. **Revoke when done:** `claude mcp remove eraser`, and revoke the OAuth grant in Eraser under **Settings → Security → Connected applications**.
 
 #### Verification checklist
 
-- [ ] Eraser connector shows **Connected** in Claude settings
+- [ ] `claude mcp list` shows `eraser: connected` in the repo (registration committed to `.mcp.json`)
 - [ ] Smoke-test diagram appears in your Eraser workspace
-- [ ] Claude can `search` your workspace and `export` to PNG/SVG
+- [ ] Claude Code can `search` your workspace and `export` to PNG/SVG
 - [ ] Audit logging is on in Eraser
-- [ ] Anthropic admin tool-permission policy reviewed (Team/Enterprise) with `delete` scope disabled
+- [ ] Claude Code tool-permission settings keep Eraser to `generate` / `generateEdit` / `export` / `search` (`delete` withheld)
 
-> **Permission inheritance:** Claude inherits the connecting user's Eraser permissions. There is no privilege escalation. Off-board by revoking the OAuth grant.
+> **Permission inheritance:** Claude Code inherits the connecting user's Eraser permissions. There is no privilege escalation. Off-board by revoking the OAuth grant.
 
-> **Claude Design enablement:** Claude Design ships enabled-by-default for Pro/Max/Team and disabled-by-default for Enterprise ([support.claude.com/en/articles/14604416](https://support.claude.com/en/articles/14604416-get-started-with-claude-design)). For Enterprise, the admin enables it under **Admin → Features → Claude Design** before Step 4. There is no MCP setup for Claude Design — it is a first-party Claude surface.
+> **UI/UX tooling (Step 4):** the frontend-design Skill needs no setup beyond enabling it in Claude Code (Step 4.2). If the project uses **Figma** as its design canvas, register the Figma MCP server at project scope too — `claude mcp add --transport http --scope project figma <figma-mcp-url>` — then authenticate per project via `/mcp`, exactly like Eraser above. Figma is optional: repos with no design file drive Step 4 entirely from the frontend-design Skill.
 
 ---
 
@@ -75,13 +69,13 @@ Use Claude Code when generating diagrams from inside a repo (e.g., a Mermaid han
 
 **Workflow:**
 
-**1.1 — Pull inputs.** In a Claude conversation with the **Linear connector enabled**, fetch the approved PRD Document and any related initiatives/issues from the Phase 1 Project. Do not paste — let Claude read via MCP so the trace stays clean. Record the PRD Document URL and PRD version (`v1.0`, etc.) — every ADR and diagram must cite both.
+**1.1 — Pull inputs.** In Claude Code with the **Linear MCP server connected**, fetch the approved PRD Document and any related initiatives/issues from the Phase 1 Project. Do not paste — let Claude Code read via MCP so the trace stays clean. Record the PRD Document URL and PRD version (`v1.0`, etc.) — every ADR and diagram must cite both.
 
-**1.2 — Generate architecture options with Claude.** Use the [`architecture-proposal`](./PROMPTS.md#architecture-proposal) prompt. Feed in the PRD reference, NFRs, team profile, budget, and timeline. Claude produces 2–3 candidate architectures with components, communication patterns, data architecture, and trade-off tables. The output stays in chat — no diagrams or ADRs yet.
+**1.2 — Generate architecture options with Claude Code.** Use the [`architecture-proposal`](./PROMPTS.md#architecture-proposal) prompt. Feed in the PRD reference, NFRs, team profile, budget, and timeline. Claude Code produces 2–3 candidate architectures with components, communication patterns, data architecture, and trade-off tables. The output stays local — no diagrams or ADRs yet.
 
-**1.3 — Trade-off interrogation.** For each option, run the [`trade-off-interrogation`](./PROMPTS.md#trade-off-interrogation) prompt (or follow up in chat with `Stress-test option 2 at 10x current load — where does it break first, and what is the mitigation?`). Force Claude to surface failure modes, single points of failure, and cost cliffs. Capture the answers; they become inputs to the design review prompt at 1.6.
+**1.3 — Trade-off interrogation.** For each option, run the [`trade-off-interrogation`](./PROMPTS.md#trade-off-interrogation) prompt (or follow up in Claude Code with `Stress-test option 2 at 10x current load — where does it break first, and what is the mitigation?`). Force Claude Code to surface failure modes, single points of failure, and cost cliffs. Capture the answers; they become inputs to the design review prompt at 1.6.
 
-**1.4 — Render diagrams in Eraser.io (via MCP).** With the Eraser connector on, run the [`eraser-architecture-diagram`](./PROMPTS.md#eraser-architecture-diagram) prompt. Claude calls Eraser MCP `generate` to produce a cloud architecture diagram and a system overview diagram in Eraser's diagram-as-code DSL. Eraser supports flowcharts, sequence diagrams, ER diagrams, cloud architecture, and BPMN/swimlane natively ([eraser.io/diagramgpt](https://www.eraser.io/diagramgpt)). For each generated diagram, Claude returns the editor URL and the DSL — open the URL, refine in the visual editor or via inline AI requests, then export PNG/SVG. The DSL is checked into `/docs/diagrams/eraser/` alongside the export so the diagram round-trips.
+**1.4 — Render diagrams in Eraser.io (via MCP).** With the Eraser MCP server connected, run the [`eraser-architecture-diagram`](./PROMPTS.md#eraser-architecture-diagram) prompt. Claude Code calls Eraser MCP `generate` to produce a cloud architecture diagram and a system overview diagram in Eraser's diagram-as-code DSL. Eraser supports flowcharts, sequence diagrams, ER diagrams, cloud architecture, and BPMN/swimlane natively ([eraser.io/diagramgpt](https://www.eraser.io/diagramgpt)). For each generated diagram, Claude Code returns the editor URL and the DSL — open the URL, refine in the visual editor or via inline AI requests, then export PNG/SVG. The DSL is checked into `/docs/diagrams/eraser/` alongside the export so the diagram round-trips.
 
 **1.5 — Render in-repo diagrams in Mermaid.** For diagrams that must live in version control and render in GitHub/GitLab markdown (sequence diagrams in ADRs, C4 Context/Container diagrams), use Claude to produce Mermaid directly. Mermaid in 2026 supports the full C4 model — Context, Container, Component, Dynamic ([mermaid.js.org/syntax/c4](https://mermaid.js.org/syntax/c4.html)). Commit these to `/docs/diagrams/mermaid/` and reference them from the ADR.
 
@@ -110,7 +104,7 @@ Use Claude Code when generating diagrams from inside a repo (e.g., a Mermaid han
 
 **Workflow:**
 
-**2.1 — Extract entities.** Run the [`entity-extraction`](./PROMPTS.md#entity-extraction) prompt with the Linear connector on. Claude reads the PRD Document and produces a structured entity list with attributes, relationships, cardinalities, and a cross-context map. Entities that span bounded contexts may need duplication or an event contract, not a foreign key — the prompt flags these explicitly.
+**2.1 — Extract entities.** Run the [`entity-extraction`](./PROMPTS.md#entity-extraction) prompt in Claude Code with the Linear MCP server connected. Claude Code reads the PRD Document and produces a structured entity list with attributes, relationships, cardinalities, and a cross-context map. Entities that span bounded contexts may need duplication or an event contract, not a foreign key — the prompt flags these explicitly.
 
 **2.2 — Generate schema with Claude Code.** From inside the repo, run the [`schema-generation`](./PROMPTS.md#schema-generation) prompt. Specify the ORM (Prisma / TypeORM / Drizzle / raw SQL) and naming convention. Claude Code reads existing repo conventions and produces a schema that matches them — this is the key reason to drive schema generation from Claude Code rather than chat. Output includes constraints, indexes covering the top query patterns, soft-delete columns where appropriate, and timestamps on every entity.
 
@@ -139,7 +133,7 @@ Use Claude Code when generating diagrams from inside a repo (e.g., a Mermaid han
 
 **Workflow:**
 
-**3.1 — Map flows to endpoints.** Use Claude with the Linear connector on to read each PRD user-flow section and propose the resource model and endpoints. Resolve naming and verb questions here before writing any spec — REST mistakes calcify fast.
+**3.1 — Map flows to endpoints.** Use Claude Code with the Linear MCP server connected to read each PRD user-flow section and propose the resource model and endpoints. Resolve naming and verb questions here before writing any spec — REST mistakes calcify fast.
 
 **3.2 — Generate OpenAPI 3.1 spec.** Run the [`api-contract`](./PROMPTS.md#api-contract) prompt in Claude Code so the spec aligns with existing repo conventions. Claude produces a complete OpenAPI 3.1 YAML with: info + servers + security schemes, all CRUD endpoints, request bodies with JSON Schema, success and error responses (200/201/400/401/403/404/409/422/500), pagination on every list endpoint, reusable components, and consistent tagging. Commit to `/docs/api/openapi.yaml`.
 
@@ -155,42 +149,44 @@ Use Claude Code when generating diagrams from inside a repo (e.g., a Mermaid han
 
 ---
 
-### Step 4: UI/UX Wireframing — with Claude Design
+### Step 4: UI/UX Wireframing — in Claude Code
 
 > Visual: [Step 4 flowchart](./FLOWCHART.md#step-4-uiux-wireframing)
 
+UI/UX in the AI-DLC is generated **as real code in the repo** by Claude Code with the **frontend-design Skill** — not on a separate canvas. Wireframes are runnable React/Tailwind/shadcn screens you preview in the project's own dev server (or Storybook), so there is no wireframe-to-code translation step and no surface to round-trip through. **Figma is the paired canvas tool** for designer-led or pixel-perfect work, connected over the official **Figma MCP** so Claude Code reads a Figma file into code (design-to-code) or pushes generated screens back into Figma (code-to-design) from inside the terminal.
+
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | PRD user flows, personas, functional requirements, brand assets (if any), repo URL |
-| **Tool** | **Claude Design** (primary — wireframes, interactive prototypes, design system) + Claude (accessibility review) |
-| **Output** | Interactive prototypes (live HTML/CSS/React), component specifications, accessibility report, Claude Code handoff |
-| **Human** | Validate UX, review accessibility, approve designs, drive iterations via inline comments |
+| **Input** | PRD user flows, personas, functional requirements, brand assets (if any), the repo itself (existing components / Tailwind config / tokens), an existing Figma file (optional) |
+| **Tool** | **Claude Code + frontend-design Skill** (primary — generates screens as repo code) + **Figma via the Figma MCP** (optional canvas / designer handoff) + Claude Code (accessibility review) |
+| **Output** | Runnable wireframe screens in the repo (React + Tailwind + shadcn), all states, desktop + mobile; component specifications; accessibility report; PR per flow |
+| **Human** | Validate UX in the running preview, review accessibility, approve designs, drive iterations by prompt |
 
 **Workflow:**
 
-**4.1 — Onboard the design system once per project.** In Claude Design, create a new project and link the codebase repo plus any existing design files. Claude Design reads the repo and design files to build a custom design system — colours, typography, components — that every subsequent prototype inherits automatically ([anthropic.com/news/claude-design-anthropic-labs](https://www.anthropic.com/news/claude-design-anthropic-labs)). For greenfield projects with no design system, brief Claude Design on the brand (or run the [`claude-design-system-bootstrap`](./PROMPTS.md#claude-design-system-bootstrap) prompt) and accept its proposed system before any wireframing begins.
+**4.1 — Establish the design system in the repo (once per project).** Point Claude Code at the repo so the frontend-design Skill infers the existing design system — colours, typography, spacing, component library — from the code (Tailwind config, tokens, existing components). Every subsequent screen inherits it automatically. For greenfield projects with no design system, run the [`design-system-bootstrap`](./PROMPTS.md#design-system-bootstrap) prompt to generate the token set + a reference screen **as committed repo code** (e.g., a `/design-system` route or a Storybook story), and approve it before any wireframing begins. If the project already has a **Figma** design system, connect the Figma MCP and pull tokens/variables into the repo with `get_variable_defs` / `get_design_context` so the code and the Figma file agree.
 
-**4.2 — Enable the frontend-design Skill.** In Claude.ai → Settings → Skills, enable the official **frontend-design** Skill ([claude.com/blog/improving-frontend-design-through-skills](https://claude.com/blog/improving-frontend-design-through-skills)). It biases Claude away from generic Inter-and-purple-gradient defaults and towards distinctive typography, intentional motion, and considered colour palettes — exactly what wireframes need to communicate intent. The Skill cooperates with Claude Design and Artifacts; no extra setup beyond toggling it on.
+**4.2 — Enable the frontend-design Skill.** Enable the official **frontend-design** Skill ([claude.com/blog/improving-frontend-design-through-skills](https://claude.com/blog/improving-frontend-design-through-skills)) in Claude Code. It biases Claude Code away from generic Inter-and-purple-gradient defaults and towards distinctive typography, intentional motion, and considered colour palettes — exactly what wireframes need to communicate intent. No setup beyond enabling it.
 
-**4.3 — Generate wireframes per user flow.** For each PRD user flow, run the [`claude-design-wireframe`](./PROMPTS.md#claude-design-wireframe) prompt in Claude Design. Output is **live HTML/CSS/React in a Claude Design canvas**, not a pixel mockup — clickable, with real layout, real components, real behaviours. Claude Design produces all standard states out of the box: loading, empty, error, success, plus mobile and desktop variants when prompted.
+**4.3 — Generate wireframes per user flow.** For each PRD user flow, run the [`ui-wireframe`](./PROMPTS.md#ui-wireframe) prompt in Claude Code. Output is **live React/Tailwind/shadcn code committed to the repo** — clickable, with real layout, real components, real behaviours, previewed in the project's dev server. Produce all standard states (loading, empty, error, success) plus desktop (1440) and mobile (375) variants. For designer-led or pixel-perfect flows, drive the same result through **Figma via the Figma MCP** — either implement an existing Figma frame with `get_design_context`, or generate the screen and push it into Figma with `generate_figma_design` / `use_figma` for a designer to refine.
 
-**4.4 — Iterate via inline comments and chat.** Refine through two channels: **inline comments** (click a region of the canvas, request a targeted change — "tighten this header, increase tap target on the primary CTA") and **chat** (broad changes that affect the whole design). The Skill plus Claude Design's design-system inheritance keeps refinements visually consistent across flows.
+**4.4 — Iterate by prompt (and in Figma when used).** Refine through Claude Code: targeted edits ("tighten this header, increase the tap target on the primary CTA") and broad restyles, previewing each change in the running app. The frontend-design Skill plus the repo's design-system tokens keep refinements consistent across flows. When a designer is iterating on the Figma canvas, re-sync the change into the repo with the Figma MCP so code stays the source of truth.
 
-**4.5 — Production-grade components when needed.** When a wireframe needs to evolve directly into production code, use Claude Design's **Handoff to Claude Code** action. Claude Design exports the React + Tailwind + shadcn-aligned components into the repo via Claude Code's local agent, preserving the design-system tokens. The output is editable code, not a screenshot — eliminating the wireframe-to-code translation step.
+**4.5 — Promote to production-grade components.** Because screens are already real code, "handoff" is just promotion: lift the mature component into the shared component library (`src/components/ui/…`), tighten its typed props and variants, add the render + a11y tests, and open a PR. There is no canvas-to-code export — the [`production-component`](./PROMPTS.md#production-component) prompt drives this directly in Claude Code.
 
-**4.6 — Accessibility review.** Run the [`accessibility-review`](./PROMPTS.md#accessibility-review) prompt against each generated component. Claude checks WCAG 2.1 AA: keyboard navigation, focus order, colour contrast, screen-reader labelling, semantic HTML, motion-reduction respect. Resolve every Critical and High; document accepted Mediums in the ADR for that flow.
+**4.6 — Accessibility review.** Run the [`accessibility-review`](./PROMPTS.md#accessibility-review) prompt against each generated component. Claude Code checks WCAG 2.1 AA: keyboard navigation, focus order, colour contrast, screen-reader labelling, semantic HTML, motion-reduction respect. Resolve every Critical and High; document accepted Mediums in the ADR for that flow.
 
-**4.7 — Stakeholder review.** Share the Claude Design project link with PM and stakeholders. Stakeholders comment inline directly on the canvas. Iterate. Approve.
+**4.7 — Stakeholder review.** Share a running preview — a deploy preview, a Storybook link, or a screen recording of the flow — with PM and stakeholders (or the Figma file if the flow was designed there). Capture feedback, iterate in Claude Code, approve.
 
-**▼ GATE 3 — Wireframes approved.** PM signs off in the Claude Design project. See [QUALITY-GATES.md → Gate 3](./QUALITY-GATES.md#gate-3-wireframes--tech-stack).
+**▼ GATE 3 — Wireframes approved.** PM signs off on the previewed screens (deploy preview / Storybook / Figma). See [QUALITY-GATES.md → Gate 3](./QUALITY-GATES.md#gate-3-wireframes--tech-stack).
 
-**Escalation paths (Claude Design fallbacks):**
-- **Pixel-perfect brand work or designer-led flow** → Figma (the standard design tool, not the AI add-on). Designers in Figma, developers receive coded components from Claude Design or implement from Figma specs.
+**Escalation paths (beyond the frontend-design Skill + Figma):**
+- **Pixel-perfect brand work or designer-led flow** → **Figma** is the primary canvas here, wired over the Figma MCP so code and design stay in sync (not a manual spec handoff).
 - **Full-stack interactive demo with real backend** → Bolt.new or Lovable. Treat as a throwaway exploration; do not ship the output.
-- **A specific dropped-in component for an existing repo where Claude Design's handoff falters** → v0 by Vercel as a per-component fallback only.
-- **Heavy IDE-driven UI work** → Cursor with the shadcn registry. Reserve for cases where the flow lives more in the codebase than in the design canvas.
+- **A specific dropped-in component that is faster to start from a generator** → v0 by Vercel as a per-component fallback; bring the code back into the repo and reconcile it to the design-system tokens.
+- **Heavy IDE-driven UI work** → Cursor with the shadcn registry, for flows that live more in the codebase than in any canvas.
 
-If the team lands in fallback territory more than once a sprint, that is a signal — re-evaluate Claude Design coverage rather than normalising the workaround.
+If the team lands in fallback territory more than once a sprint, that is a signal — re-evaluate whether the frontend-design Skill + repo design system is being used to its full extent rather than normalising the workaround.
 
 If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edit the Linear PRD Document (bumping the version per the changelog rule) and re-run `linear-gap-sweep` before resuming Phase 2.
 
@@ -233,7 +229,7 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 | Migration scripts + seed data | ORM migration files | `/src/db/migrations/` |
 | OpenAPI spec | YAML | `/docs/api/openapi.yaml` |
 | Mock server URL | README entry | Project README |
-| UI wireframes / prototypes | Claude Design project link + handoff branch | Project README + Claude Design |
+| UI wireframes / prototypes | Runnable screens in the repo (React + Tailwind + shadcn) + deploy-preview / Storybook link; Figma file link if used | Repo (`/src`) + Project README |
 | Accessibility review | Markdown | `/docs/accessibility/wcag-aa-report.md` |
 | Tech stack ADRs + training plans | Markdown | `/docs/adrs/` |
 
@@ -244,7 +240,7 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 - [ ] Mermaid diagrams: C4 Context + Container, ERD — rendering in repo
 - [ ] Schema reviewed by ≥ 1 backend developer; migrations run cleanly locally
 - [ ] OpenAPI 3.1 spec covers every PRD user flow; mock server URL in README
-- [ ] Claude Design wireframes cover every PRD user flow with all states; accessibility review passes WCAG 2.1 AA
+- [ ] frontend-design Skill wireframes (repo code) cover every PRD user flow with all states; accessibility review passes WCAG 2.1 AA
 - [ ] Tech stack ADRs complete; every unfamiliar choice has a training plan
 - [ ] Linear: every Phase 2 ADR / spec / diagram URL is linked from the corresponding Linear Issue with the `phase:design` label
 
@@ -258,9 +254,9 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 | **Hallucinated architecture decisions** — Claude proposes a pattern that sounds plausible but does not match the actual NFRs (e.g., recommends event sourcing for a CRUD app) | Always run the [`design-review`](./PROMPTS.md#design-review) prompt before accepting a proposal; require the trade-off interrogation step (1.3) on every option; ADRs must list the **rejected** alternatives with the specific reason — if Claude cannot articulate why an alternative was rejected, it has not actually evaluated it. |
 | **Hallucinated requirements in ADRs** — Claude writes consequences that read well but were never validated | ADRs require human "Status: Accepted" sign-off; PRs that touch `/docs/adrs/` need a non-author reviewer. Treat every numeric claim ("latency drops 40%") as a citation-needed flag — strike it or back it. |
 | **OpenAPI spec drift** — the spec is correct on day one but the implemented API diverges by week three | Make the spec the source of truth: contract-test the running API against `openapi.yaml` in CI (e.g., Schemathesis or Dredd). Spec changes go through the [Gate 2](./QUALITY-GATES.md#gate-2-data-model--api-contracts) review path, not casual edits. |
-| **Claude Design output ignores accessibility** — generated UI looks good but fails keyboard navigation, contrast, or screen-reader semantics | The accessibility review at Step 4.6 is mandatory, not optional. Resolve every Critical and High before Gate 3. The frontend-design Skill helps with intent but does not replace the audit. |
-| **Wireframe-to-prod creep** — stakeholders fall in love with a Claude Design prototype and the "wireframe" is shipped without engineering review | Mark every Claude Design project explicitly as "wireframe — not production". Production code path is **Handoff to Claude Code → branch → PR → Phase 3 review**, never canvas-to-prod. |
-| **Eraser permission overreach** — a connector with `delete` enabled wipes diagrams during an aggressive refactor prompt | Disable `delete` scope in the Anthropic Connectors policy until the team is mature. Audit logs must be on in Eraser. Off-board users by revoking the OAuth grant. |
+| **Generated UI ignores accessibility** — frontend-design output looks good but fails keyboard navigation, contrast, or screen-reader semantics | The accessibility review at Step 4.6 is mandatory, not optional. Resolve every Critical and High before Gate 3. The frontend-design Skill helps with intent but does not replace the audit. |
+| **Wireframe-to-prod creep** — stakeholders fall in love with a wireframe screen and it ships without engineering review | Mark every wireframe screen explicitly as "wireframe — not production" (e.g., a route flag or Storybook tag). The production path is **promote component → PR → Phase 3 review**, never wireframe-branch-to-prod. |
+| **Eraser permission overreach** — an MCP server with `delete` enabled wipes diagrams during an aggressive refactor prompt | Withhold the `delete` action in Claude Code's tool-permission settings until the team is mature. Audit logs must be on in Eraser. Off-board users by revoking the OAuth grant. |
 | **Spec/schema/diagram fan-out without traceability** — three diagrams, two ADRs, an ER diagram, an OpenAPI spec, and nobody can find the PRD section that drove any of it | Every artifact cites the PRD section (Linear Document anchor) it traces to. The handoff checklist enforces this; the Phase 3 team rejects unlinked artifacts. |
 
 ---
@@ -295,12 +291,12 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
    │
    ▼  GATE 2: Data model + API contracts approved
    │
-[Step 4.1] Claude Design onboards design system from repo + brand
-[Step 4.2] frontend-design Skill enabled
-[Step 4.3-4.4] Wireframes per flow + iteration via inline comments
-[Step 4.5] Handoff to Claude Code (when production-grade required)
+[Step 4.1] frontend-design Skill infers design system from repo (+ Figma tokens if used)
+[Step 4.2] frontend-design Skill enabled in Claude Code
+[Step 4.3-4.4] Wireframe screens per flow as repo code + iteration by prompt
+[Step 4.5] Promote mature components to the shared library → PR
 [Step 4.6] accessibility-review prompt → WCAG 2.1 AA report
-[Step 4.7] Stakeholder review on Claude Design canvas
+[Step 4.7] Stakeholder review on deploy preview / Storybook / Figma
    │
    ▼  GATE 3: Wireframes approved by PM
    │
@@ -327,9 +323,8 @@ Four explicit human gates ensure that **no AI-generated artifact reaches Phase 3
 - [Eraser MCP server docs](https://docs.eraser.io/docs/mcp) — server URL, OAuth, available tools
 - [Eraser AI agent integrations](https://docs.eraser.io/docs/using-ai-agent-integrations) — MCP vs Skills, recommended workflows
 - [Eraser DiagramGPT](https://www.eraser.io/diagramgpt) — diagram types, DSL, export formats
-- [Anthropic — Introducing Claude Design](https://www.anthropic.com/news/claude-design-anthropic-labs) — launch, capabilities, model
-- [Get started with Claude Design](https://support.claude.com/en/articles/14604416-get-started-with-claude-design) — access, refinement, handoff
-- [Anthropic — Improving frontend design through Skills](https://claude.com/blog/improving-frontend-design-through-skills) — frontend-design Skill
+- [Anthropic — Improving frontend design through Skills](https://claude.com/blog/improving-frontend-design-through-skills) — the frontend-design Skill in Claude Code
+- [Figma MCP server](https://www.figma.com/blog/introducing-figmas-dev-mode-mcp-server/) — design-to-code and code-to-design from Claude Code
 - [Mermaid C4 syntax](https://mermaid.js.org/syntax/c4.html) — Context/Container/Component/Dynamic
 - [Stoplight Prism (OSS)](https://stoplight.io/open-source/prism) — OpenAPI 3.1 mock server
 - [Phase 2 Tools Evaluation](../../docs/tools-evaluation/2.SystemDesign_Phase_Tools.md)

@@ -39,10 +39,10 @@ This document defines the AI-assisted workflow for the Testing & QA phase, using
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Linear workspace (already connected from Phase 1 — see [`01-requirement-gathering/PROCESS.md` Step 0](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)), Sentry organisation admin, Anthropic Connectors admin (Team/Enterprise) |
+| **Input** | Linear workspace (already connected from Phase 1 — see [`01-requirement-gathering/PROCESS.md` Step 0](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)), Sentry organisation admin, access to Claude Code tool-permission settings |
 | **Tools** | **Linear MCP** (`https://mcp.linear.app/mcp`), **Sentry MCP** (`https://mcp.sentry.dev/mcp`), **Sentry Agent for Linear** (in-app, no MCP — it is a Linear Agent) |
 | **Output** | Claude Code can read & write Linear issues + Sentry issues; Sentry can auto-file bug issues into Linear with Seer RCA pre-attached |
-| **Human** | Workspace admin enables connectors; QA Lead configures Sentry Agent triage rules; each user authorises once via OAuth |
+| **Human** | Workspace admin authorises the MCP servers; QA Lead configures Sentry Agent triage rules; each user authorises once per project via OAuth |
 
 Phase 4 builds on the Phase 1 Linear MCP setup but adds **two new pieces**: the Sentry MCP server (so Claude Code can query Sentry directly during debugging) and the Sentry Agent for Linear (so production errors auto-flow into Linear's Triage with root-cause analysis attached).
 
@@ -50,7 +50,7 @@ Phase 4 builds on the Phase 1 Linear MCP setup but adds **two new pieces**: the 
 
 1. **Add the Sentry MCP server** at user scope:
    ```bash
-   claude mcp add --transport http --scope user sentry https://mcp.sentry.dev/mcp
+   claude mcp add --transport http --scope project sentry https://mcp.sentry.dev/mcp
    ```
 2. **Authenticate:** open Claude Code (`claude`) → `/mcp` → select **sentry** → approve OAuth in the browser.
 3. **Verify:** `claude mcp list` should show `sentry: connected`. In a session: `Via Sentry MCP, find the top 5 unresolved issues in project <slug> in the last 24h, with stack traces.` Claude should return real Sentry data with affected-user counts.
@@ -69,9 +69,9 @@ The Sentry Agent for Linear is a **Linear Agent** (April 2026 onwards) — same 
 4. **Enable Seer auto-run on the agent.** In Linear → Settings → Integrations → Sentry → **Auto-run Seer RCA on issue creation**: ON. **Auto-create PR**: OFF (we want the human gate at Phase 4 Step 7). **Auto-update status**: ON (so the agent can mark the Linear issue *In Review* when Seer finishes).
 5. **Smoke test:** in a non-production project, throw a deliberate error. Within ~60 seconds a Linear issue should appear in Triage with: stack trace, affected users, environment, release version, **Seer RCA** as a comment, and severity proposal. The QA Lead reviews this in Step 7.
 
-#### Tool-permission policy (Anthropic Connectors, Team/Enterprise only)
+#### Tool-permission policy (Claude Code settings)
 
-For **Linear** in the Anthropic admin console, Phase 4 keeps the Phase 3 widening (`update_issue`, `assign_issue`, `create_issue`, `create_comment`) and additionally permits:
+For **Linear** in Claude Code's tool-permission settings, Phase 4 keeps the Phase 3 widening (`update_issue`, `assign_issue`, `create_issue`, `create_comment`) and additionally permits:
 
 - `update_issue` with state transitions to `Resolved` / `Done` (so Claude Code can close bugs after the fix lands)
 - `create_issue` with `parentId` + label `regression-test` (for regression-test stories filed when a bug is fixed — see Step 8)
@@ -85,7 +85,7 @@ For **Sentry**, enable: `find_issues`, `get_issue`, `get_event`, `seer_status`, 
 - [ ] Linear → Settings → Integrations → Sentry: Auto-run Seer ON, Auto-PR OFF, Auto-status ON
 - [ ] Smoke test: deliberate error in staging produced a Linear Triage issue with Seer RCA attached
 - [ ] Audit logging on in both Linear and Sentry
-- [ ] Anthropic Connectors policy reviewed (Team/Enterprise) — see Risks & Guardrails
+- [ ] Claude Code tool-permission settings reviewed for Linear + Sentry — see Risks & Guardrails
 
 > **Permission inheritance:** Claude inherits the connecting user's Linear and Sentry permissions. The Sentry Agent for Linear inherits the OAuth scopes the workspace admin approved at integration time — review them; do not approve "all" scopes by default.
 
@@ -106,7 +106,7 @@ For **Sentry**, enable: `find_issues`, `get_issue`, `get_event`, `seer_status`, 
 
 **1.1 — Pull inputs.** In a Claude Code session with Linear MCP enabled, fetch the Phase 1 PRD Document and the Phase 2 architecture/ADRs by URL. **Do not paste** — let Claude read via MCP so trace stays clean.
 
-**1.2 — Draft test plan in Claude.** Run the [`test-plan-generation`](./PROMPTS.md#test-plan-generation) prompt. Claude produces: scope, strategy per test type (unit / integration / E2E / load / mobile if applicable), test cases mapped to every AC, test data strategy, environment needs (dev / staging / perf), entry/exit criteria, risk-based prioritisation. The draft stays in chat as Markdown — no Linear write yet.
+**1.2 — Draft test plan in Claude Code.** Run the [`test-plan-generation`](./PROMPTS.md#test-plan-generation) prompt. Claude Code produces: scope, strategy per test type (unit / integration / E2E / load / mobile if applicable), test cases mapped to every AC, test data strategy, environment needs (dev / staging / perf), entry/exit criteria, risk-based prioritisation. The draft stays local as Markdown — no Linear write yet.
 
 **1.3 — Self-review with Claude.** Run the [`test-plan-gap-analysis`](./PROMPTS.md#test-plan-gap-analysis) prompt against the draft. Claude flags ACs without mapped tests, NFRs without load coverage, integration boundaries without contract tests, missing edge cases. Resolve every Critical/High before publishing.
 
