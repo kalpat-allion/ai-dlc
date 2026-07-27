@@ -18,7 +18,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI/tool-driven action (Claude Code, CodeRabbit, SonarQube, Linear Agent) |
+| 🤖 | AI/tool-driven action (Claude Code, CodeRabbit, Claude PR review bot, SonarQube, Linear Agent) |
 | 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 🔁 | Auto-transition driven by Linear's git integration (PR open / merge) |
 | 👤 | Human-led action |
@@ -221,7 +221,9 @@ flowchart TD
 
 ## Step 4: Code Review
 
-Entry point is the feature branch with passing local tests. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, SonarQube, coverage), receive CodeRabbit AI review, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done. **Gate 2: PR Merge** is per-PR — on No, fix and re-run; on Yes, the PR merges and Linear auto-closes the issue. See [QUALITY-GATES.md → Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).
+Entry point is the feature branch with passing local tests. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, SonarQube, coverage), receive **automated AI review**, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done.
+
+At 4.3 the diagram shows **two peer options, not a sequence** — a project configures CodeRabbit (hosted, vendor-tuned, flat cost, near-zero upkeep), the [Claude PR review bot](./PR-REVIEW-BOT.md) (self-hosted in CI, driven by a checklist committed in the repo, per-run cost, checklist upkeep), or both. Neither is a fallback for the other; the dashed edges mean "if configured". The selection rule lives in [PROCESS.md → Step 4.3](./PROCESS.md#step-4-code-review). Whichever runs, it is advisory and non-blocking: it never approves a PR and is never a required status check, so a provider outage cannot freeze the merge queue. **Gate 2: PR Merge** is per-PR — on No, fix and re-run; on Yes, the PR merges and Linear auto-closes the issue. See [QUALITY-GATES.md → Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).
 
 ```mermaid
 flowchart TD
@@ -241,15 +243,22 @@ flowchart TD
     R_CI{CI green?}
     R_CI -- No --> R_FIX[Fix locally + push<br/>👤 developer]
     R_FIX --> R2
-    R_CI -- Yes --> R3[4.3 CodeRabbit AI review<br/>inline comments on bugs, security, quality, test gaps<br/>auto re-runs on every push<br/>🤖 CodeRabbit]
-    R3 --> R_CR
+    R_CI -- Yes --> R3[4.3 AI review - configured reviewer s<br/>auto re-runs on every push<br/>advisory only - never approves - never a required check<br/>🤖]
+    R3 -. if configured .-> R3A
+    R3 -. if configured .-> R3B
 
-    R_CR{CodeRabbit Critical / High<br/>resolved?}
-    R_CR -- No --> R_ADDR[Address feedback<br/>accept fix or dismiss with reason<br/>👤 developer]
+    R3A[Option A - CodeRabbit<br/>hosted app - vendor model reasons from the diff<br/>general bugs, security, quality, test gaps<br/>flat per-seat cost - near-zero upkeep<br/>🤖 CodeRabbit]
+    R3B[Option B - Claude PR review bot<br/>claude-code-action in your own CI<br/>repo conventions from a committed checklist<br/>size-gated - per-run token cost - checklist upkeep<br/>🤖 anthropics/claude-code-action]
+
+    R3A --> R_CR
+    R3B --> R_CR
+
+    R_CR{Critical / High findings<br/>from every configured reviewer<br/>resolved or dismissed with reason?}
+    R_CR -- No --> R_ADDR[Address feedback<br/>accept fix or dismiss with reason<br/>mark every thread Fixed / Disagreed / Deferred<br/>👤 developer]
     R_ADDR --> R3
     R_CR -- Yes --> R4[4.4 Human review<br/>architecture, business logic, naming,<br/>cross-service impacts, AI-flagged sections<br/>1 approver minimum<br/>2 for high blast radius - auth, payments, schema<br/>👤 reviewer]
 
-    R4 --> G2{Gate 2: PR Merge?<br/>CI green + CodeRabbit resolved<br/>+ human approval + correct linked issue}
+    R4 --> G2{Gate 2: PR Merge?<br/>CI green + AI review resolved<br/>+ human approval + correct linked issue}
     G2 -- No --> R_REWORK[Rework<br/>👤 developer]
     R_REWORK --> R2
     G2 -- Yes --> R_MERGE_Q{Merge button blocked<br/>by conflicts?<br/>main moved during review}
@@ -342,7 +351,7 @@ flowchart TD
     DW_C3 --> DW_R([Review])
 
     DW_R --> DW_R1[Open PR ENG-XXX + Closes ENG-XXX<br/>Linear auto In Review<br/>🔁]
-    DW_R1 --> DW_R2[CI - CodeRabbit - Human review<br/>🤖 + 👤]
+    DW_R1 --> DW_R2[CI - AI review - Human review<br/>🤖 + 👤]
     DW_R2 --> DW_R3[Merge - Linear auto Done<br/>🔁]
     DW_R3 --> DW_E([End of Day])
 
@@ -364,7 +373,7 @@ flowchart TD
 The flow has three explicit human gates so that no AI-generated code reaches main without sign-off:
 
 1. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment).** Tech Lead opens the Linear Cycle with stories that have AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. AI estimates inform; team velocity commits.
-2. **[Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).** Per PR — CI green, CodeRabbit Critical/High resolved, ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations), Linear identifier in title and `Closes` body match the diff.
+2. **[Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).** Per PR — CI green, Critical/High findings from every configured AI reviewer resolved or dismissed with a reason, ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations), Linear identifier in title and `Closes` body match the diff.
 3. **[Gate 3: Phase Completion](./QUALITY-GATES.md#gate-3-phase-completion).** Coverage ≥ 80% on new code, 0 Critical/High SonarQube on main, all stories Done, retrospective filed with AI-estimate variance recorded.
 
 Linear's git integration handles state changes between Gate 2 and Gate 3 automatically — In Review on PR open, Done on merge — so developers never manually transition issues during normal flow.
@@ -376,5 +385,6 @@ Linear's git integration handles state changes between Gate 2 and Gate 3 automat
 - [Process Definition →](./PROCESS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
+- [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
 - [Code Review Checklist →](../templates/code-review-checklist.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)

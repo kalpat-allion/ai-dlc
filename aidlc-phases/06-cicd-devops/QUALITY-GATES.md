@@ -47,9 +47,19 @@ Before the team relies on automation for deploys.
 - [ ] Manual approval gate on production deploys (GitHub Environment with required reviewers)
 
 ### AI integration in CI
-- [ ] Anthropic Claude Code Action committed at `.github/workflows/claude.yml`, version pinned to `@v1`
-- [ ] Auto-review on PR open posts within ~3 min, severity-bucketed (Critical / High / Medium / Low)
-- [ ] `@claude` mention triggers fix-on-mention workflow that opens a follow-up commit
+- [ ] Anthropic Claude Code Action committed, version pinned to an **exact** release (not a floating `@v1`)
+- [ ] `@claude` mention triggers fix-on-mention workflow that opens a follow-up commit (separate workflow from any reviewer)
+- [ ] The project's AI PR reviewer choice ([Phase 3 Step 4.3](../03-development/PROCESS.md#step-4-code-review) — CodeRabbit, the Claude PR review bot, or both) is recorded in the tech-stack ADR and wired on the repo
+- [ ] Auto-review posts within ~3 min, severity-bucketed, and **never** approves the PR
+- [ ] AI review is **not** a required status check — a provider outage cannot freeze the merge queue
+
+*If the Claude PR review bot is one of the configured reviewers, additionally:*
+
+- [ ] Committed per [PR-REVIEW-BOT.md](../03-development/PR-REVIEW-BOT.md) — workflow + prompt template + committed checklist
+- [ ] Review submitted as `REQUEST_CHANGES` / `COMMENT`, never `APPROVE`; no AI attribution in the body
+- [ ] Size gate trips on an oversized PR and posts a skip notice rather than failing silently
+- [ ] Review job is `continue-on-error`; a forced failure posts a degraded-mode notice that clears on the next successful pass
+- [ ] Second-pass test done: a finding marked `❌ Disagreed` is not re-raised on the next push
 - [ ] At least one Copilot Agentic Workflow committed and dry-run passing (stale-issue triage / release-notes / flaky-test repair / lint-debt fix)
 - [ ] GitLab Duo Root Cause Analysis enabled (if on GitLab fallback)
 
@@ -63,7 +73,7 @@ Before the team relies on automation for deploys.
 - [ ] Anthropic API monthly spend cap configured (or routed to Bedrock / Vertex / Foundry per existing cloud commits)
 
 ### Branch protection
-- [ ] `main` requires PR + all checks passing + Claude Code Action review acknowledged + 1 human approval
+- [ ] `main` requires PR + all checks passing + AI review acknowledged (whichever reviewer is configured) + 1 human approval
 - [ ] Force-push to `main` disabled
 - [ ] Linear identifier required in PR title (Phase 3 convention)
 - [ ] High-blast-radius changes (auth, schema migrations, IAM) require 2 humans
