@@ -6,11 +6,11 @@ This document defines the AI-assisted workflow for the Development phase, using 
 
 **Phase Duration:** Sprint-based (typically 2–8 weeks for MVP)
 **Phase Owner:** Tech Lead / Engineering Manager
-**Tools Used:** **Cursor** (IDE), **Claude Code** (terminal agent), **CodeRabbit** (AI PR review), **SonarQube** (static analysis), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
+**Tools Used:** **Claude Code** (AI coding agent — terminal + IDE extension), **CodeRabbit** (AI PR review), **SonarQube** (static analysis), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
 
-> **Tool Philosophy:** Cursor is the IDE — built-in AI autocomplete (Supermaven engine) plus Composer for multi-file edits. Claude Code is the terminal agent for complex refactors, long-running autonomous tasks, and **all** Linear MCP work. CodeRabbit reviews every PR. SonarQube enforces static-analysis gates in CI. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. Five tools, zero overlap.
+> **Tool Philosophy:** Claude Code is the AI coding agent for all development — scaffolding, multi-file editing, complex refactors, debugging, long-running autonomous tasks, and **all** Linear MCP work — driven from the terminal or its IDE extension, with role-scoped specialist subagents for focused work. CodeRabbit reviews every PR. SonarQube enforces static-analysis gates in CI. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. Four tools, zero overlap.
 
-> **Single-vendor alternative:** The recommended baseline is Cursor Pro plus a Claude Pro/Team plan, as assumed throughout this document. Teams that prefer simpler procurement can drop Cursor entirely and run **Claude Code Max 5x (~$100/dev/mo, approximate, early 2026 — verify before committing budget)** as the sole AI coding tool: one vendor, one billing line, no Cursor licence to manage, and a substantially higher Claude usage quota for heavy users. The trade-off is loss of inline autocomplete-as-you-type — Claude Code is request-response, not ghost-text on the cursor — which can be recovered with **Supermaven standalone** (free tier or ~$10/mo Pro) or any IDE-native completion, though many developers code productively without inline AI completion. On this path, alt-path readers should apply three substitutions wherever the per-step prose names Cursor: **Cursor autocomplete / Supermaven** (Steps 3.2 and 6.1, the last row of the *Decision rule — which agent for which work* table in Step 0, and the Daily Developer Workflow box) becomes **Supermaven standalone or your IDE's native completion**; **Cursor Composer for multi-file scaffolding or localised refactors** (Steps 3.1 and 5.3, the "When to use which tool" decision table, and the Tool attribute rows in Steps 5 and 6) becomes **Claude Code with the relevant specialist subagent** (`frontend-engineer`, `backend-engineer`, or `refactor-specialist` as appropriate); and **Cursor Chat for quick codebase questions** (the corresponding row of the decision table) becomes **Claude Code in the IDE extension or terminal**. The decision rules, gates, and quality bars are unchanged — alt-path readers swap the tools, not the process.
+> **Inline completion is optional.** Claude Code is a request-response agent, not a ghost-text autocompleter. Teams that want inline as-you-type completion can add **Supermaven standalone** (free tier or ~$10/mo Pro) or their IDE's native completion alongside Claude Code — optional, and it changes none of the decision rules, gates, or quality bars below.
 
 ---
 
@@ -31,7 +31,7 @@ The Linear MCP server set up in Phase 1 is the same server (the same committed `
 
 **In this step:**
 
-1. Setup paths — [Path A (Claude Code, primary)](#path-a--claude-code-developer--cli-use-primary) and [Path B (Cursor, optional)](#path-b--cursor-in-ide-linear-browsing-optional), plus [Phase 3 scope expansion](#phase-3-scope-expansion-tech-lead-teamenterprise-only)
+1. [Claude Code setup](#claude-code-setup), plus [Phase 3 scope expansion](#phase-3-scope-expansion-tech-lead-teamenterprise-only)
 2. [Bundle the recurring workflow into `linear-task-agent`](#bundle-the-recurring-workflow-into-a-local-claude-code-subagent-recommended)
 3. [Specialist subagents for Phase 3 roles](#specialist-subagents-for-phase-3-roles-recommended) — `software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`
 4. [Build-your-own subagent recipe](#creating-your-own-claude-code-subagent--step-by-step)
@@ -39,9 +39,9 @@ The Linear MCP server set up in Phase 1 is the same server (the same committed `
 6. [Verification checklist](#verification-checklist)
 7. [Linear Workspace Setup (Phase-3 additions)](#linear-workspace-setup-phase-3-additions)
 
-#### Path A — Claude Code (developer / CLI use, primary)
+#### Claude Code setup
 
-This is the primary surface for Phase 3. Every developer runs through it once.
+Every developer runs through this setup once.
 
 1. **The server is already registered at project scope** in the repo's committed `.mcp.json` from Phase 1 — so most developers just clone and authenticate. If you are starting a fresh repo, add it from the repo root:
    ```bash
@@ -52,10 +52,6 @@ This is the primary surface for Phase 3. Every developer runs through it once.
 3. **Verify available tools.** In a session, prompt: `Via Linear MCP, list_teams and then search_issues assigned to me with state Backlog ordered by priority.` Claude Code should return your teams and your top-priority backlog. If it fails, run `claude mcp list` — `linear: connected` must appear.
 4. **Enable the git integration on Linear's side.** In Linear → **Settings → Integrations → GitHub / GitLab / Bitbucket**, connect the provider and enable: (a) **Open PRs auto-link by branch name** (matches `feature/eng-123-…` to `ENG-123`), (b) **Auto-update issue status to "In Review" on PR open**, (c) **Auto-update issue status to "Done" on PR merge**. With this on, Claude Code only needs to set *In Progress* — the PR lifecycle drives the rest.
 5. **Revoke when done** (e.g., off-boarding): `claude mcp remove linear` and revoke the OAuth grant in Linear under **Settings → Security & access → OAuth applications**.
-
-#### Path B — Cursor (in-IDE Linear browsing, optional)
-
-Cursor 0.45+ supports MCP servers. Adding the same Linear server inside Cursor lets developers `@`-mention Linear issues from inline chat. Add it in **Cursor Settings → MCP → Add Server** with the same URL and OAuth as Path A. This is convenience-only — do not duplicate writes from both Cursor and Claude Code; pick one writer per task.
 
 #### Phase 3 scope expansion (Tech Lead, Team/Enterprise only)
 
@@ -70,7 +66,7 @@ Keep `delete_issue` **denied**. If a story is wrong, a human cancels it in Linea
 
 #### Bundle the recurring workflow into a local Claude Code subagent (recommended)
 
-Path A wires the MCP connection; this sub-section wraps the **daily** Linear operations — fetch next story, transition state, check out `branchName`, post kickoff and progress comments, open the PR with the right title — into a single-purpose Claude Code subagent. Developers stop retyping the multi-step prompt sequences and the team stops drifting on Linear-write conventions (state transitions, PR title format, comment signature).
+The setup above wires the MCP connection; this sub-section wraps the **daily** Linear operations — fetch next story, transition state, check out `branchName`, post kickoff and progress comments, open the PR with the right title — into a single-purpose Claude Code subagent. Developers stop retyping the multi-step prompt sequences and the team stops drifting on Linear-write conventions (state transitions, PR title format, comment signature).
 
 The subagent is a markdown file with YAML frontmatter under `.claude/agents/`. Claude Code auto-discovers any file in that directory. Committing it to the repo means every developer (and every fresh clone) gets the same workflow with no per-machine configuration.
 
@@ -122,7 +118,7 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 | Pre-PR self-review of the diff (Step 3.5) before invoking `linear-task-agent` to open the PR | `code-reviewer` |
 | Step 5 refactoring work against a `tech-debt` Linear issue | `refactor-specialist` |
 | Resolve git merge / rebase / cherry-pick conflicts on the working tree, complete the operation, and report what was decided | `conflict-resolver` |
-| Inline single-file edits, autocomplete, "rename this variable", small intra-file tweaks | Cursor autocomplete (Supermaven) — no subagent needed |
+| Inline single-file edits, "rename this variable", small intra-file tweaks | Claude Code directly — no subagent needed |
 
 > **Credentials & Linear-write boundary (all six specialists).** Each subagent inherits the developer's local credentials and repo permissions; it cannot escalate. None of them may transition Linear state, post Linear comments, or open PRs — those writes belong exclusively to `linear-task-agent` so the audit trail stays single-sourced. None of the six may push, force-push, or merge — only the developer pushes after review. [`conflict-resolver`](#conflict-resolver)'s operating boundaries are stricter — see its subsection below.
 
@@ -148,7 +144,7 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 #### `frontend-engineer`
 
-**Purpose / when to invoke.** Drives the implementation half of UI stories in Steps 3.1–3.3 — component scaffolding, state wiring, API integration, accessibility (WCAG 2.2 AA), and component-level tests written in the same commit. The agent embeds the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-cursor-composer-or-claude-code) and [`test-generation`](./PROMPTS.md#test-generation) prompts and is calibrated to the repo's component library and test runner via placeholders. Trigger phrases: "build the X screen", "wire up the new dashboard tile", "add the form for ENG-247", "make this component accessible", "write the component tests for X".
+**Purpose / when to invoke.** Drives the implementation half of UI stories in Steps 3.1–3.3 — component scaffolding, state wiring, API integration, accessibility (WCAG 2.2 AA), and component-level tests written in the same commit. The agent embeds the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-claude-code) and [`test-generation`](./PROMPTS.md#test-generation) prompts and is calibrated to the repo's component library and test runner via placeholders. Trigger phrases: "build the X screen", "wire up the new dashboard tile", "add the form for ENG-247", "make this component accessible", "write the component tests for X".
 
 **When NOT to invoke.** Server endpoints, migrations, or anything outside the frontend tree → `backend-engineer`. Pre-PR review of the diff → `code-reviewer`. Behaviour-preserving cleanups against a `tech-debt` issue → `refactor-specialist`. Linear writes, branching, or PR open → `linear-task-agent`. New design-system primitives or visual-language decisions → escalate to a Phase 2 design-system review; do not invent.
 
@@ -161,7 +157,7 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 #### `backend-engineer`
 
-**Purpose / when to invoke.** Drives the implementation half of server-side stories in Steps 3.1–3.3 — endpoint handlers, service-layer business logic, repository / data-access code, schema migrations, third-party integrations, and integration tests. Embeds the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-cursor-composer-or-claude-code) and [`test-generation`](./PROMPTS.md#test-generation) prompts and is calibrated to the repo's framework, ORM, and test runner via placeholders. Trigger phrases: "implement the OAuth callback handler", "add the endpoint for ENG-247", "wire up the migration for X", "build the integration with Stripe", "write the integration tests for the orders service".
+**Purpose / when to invoke.** Drives the implementation half of server-side stories in Steps 3.1–3.3 — endpoint handlers, service-layer business logic, repository / data-access code, schema migrations, third-party integrations, and integration tests. Embeds the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-claude-code) and [`test-generation`](./PROMPTS.md#test-generation) prompts and is calibrated to the repo's framework, ORM, and test runner via placeholders. Trigger phrases: "implement the OAuth callback handler", "add the endpoint for ENG-247", "wire up the migration for X", "build the integration with Stripe", "write the integration tests for the orders service".
 
 **When NOT to invoke.** Anything inside the frontend tree → `frontend-engineer`. Pre-PR review of the diff → `code-reviewer`. Behaviour-preserving cleanups against a `tech-debt` issue → `refactor-specialist`. Linear writes, branching, or PR open → `linear-task-agent`. New service boundaries, datastore choices, or cross-service contracts → escalate to a Phase 2 system-architect-style review.
 
@@ -215,9 +211,9 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 - May run `git status`, `git diff`, `git log`, `git show`, `git ls-files --unmerged`, and the test / lint / type-check commands after `--continue` to verify the working tree is sane before handing back to the developer.
 - Inherits the developer's local credentials and repo permissions; cannot escalate.
 
-##### Choosing between a specialist and Cursor inline
+##### Choosing between a specialist and a direct Claude Code edit
 
-> **Rule of thumb:** if the work is **cross-file or multi-step** (scaffolds a new feature, refactors across modules, generates tests for a whole service, runs a structured pre-PR review), use a specialist subagent — it carries the right system prompt and runs in its own scoped session. If the work is **intra-file and incremental** (rename a variable, accept the next autocomplete, add one missing branch in a conditional, tweak a JSX prop), Cursor's Supermaven autocomplete is faster and lower-friction. The specialist is the framing tool; Cursor is the typing tool. Most stories use both — open the specialist for the scaffold and the tests, drop into Cursor for the small edits in between.
+> **Rule of thumb:** if the work is **cross-file or multi-step** (scaffolds a new feature, refactors across modules, generates tests for a whole service, runs a structured pre-PR review), use a specialist subagent — it carries the right system prompt and runs in its own scoped session. If the work is **intra-file and incremental** (rename a variable, add one missing branch in a conditional, tweak a JSX prop), a direct Claude Code edit in the main session is faster and lower-friction than spinning up a scoped specialist. The specialist gives you a focused, boundaried session; a direct edit keeps you in the current context. Most stories use both — open the specialist for the scaffold and the tests, drop back to direct edits for the small changes in between.
 
 #### Creating your own Claude Code subagent — step-by-step
 
@@ -509,7 +505,7 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Working branch, story AC, PRD section, ADRs, OpenAPI spec, data model |
-| **Tool** | **Cursor** (daily coding) + **Claude Code** (complex multi-file work, MCP-driven integrations) |
+| **Tool** | **Claude Code** (all coding — scaffolding, multi-file work, MCP-driven integrations; specialist subagents for role-scoped work) |
 | **Output** | Implementation code, unit tests, inline docs, commits on the feature branch |
 | **Human** | Architecture alignment, business-logic correctness, code ownership |
 
@@ -518,14 +514,14 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 | Task | Tool | Why |
 |------|------|-----|
 | Non-trivial story design before scaffolding | **Claude Code** with `software-architect` | Read-only design pass; gates the implementation specialists — no scaffold until the developer approves the plan |
-| New feature with familiar pattern | **Cursor** Composer | Multi-file scaffolding in the IDE; autocomplete as you code |
-| Incremental coding, small edits | **Cursor** autocomplete (Supermaven) | Inline suggestions — fast and low-friction |
+| New feature with familiar pattern | **Claude Code** (`frontend-engineer` / `backend-engineer` specialist) | Multi-file scaffolding following the reference module |
+| Incremental coding, small edits | **Claude Code** directly | Quick targeted edits without spinning up a specialist |
 | Complex multi-file refactoring or feature | **Claude Code** | Reads entire codebase, runs tests, iterates autonomously |
 | Debugging across modules | **Claude Code** | Traces data flows, checks logs, proposes and verifies fixes |
 | MCP integration (Linear, Figma, GitHub, Sentry, etc.) | **Claude Code** | Deepest MCP support — built by the team that created MCP |
 | Autonomous story implementation | **Claude Code** (background agent or [Linear Agent](#linear-agent-optional-autonomous-pickup) — see below) | For well-scoped stories with clear AC, assign and review output |
 | Cross-layer story splittable into parallel slices, multiple sibling stories in flight, or adversarial review/debug | **Multi-agent** — see [Multi-agent development patterns](#multi-agent-development-patterns) | Subagents (in-process), Agent Teams (peer messaging, experimental), git worktrees, or Conductor — picks the right surface for the parallelism shape |
-| Quick question about the codebase | **Cursor** Chat | Ask inline without leaving the editor |
+| Quick question about the codebase | **Claude Code** | Ask in the terminal or IDE extension |
 
 **Workflow:**
 
@@ -533,9 +529,9 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 (Non-trivial stories only.) Before any code is touched, invoke `software-architect` in Claude Code with the story body, AC, the context pulled in Step 2.4, and the relevant ADR(s). The agent runs the [`architecture-design`](./PROMPTS.md#architecture-design) prompt and returns a markdown plan in the developer's session — interfaces, data flow, file/module touch list, test strategy, risks, and a scaffold-ready verdict — citing the in-repo reference module(s) and ADR(s) the design follows. **User-approval gate:** the developer reviews the plan and must explicitly approve before any implementation specialist (`frontend-engineer`, `backend-engineer`) is invoked; on revisions, the agent re-runs against the developer's feedback. Once approved, the developer asks `linear-task-agent` to post a 3–5 line plan summary as a Linear comment so the audit trail captures the design intent alongside the story. **Skip rule:** in-pattern stories that follow an existing reference module skip Step 3.0 — the developer confirms the pattern in the kickoff comment (`Following the pattern at <module>`) and goes straight to Step 3.1. **Escalation:** if the agent surfaces a system-wide concern (new service boundary, new tech, new pattern that becomes the next reference), it must stop and recommend a Phase 2 human-architect review — per-story design is in scope, system-wide design is not.
 
-**3.1 — Scaffold the feature.** Run the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-cursor-composer-or-claude-code) prompt either in Cursor Composer (for in-pattern features) or Claude Code (for multi-module). Provide the story body, the relevant ADR, the reference module to follow. **For stories that ran Step 3.0**, the developer-approved architect plan is the authoritative input — the scaffold must match the plan, or the developer must explicitly re-approve a deviation before continuing.
+**3.1 — Scaffold the feature.** Run the [`feature-scaffolding`](./PROMPTS.md#feature-scaffolding-for-claude-code) prompt in Claude Code — via the `frontend-engineer` / `backend-engineer` specialist for role-scoped work, or directly in the main session for multi-module scaffolding. Provide the story body, the relevant ADR, the reference module to follow. **For stories that ran Step 3.0**, the developer-approved architect plan is the authoritative input — the scaffold must match the plan, or the developer must explicitly re-approve a deviation before continuing.
 
-**3.2 — Code with autocomplete.** Cursor's Supermaven engine handles inline suggestions while typing. The skill is to accept selectively — discard suggestions that hallucinate APIs, take ones that match repo patterns.
+**3.2 — Implement incrementally.** Claude Code applies edits in a request-response loop while you review each diff. The skill is to accept selectively — reject changes that hallucinate APIs or invent abstractions, keep ones that match repo patterns.
 
 **3.3 — Write tests alongside code.** Every new function gets a test in the same commit. Use the [`test-generation`](./PROMPTS.md#test-generation) prompt with an example test from the project as style reference. Test coverage is enforced both at the Phase 3 [Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge) and downstream in Phase 4 Testing — but the discipline starts here.
 
@@ -570,7 +566,7 @@ The industry framing for this shift, captured in O'Reilly's "Conductors to Orche
 | Sequential story with tight feedback loops (research → spike → implement → test) | **No** | Coordination overhead exceeds parallelism gain. Stay in a single Claude Code session. |
 | Same-file edits or many shared dependencies | **No** | Two agents editing the same file overwrite each other. Decompose first, or stay sequential. |
 | Spec is vague or the AC is ambiguous | **No** | Vague specs multiply errors across N parallel runs. Fix the spec first (bounce to PM, see Step 2.2). |
-| Small intra-file change | **No** | Cursor inline autocomplete is faster and cheaper. |
+| Small intra-file change | **No** | A direct Claude Code edit is faster; multi-agent overhead is wasted. |
 
 > **Decision rule:** if you cannot describe each agent's file scope and deliverable in one sentence each before spawning, do not spawn. Vague delegation is the single biggest cause of wasted multi-agent runs (Osmani 2026, internal team retros). Most of the value comes from the *upfront decomposition*, not the parallelism — if the decomposition is shaky, run sequentially and save the tokens.
 
@@ -676,7 +672,7 @@ The new directory is a fully checked-out copy on its own branch. Multiple worktr
 | Two to four sibling stories in flight in the same cycle | **C — Worktrees** | Sessions stay independent; review and merge on their own schedules. |
 | Refactor that the developer wants to be able to throw away cleanly | **C — Worktrees** + `isolation: worktree` on `refactor-specialist` | Failed attempt prunes itself; main branch is never polluted. |
 | 3+ stories in flight, macOS team, friction managing terminals | **D — Conductor** | Same primitive as C, with a dashboard — adopt once C starts costing more attention than it saves. |
-| Inline single-file edit, "rename this", small intra-file tweak | **None — Cursor inline** | Multi-agent overhead is wasted on intra-file work. |
+| Inline single-file edit, "rename this", small intra-file tweak | **None — direct Claude Code edit** | Multi-agent overhead is wasted on intra-file work. |
 | Vague AC or fuzzy story | **None — bounce to PM (Step 2.2)** | Multi-agent multiplies ambiguity. Fix the spec first. |
 
 The patterns are stackable: a typical heavy-load day looks like Conductor (D) holding three stories in flight, each story's session running its specialists (A) in parallel, and one of those stories occasionally promoting to an agent team (B) when adversarial review is warranted. The patterns answer different questions — A is *"how do I split one story across roles?"*, B is *"how do I get those roles to talk?"*, C is *"how do I run multiple stories at once?"*, D is *"how do I see all of that on one screen?"*.
@@ -762,7 +758,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | SonarQube findings, tech-debt backlog (Linear issues labelled `tech-debt`) |
-| **Tool** | **Claude Code** (large-scale, multi-file) + **Cursor** Composer (localised) |
+| **Tool** | **Claude Code** (large-scale multi-file and localised refactors; `refactor-specialist` for `tech-debt`-tracked work) |
 | **Output** | Refactored code with maintained test coverage, no behaviour change |
 | **Human** | Scope validation, behaviour verification |
 
@@ -772,7 +768,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 
 **5.2 — Scope explicitly.** In the Linear issue, write what changes and what stays the same. Refactoring is a behaviour-preserving operation; if behaviour changes, it is a feature, not a refactor — split it.
 
-**5.3 — Execute.** Claude Code for large-scale (extract service, rename pattern across codebase, dependency upgrade with API change). Cursor Composer for localised (extract function, simplify conditional, parameterise).
+**5.3 — Execute.** Claude Code handles both large-scale (extract service, rename pattern across codebase, dependency upgrade with API change) and localised (extract function, simplify conditional, parameterise) refactors.
 
 **5.4 — Verify.** All existing tests must pass; if they do not, the refactor is wrong. **No new functionality** in refactoring PRs. Reviewers reject refactor PRs that introduce features — split the diff.
 
@@ -787,13 +783,13 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Implementation code, OpenAPI spec, ADRs |
-| **Tool** | **Claude Code** (comprehensive docs, runbooks) + **Cursor** (inline docstrings) |
+| **Tool** | **Claude Code** (inline docstrings, comprehensive docs, runbooks) |
 | **Output** | Inline docs, module READMEs, auto-generated API docs, operational runbooks |
 | **Human** | Validate accuracy, ensure completeness |
 
 **Workflow:**
 
-**6.1 — Inline docs (continuous).** Cursor generates docstrings as code is written. Review and refine in the same commit as the code — docs added as an afterthought drift.
+**6.1 — Inline docs (continuous).** Claude Code generates docstrings as code is written. Review and refine in the same commit as the code — docs added as an afterthought drift.
 
 **6.2 — Module READMEs.** When a module crosses ~500 lines or > 3 public exports, run the [`documentation-generation`](./PROMPTS.md#documentation-generation) prompt in Claude Code. Output covers overview, architecture, key concepts, usage, configuration, testing, limitations.
 
@@ -823,9 +819,9 @@ Design (non-trivial stories only):
   3.0  software-architect → plan → developer approves → linear-task-agent
        posts 3-5 line plan summary as a Linear comment
 
-Coding (in Cursor, Claude Code for complex):
-  3.1  Scaffold with Composer (or Claude Code for complex)
-  3.2  Code with Supermaven autocomplete
+Coding (Claude Code):
+  3.1  Scaffold (frontend-engineer / backend-engineer specialist, or Claude Code directly)
+  3.2  Implement incrementally, reviewing each diff
   3.3  Tests alongside code
   3.4  Post progress comments on the Linear issue at checkpoints
   3.5  Self-review: Claude Code with self-review prompt
@@ -891,7 +887,7 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 [Step 3.0]     software-architect → plan → developer approves → plan summary on Linear
                (non-trivial stories only; in-pattern stories skip to 3.1)
    │
-[Step 3.1-3.4] Cursor / Claude Code implement + test + checkpoint comments
+[Step 3.1-3.4] Claude Code implement + test + checkpoint comments
 [Step 3.5] self-review → fix Critical/High before PR
    │
 [Step 4.1] Open PR with [ENG-XXX] title + Closes ENG-XXX
@@ -926,7 +922,7 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 | **PR-to-issue drift** — developer invents a branch name, Linear's git integration fails to auto-link, the issue stays *In Progress* after merge | Step 2.3 mandates `branchName` from Linear MCP. Linear's git integration is the authority — broken links surface in the **In Progress** view as stale issues; the Tech Lead sweeps it weekly. |
 | **Wrong issue closed** — PR title typo (`ENG-274` vs `ENG-247`) auto-closes an unrelated issue | Step 4.5 sanity-check: reviewer confirms the linked issue matches the diff before merging. The Linear `update_issue` audit log + git diff together identify the mistake within hours; reopen and fix forward. |
 | **Silent state-change scope creep** — a Claude prompt accidentally moves backlog issues to In Progress | Claude Code's tool-permission settings (committed per project) keep `update_issue` to the dev team's repos only; the audit log on Linear records every state change. Off-board old developers by revoking OAuth in Linear. |
-| **Hallucinated APIs / dependencies in AI-generated code** — Claude or Cursor invents a method that does not exist | Run tests after every AI edit (Step 3.3). CI catches imports of non-existent modules. CodeRabbit flags hallucinated APIs in 70%+ of cases (CodeRabbit telemetry). |
+| **Hallucinated APIs / dependencies in AI-generated code** — Claude Code invents a method that does not exist | Run tests after every AI edit (Step 3.3). CI catches imports of non-existent modules. CodeRabbit flags hallucinated APIs in 70%+ of cases (CodeRabbit telemetry). |
 | **Linear Agent over-assignment** — Tech Lead routes too many stories to the Linear Agent without human review-bandwidth | Cap agent-authored PRs in flight per cycle (e.g., ≤ 3). The `agent-authored` label triggers two human reviewers, not one. Agent quality is reviewed at cycle close; under-performing patterns roll back to human-only. |
 | **Refactor PRs introduce features** — Claude generalises during a refactor and adds capability that nobody asked for | Step 5.4: PRs against `tech-debt` issues that introduce features are rejected at review and split. The reviewer checklist explicitly asks "is any new behaviour added?". |
 | **Comment spam on Linear** — every Claude Code session posts a kickoff + checkpoint + EOD comment, drowning real discussion | Comment discipline: one kickoff, checkpoint comments only on substantive change, one EOD only if not merged. Aggregate progress in the PR description, not on the issue. |

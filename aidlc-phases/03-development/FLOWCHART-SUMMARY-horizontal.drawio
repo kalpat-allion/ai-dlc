@@ -25,16 +25,16 @@
         <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: Pick &amp;amp; Start a Story&lt;/b&gt;&lt;br&gt;&lt;br&gt;Fetch next issue, set In Progress,&lt;br&gt;branch from Linear&#39;s branchName.&lt;br&gt;&lt;br&gt;· Claude Code · Linear MCP" vertex="1">
           <mxGeometry height="135" width="210" x="770" y="130" as="geometry" />
         </mxCell>
-        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: Feature Development&lt;/b&gt;&lt;br&gt;&lt;br&gt;Scaffold, test, and self-review.&lt;br&gt;software-architect for non-trivial.&lt;br&gt;&lt;br&gt;· Cursor · Claude Code · Linear MCP" vertex="1">
+        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: Feature Development&lt;/b&gt;&lt;br&gt;&lt;br&gt;Scaffold, test, and self-review.&lt;br&gt;software-architect for non-trivial.&lt;br&gt;&lt;br&gt;· Claude Code · Linear MCP" vertex="1">
           <mxGeometry height="135" width="210" x="1005" y="130" as="geometry" />
         </mxCell>
         <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Code Review&lt;/b&gt;&lt;br&gt;&lt;br&gt;PR → CI + CodeRabbit + human review&lt;br&gt;→ merge → Linear auto-closes.&lt;br&gt;&lt;br&gt;· Claude Code · Code reviewer agent · CI" vertex="1">
           <mxGeometry height="135" width="210" x="1005" y="425" as="geometry" />
         </mxCell>
-        <mxCell id="S5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 5: Refactoring&lt;/b&gt;&lt;br&gt;&lt;br&gt;Behaviour-preserving tech-debt PRs.&lt;br&gt;No features mixed in.&lt;br&gt;&lt;br&gt;· Cursor&amp;nbsp;· Claude Code&amp;nbsp;" vertex="1">
+        <mxCell id="S5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 5: Refactoring&lt;/b&gt;&lt;br&gt;&lt;br&gt;Behaviour-preserving tech-debt PRs.&lt;br&gt;No features mixed in.&lt;br&gt;&lt;br&gt;· Claude Code&amp;nbsp;" vertex="1">
           <mxGeometry height="135" width="210" x="770" y="425" as="geometry" />
         </mxCell>
-        <mxCell id="S6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 6: Documentation&lt;/b&gt;&lt;br&gt;&lt;br&gt;Continuous inline docs +&lt;br&gt;auto API docs from OpenAPI.&lt;br&gt;&lt;br&gt;· Cursor · Claude Code" vertex="1">
+        <mxCell id="S6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontColor=#000000;strokeColor=#666666;fontSize=11;" value="&lt;b&gt;Step 6: Documentation&lt;/b&gt;&lt;br&gt;&lt;br&gt;Continuous inline docs +&lt;br&gt;auto API docs from OpenAPI.&lt;br&gt;&lt;br&gt;· Claude Code" vertex="1">
           <mxGeometry height="135" width="210" x="535" y="425" as="geometry" />
         </mxCell>
         <mxCell id="END" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="&lt;b&gt;← Phase 4: Testing &amp;amp; QA&lt;/b&gt;&lt;br&gt;&lt;br&gt;Merged code +&lt;br&gt;80%+ coverage + retro filed" vertex="1">

@@ -19,7 +19,7 @@ Before any workload is deployed to cloud resources.
 ### IaC repo and state (Step 3)
 - [ ] Pulumi project bootstrapped with TypeScript / Python / Go / .NET / Java
 - [ ] One stack per environment (`dev`, `staging`, `prod`); component resources for reusable patterns
-- [ ] `AGENTS.md` committed at repo root and referenced by Pulumi Neo / Claude Code / Cursor
+- [ ] `AGENTS.md` committed at repo root and referenced by Pulumi Neo / Claude Code
 - [ ] Pulumi Cloud (or self-managed S3 / Azure Blob / GCS) configured for remote state
 - [ ] State file is **never** committed to git
 - [ ] Pulumi ESC environments created per stack; secrets pull from upstream stores (Vault / Secrets Manager / Key Vault / 1Password)

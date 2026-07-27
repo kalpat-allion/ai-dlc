@@ -351,7 +351,7 @@ Dependabot/Renovate + Trivy + reachability-aware tools (Endor Labs AURI / Snyk O
 Trivy MCP + Docker Scout + Checkov + OPA Gatekeeper with AI policy generation (Red Hat 2026 dynamic generator pattern); mandatory dryrun-first. See [PROCESS.md → Step 4](./PROCESS.md#step-4-container--iac-security).
 
 ### Step 5: Secrets
-ggshield pre-commit + GitGuardian platform + ggshield AI hook (pre-prompt + pre-tool-use + post-tool-use) for Cursor / Claude Code / Copilot. See [PROCESS.md → Step 5](./PROCESS.md#step-5-secrets--layered-defence-with-ai-hooks).
+ggshield pre-commit + GitGuardian platform + ggshield AI hook (pre-prompt + pre-tool-use + post-tool-use) for Claude Code / Copilot. See [PROCESS.md → Step 5](./PROCESS.md#step-5-secrets--layered-defence-with-ai-hooks).
 
 ### Step 6: AI Agent Security
 OWASP LLM Top 10 + OWASP Top 10 for Agentic Applications 2026; Anthropic Claude Opus 4.7 model-layer defences; MCP enforcement allow-list; Cycode AI Governance + AIBOM (optional). See [PROCESS.md → Step 6](./PROCESS.md#step-6-ai--agent-specific-security).

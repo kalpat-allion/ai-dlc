@@ -8,7 +8,7 @@ This document defines the AI-assisted workflow for the Testing & QA phase, using
 **Phase Owner:** QA Lead / Senior Developer
 **Tools Used:** Vitest / Jest / pytest / JUnit 5 (unit), Supertest + Testcontainers (integration), **Playwright** (E2E), **k6** (load), Claude Code (test generation, debugging), CodeRabbit + SonarQube (already in Phase 3 stack), **Linear** (project management spine, integrated via MCP), **Sentry** (production error tracking, integrated via MCP and the Sentry Agent for Linear), BrowserStack App Automate (mobile, optional)
 
-> **Tool Philosophy:** Testing is the cheapest phase of the AI-DLC. Frameworks are free OSS. AI test generation is already paid for in the Development stack (Claude Code + Cursor). Bug triage uses tools the team already runs (Linear, Sentry, CodeRabbit). **Linear and Sentry are wired together** through the Sentry Agent for Linear — production errors become triaged Linear issues with Seer root-cause analysis attached, with no human shovelling. The QA Lead's job is calibration and prioritisation, not transcription.
+> **Tool Philosophy:** Testing is the cheapest phase of the AI-DLC. Frameworks are free OSS. AI test generation is already paid for in the Development stack (Claude Code). Bug triage uses tools the team already runs (Linear, Sentry, CodeRabbit). **Linear and Sentry are wired together** through the Sentry Agent for Linear — production errors become triaged Linear issues with Seer root-cause analysis attached, with no human shovelling. The QA Lead's job is calibration and prioritisation, not transcription.
 
 ---
 
@@ -23,7 +23,7 @@ This document defines the AI-assisted workflow for the Testing & QA phase, using
 | **E2E Testing (Web)** | Playwright | De facto standard in 2026 | Free OSS |
 | **Load Testing** | k6 (JS/TS) or Locust (Python) | Developer-friendly load tests | Free OSS |
 | **Mobile Testing** (if applicable) | BrowserStack App Automate + Appium | Real-device mobile testing | From $199/mo per parallel |
-| **Test Generation** | Claude Code + Cursor | AI-generated tests (already in Phase 3 stack) | Already paid |
+| **Test Generation** | Claude Code | AI-generated tests (already in Phase 3 stack) | Already paid |
 | **Test Review** | CodeRabbit | AI review of test code alongside production code | Already in Phase 3 stack |
 | **Bug Tracking + AI Triage** | **Linear** + **Triage Intelligence** | Issue tracker + duplicate detection + label/priority suggestions | $10/user/mo Business+ |
 | **Error Tracking + RCA** | **Sentry** + **Seer** + **Sentry Agent for Linear** | Production error tracking, AI root-cause analysis, auto-creates Linear issues | From $26/mo |

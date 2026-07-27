@@ -34,7 +34,7 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 | **Docs platform (customer-facing)** | Mintlify (MCP at `/mcp`, AI agent, auto llms.txt + skill.md) | GitBook (MCP at `/~gitbook/mcp`) or Docusaurus (OSS) | Mintlify Pro $300/mo; GitBook Pro $215/mo for 10 seats; Docusaurus free |
 | **Docs platform (internal/dev)** | Docusaurus + Claude Code over the repo | Mintlify with auth-gated MCP at `/authed/mcp` | Docusaurus free |
 | **API reference** | Mintlify OpenAPI integration / `docusaurus-plugin-openapi-docs` | Redoc, Scalar, Bump.sh | Free for OSS plugins |
-| **Doc gen agent** | Claude Code with docs-platform MCP + repo `--add-dir` | Cursor over the docs repo | Already in Phase 3 stack |
+| **Doc gen agent** | Claude Code with docs-platform MCP + repo `--add-dir` | Aider / Cline (BYOK) over the docs repo | Already in Phase 3 stack |
 | **Handoff doc synthesis** | Claude Code with `--add-dir` across PRD repo, code repo, IaC repo, docs site MCP | NotebookLM Enterprise for oversized multi-repo corpora | API usage-based |
 | **KT recording (meetings)** | Fathom (best action-item extraction; 9.4 vs Loom 7.2 in 2026 G2) | Otter, Granola, Jamie | Fathom Free covers most; Premium $19/mo |
 | **KT recording (screen)** | Loom AI (auto chapters + auto CTA + summaries) | Fathom screen-recorder mode | Loom Business $15/user/mo |

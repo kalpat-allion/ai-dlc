@@ -14,7 +14,7 @@ This document defines the AI-assisted workflow for the CI/CD & DevOps phase of t
 - **Containerization:** Docker Desktop with Gordon AI + Claude Code; Trivy + Docker Scout for image scanning
 - **Cost:** Pulumi Insights + Infracost (Terraform/OpenTofu fallback only — Infracost still does not support Pulumi natively as of 2026)
 - **Observability:** Datadog + Bits AI SRE (primary commercial) **or** Grafana Cloud + Grafana Assistant + Sift (primary OSS-friendly); Sentry + Seer for application errors
-- **AI authoring:** Claude Code (terminal agent) + Cursor (IDE) — both connected to Pulumi MCP, GitHub MCP, and observability MCP servers
+- **AI authoring:** Claude Code (terminal agent + IDE extension) — connected to Pulumi MCP, GitHub MCP, and observability MCP servers
 
 > **Tool Philosophy.** DevOps is now AI-native. We treat Pulumi Neo as a junior platform engineer that reads tickets, plans changes, opens PRs, runs `pulumi preview`, and waits for human review. We treat Bits AI SRE / Grafana Sift as the first responder on every alert. Claude Code remains the orchestrator that ties Pulumi MCP, GitHub MCP, and observability MCP servers into one session — same model the team already uses in Phase 3. Five tool families, zero overlap, every state-changing action requires a human approval gate.
 
@@ -62,7 +62,7 @@ This step is done **once per project**. The cost of skipping it is paying the "A
 
 #### 0.1 — Connect Claude Code to Pulumi MCP
 
-The Pulumi MCP server is the bridge between Claude Code (or Cursor) and Pulumi Cloud — it exposes `get-stacks`, `resource-search` (Lucene), `pulumi preview`, `pulumi up`, `pulumi stack output`, and Pulumi Insights queries to the LLM session.
+The Pulumi MCP server is the bridge between Claude Code and Pulumi Cloud — it exposes `get-stacks`, `resource-search` (Lucene), `pulumi preview`, `pulumi up`, `pulumi stack output`, and Pulumi Insights queries to the LLM session.
 
 Two installation paths — pick the **remote MCP** path for organisations standardising on a single Pulumi Cloud workspace; pick the **local MCP** path for developer machines that need to work offline or against self-managed state.
 
@@ -131,7 +131,7 @@ Add Trivy to every container build step in CI (Phase 5 already covers this) and 
 
 #### 0.7 — Author an `AGENTS.md` at the repo root
 
-Pulumi Neo (and most modern AI coding agents — Claude Code, Cursor, Copilot agent) read [AGENTS.md](https://agents.md) as the canonical project context file. Capture: stack naming convention, region defaults, mandatory tags (`Project`, `Environment`, `Owner`, `CostCenter`), forbidden resource types, ADR pointers, and the production-deploy approval requirement. Without this, every prompt drifts; with it, the agent fences itself within team standards automatically. Use the [`agents-md-authoring`](./PROMPTS.md#agentsmd-authoring) prompt for the first draft, then have the platform lead review and commit.
+Pulumi Neo (and most modern AI coding agents — Claude Code, Copilot agent) read [AGENTS.md](https://agents.md) as the canonical project context file. Capture: stack naming convention, region defaults, mandatory tags (`Project`, `Environment`, `Owner`, `CostCenter`), forbidden resource types, ADR pointers, and the production-deploy approval requirement. Without this, every prompt drifts; with it, the agent fences itself within team standards automatically. Use the [`agents-md-authoring`](./PROMPTS.md#agentsmd-authoring) prompt for the first draft, then have the platform lead review and commit.
 
 #### Verification checklist
 
@@ -265,7 +265,7 @@ Commit the generated `pulumi.yaml`, `Pulumi.<stack>.yaml`, and the language scaf
 
 **Workflow:**
 
-**4.1 — Generate pipeline configs with Copilot + Claude Code.** Open the repo in Cursor or VS Code with GitHub Copilot, run the [`pipeline-generation`](./PROMPTS.md#cicd-pipeline-generation) prompt against the tech-stack ADR. Copilot scaffolds the YAML; Claude Code (via terminal) refines edge cases (matrix builds, reusable workflows, OIDC). Standard stages, in order:
+**4.1 — Generate pipeline configs with Copilot + Claude Code.** Open the repo in VS Code with GitHub Copilot, run the [`pipeline-generation`](./PROMPTS.md#cicd-pipeline-generation) prompt against the tech-stack ADR. Copilot scaffolds the YAML; Claude Code (via terminal) refines edge cases (matrix builds, reusable workflows, OIDC). Standard stages, in order:
 
 1. **Lint & format** — fast feedback < 2 min, fail closed.
 2. **Build** — compile, build container image with multi-stage Dockerfile from Step 5.
@@ -441,7 +441,7 @@ When CI/CD & DevOps is complete, the following artefacts hand off to **Phase 7: 
 - [ ] Pulumi Cloud audit log enabled; GitHub audit log enabled
 - [ ] Claude Code Action posts a review on every PR; `@claude` fix workflow tested
 - [ ] Bits AI SRE / Grafana Sift configured with on-call rotation
-- [ ] AGENTS.md committed and referenced by Pulumi Neo, Claude Code, and Cursor
+- [ ] AGENTS.md committed and referenced by Pulumi Neo and Claude Code
 
 ---
 

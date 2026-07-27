@@ -24,7 +24,7 @@ Before a release candidate is built.
 - [ ] Dependabot or Renovate active on every repo; `.github/dependabot.yml` configured for patch-level auto-merge
 - [ ] Trivy in container build pipeline; fails on Critical CVEs
 - [ ] Checkov on every IaC PR
-- [ ] GitGuardian active org-wide; ggshield pre-commit hook on every developer machine; **ggshield AI hook configured** for Cursor / Claude Code / Copilot
+- [ ] GitGuardian active org-wide; ggshield pre-commit hook on every developer machine; **ggshield AI hook configured** for Claude Code / Copilot
 - [ ] One-time GitGuardian historical scan complete; any leaks routed through Step 5 incident response
 - [ ] Security Champion designated on the team
 - [ ] AGENTS.md security-conventions section committed
@@ -104,7 +104,7 @@ Continuous.
 ### Prevention layers
 - [ ] ggshield pre-commit hook on every developer machine
 - [ ] GitGuardian platform scan active; alerts route to Security Champion + on-call
-- [ ] **ggshield AI hook** active for Cursor / Claude Code / GitHub Copilot — pre-prompt + pre-tool-use + post-tool-use intercept points all live
+- [ ] **ggshield AI hook** active for Claude Code / GitHub Copilot — pre-prompt + pre-tool-use + post-tool-use intercept points all live
 - [ ] Bitwarden / 1Password (or equivalent) is the team's default; no secrets in Slack / email / paste buffers
 - [ ] Runtime secrets via Pulumi ESC (Phase 6) or platform-native (AWS Secrets Manager / Azure Key Vault / GCP Secret Manager)
 
@@ -179,7 +179,7 @@ Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: De
 - [ ] Known security issues log updated (open vs closed)
 - [ ] Secrets rotation log reviewed; no open incidents
 - [ ] Security runbook exists at `/docs/security/runbook.md`
-- [ ] AGENTS.md security conventions current and referenced by Claude Code, Cursor, Copilot, Pulumi Neo
+- [ ] AGENTS.md security conventions current and referenced by Claude Code, Copilot, Pulumi Neo
 
 ---
 
@@ -210,7 +210,7 @@ Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: De
 |----------|-----------|
 | **PRs with AI-generated code get extra scrutiny per `code-review-checklist.md`** | AI code has 1.7× more issues per PR than human code |
 | **`/security-review` runs diff-aware on every PR** | Lower false-positive rate than full-repo scanning; covers injection / authn-z / secrets / sensitive-logs |
-| **ggshield AI hook covers Cursor / Claude Code / Copilot** | Catches secrets at pre-prompt, pre-tool-use, post-tool-use; AI commits leak at ~2× baseline (~3.2%) |
+| **ggshield AI hook covers Claude Code / Copilot** | Catches secrets at pre-prompt, pre-tool-use, post-tool-use; AI commits leak at ~2× baseline (~3.2%) |
 | **Semgrep + Snyk rules include OWASP LLM Top 10 coverage** | Automatic checks for prompt injection, insecure output handling |
 | **AI-generated OPA / Rego policies must spend 7 days in `dryrun`** | Prevent a single-line policy locking the cluster (Red Hat 2026 dynamic-generator pattern) |
 | **AI-generated security fixes require a regression test** | Mutation testing in Phase 4 catches some tautological fixes; an explicit regression test catches more |

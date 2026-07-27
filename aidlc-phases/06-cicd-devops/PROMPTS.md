@@ -1,6 +1,6 @@
 # Phase 6: CI/CD & DevOps — Prompt Templates
 
-> **All prompts are for Claude Code, Cursor, GitHub Copilot, or Pulumi Neo / Copilot.** Pulumi (CLI), Docker, GitHub Actions, Pulumi Deployments, and observability backends run natively — the AI generates the configs and triages the runs.
+> **All prompts are for Claude Code, GitHub Copilot, or Pulumi Neo / Copilot.** Pulumi (CLI), Docker, GitHub Actions, Pulumi Deployments, and observability backends run natively — the AI generates the configs and triages the runs.
 
 The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) steps. Anchors below are referenced from PROCESS.md; keep the heading slugs stable.
 
@@ -11,7 +11,7 @@ The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) st
 > Used in [PROCESS.md → Step 0.7](./PROCESS.md#07--author-an-agentsmd-at-the-repo-root). One-time, run from Claude Code at the repo root before any IaC or pipeline generation.
 
 ```
-You are a platform-engineering lead authoring the canonical `AGENTS.md` for this repository. AGENTS.md is the project context file every AI coding agent (Pulumi Neo, Claude Code, Cursor, Copilot agent) reads as ground truth — be precise, terse, and project-specific. Do not pad with generic best-practice prose.
+You are a platform-engineering lead authoring the canonical `AGENTS.md` for this repository. AGENTS.md is the project context file every AI coding agent (Pulumi Neo, Claude Code, Copilot agent) reads as ground truth — be precise, terse, and project-specific. Do not pad with generic best-practice prose.
 
 ## Inputs
 - **Project name and description:** [name + 1-line description]
@@ -48,7 +48,7 @@ Which frameworks apply; which controls are infra-relevant (encryption, audit log
 The approval rule in plain language; reference the GitHub Environment / Pulumi Cloud policy that enforces it.
 
 ### How to use this file
-One paragraph telling AI agents (Pulumi Neo, Claude Code, Cursor): "Read this file before any change; if a conflict exists between this file and your generated output, this file wins; if this file does not cover a case, ask the human."
+One paragraph telling AI agents (Pulumi Neo, Claude Code): "Read this file before any change; if a conflict exists between this file and your generated output, this file wins; if this file does not cover a case, ask the human."
 
 ### Pointers
 Links to: ADRs, infra runbook, deployment runbook, Phase 6 PROCESS.md.
