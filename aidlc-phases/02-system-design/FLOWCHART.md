@@ -165,7 +165,7 @@ flowchart TD
 
 ## Step 4: UI/UX Wireframing
 
-Entry point is the frozen API contract from Step 3. Sub-stages 4.1 → 4.7 infer the design system from the repo, enable the frontend-design Skill, generate wireframe screens per flow **as repo code**, iterate by prompt, promote mature components to the shared library, run an accessibility review, and capture stakeholder sign-off. Gate 3 is PM approval. The fallback branch (UFB → Figma canvas / v0 / Cursor + shadcn / Bolt) covers designer-led or pixel-perfect cases; fallback flows still re-enter the accessibility review at U6. On Gate 3 No, the loop returns to U3 to regenerate wireframes. See [QUALITY-GATES.md → Gate 3](./QUALITY-GATES.md#gate-3-wireframes--tech-stack).
+Entry point is the frozen API contract from Step 3. Sub-stages 4.1 → 4.7 infer the design system from the repo, enable the frontend-design Skill, generate wireframe screens per flow **as repo code**, iterate by prompt, promote mature components to the shared library, run an accessibility review, and capture stakeholder sign-off. Gate 3 is PM approval. The fallback branch (UFB → Figma canvas / v0 / Bolt) covers designer-led or pixel-perfect cases; fallback flows still re-enter the accessibility review at U6. On Gate 3 No, the loop returns to U3 to regenerate wireframes. See [QUALITY-GATES.md → Gate 3](./QUALITY-GATES.md#gate-3-wireframes--tech-stack).
 
 ```mermaid
 flowchart TD
@@ -182,7 +182,7 @@ flowchart TD
     G3{GATE 3: Wireframes<br/>approved by PM?<br/>see QUALITY-GATES.md Gate 3}
     G3 -- No --> U3
     G3 -. designer-led / pixel-perfect .-> UFB
-    UFB[Fallback: Figma canvas via MCP /<br/>Bolt / Lovable interactive demo /<br/>v0 per-component drop-in /<br/>Cursor + shadcn IDE-driven<br/>reconcile back to repo tokens + record in flow ADR]
+    UFB[Fallback: Figma canvas via MCP /<br/>Bolt / Lovable interactive demo /<br/>v0 per-component drop-in<br/>reconcile back to repo tokens + record in flow ADR]
     UFB --> U6
     G3 -- Yes --> U_OUT([To Step 5: Tech Stack Definition<br/>Inputs: approved wireframes + WCAG report])
 

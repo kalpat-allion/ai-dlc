@@ -11,7 +11,7 @@ This document defines the AI-assisted workflow for the Security & Compliance pha
 - **SAST:** SonarQube CE (security profile) + Semgrep OSS with **Semgrep MCP server** + **Claude Code `/security-review`** slash command and the **`anthropics/claude-code-security-review` GitHub Action** + **GitHub Copilot Autofix**; **Snyk DeepCode AI / Snyk Agent Fix** as paid upgrade; **Aikido Infinite** as alt all-in-one
 - **SCA:** Dependabot (GitHub) or Renovate (other) + **Trivy MCP server** for IDE-driven dep + container + IaC scanning; **Snyk Open Source** or **Endor Labs AURI** for reachability-aware noise reduction
 - **Container & IaC:** Trivy + Docker Scout + Checkov + **OPA / Gatekeeper** (with AI policy generation via Red Hat's 2026 dynamic policy generator pattern)
-- **Secrets:** GitGuardian platform + **ggshield AI hook** (March 2026) for Cursor / Claude Code / GitHub Copilot — pre-prompt, pre-tool-use, and post-tool-use scanning
+- **Secrets:** GitGuardian platform + **ggshield AI hook** (March 2026) for Claude Code / GitHub Copilot — pre-prompt, pre-tool-use, and post-tool-use scanning
 - **AI / agent security:** OWASP LLM Top 10 + **OWASP Top 10 for Agentic Applications 2026** mapped per service; **Anthropic Claude Opus 4.7 prompt-injection defences** as the model-layer baseline; **Cycode AI Governance + AIBOM** (optional) for MCP enforcement
 - **Compliance:** Claude Code (checklists + evidence) + Trivy/Checkov/OPA (technical controls) + **Vanta Agents** or **Drata MCP** (formal SOC 2 / ISO 27001 / HIPAA only when certifying); NIST AI RMF + ISO/IEC 42001 crosswalk for AI products
 - **AI authoring & remediation:** **Claude Code** as the orchestrator, connected to Semgrep MCP, Trivy MCP, GitGuardian, and (optionally) Vanta / Drata MCP servers — same model the team already uses in Phase 3 and Phase 6
@@ -37,14 +37,14 @@ This document defines the AI-assisted workflow for the Security & Compliance pha
 | **Policy as code** | **OPA / Gatekeeper** with AI policy generation (Red Hat 2026 dynamic Kubernetes policy generator pattern via MCP) | Pulumi CrossGuard (Phase 6 carry-over for IaC-time policy) | Free OSS |
 | **Secrets — platform** | **GitGuardian** (500+ detectors) | TruffleHog | Free for teams < 25 devs; per-dev paid above |
 | **Secrets — pre-commit** | **ggshield** | Gitleaks (MIT); detect-secrets (Yelp) | Free OSS |
-| **Secrets — AI hook** | **ggshield AI hook** (March 2026) — pre-prompt + pre-tool-use + post-tool-use scanning for Cursor / Claude Code / GitHub Copilot | — | Free with ggshield |
+| **Secrets — AI hook** | **ggshield AI hook** (March 2026) — pre-prompt + pre-tool-use + post-tool-use scanning for Claude Code / GitHub Copilot | — | Free with ggshield |
 | **AI / agent security** | **OWASP LLM Top 10** + **OWASP Top 10 for Agentic Applications 2026** mapped via Claude Code threat-model prompt; **Anthropic Claude Opus 4.7** model-layer prompt-injection defences | **Cycode AI Governance + AIBOM** (AI inventory across 6 categories: code assistants, models, infrastructure, MCP servers, AI secrets, AI packages; MCP server enforcement) | Anthropic defences built-in; Cycode enterprise |
 | **Compliance — checklists / evidence** | **Claude Code** + Phase 5 prompt library | — | Already paid |
 | **Compliance — formal certification** | **Vanta Agents** (Compliance / TPRM / Customer Trust agents, March 2026; 4 hrs/week saved per user) | **Drata MCP** + Drata Vendor Risk Management Agent | Vanta from $7,500/yr; Drata from $10,000/yr |
 
 **Optional upgrades:**
 - **Snyk Code SAST** ($25/dev/mo) — when AI auto-fix PRs become valuable beyond Copilot Autofix and the team needs unified vulnerability management across SAST + SCA + container + IaC.
-- **Endor Labs AURI** — for AI-native AppSec when reachability noise reduction (97%) outweighs cost; relevant for OpenAI / Cursor / Snowflake-style profiles.
+- **Endor Labs AURI** — for AI-native AppSec when reachability noise reduction (97%) outweighs cost; relevant for OpenAI / Snowflake-style profiles.
 - **Cycode AI Governance + AIBOM** — when formal AI usage visibility is a board / compliance mandate (shadow AI, AI Bill of Materials, MCP server policy enforcement).
 - **Vanta or Drata** — only when formal SOC 2 / ISO 27001 / HIPAA certification is in scope. NIST AI RMF + ISO/IEC 42001 crosswalk applies if the product itself contains AI.
 
@@ -88,7 +88,7 @@ Grant the security-review workflow its write permissions — **post comments on 
 
 #### 0.2 — Connect Claude Code to the Semgrep MCP server
 
-The Semgrep MCP server (`https://github.com/semgrep/mcp`) exposes `security_check`, `semgrep_scan`, `semgrep_scan_with_custom_rule`, `get_abstract_syntax_tree`, `semgrep_findings`, `supported_languages`, `semgrep_rule_schema`, plus the built-in `write_custom_semgrep_rule` prompt. In the AI-DLC it runs in **Claude Code** via its project-scoped MCP support (the server is also broadly compatible with other MCP clients such as Cursor / VS Code / Windsurf).
+The Semgrep MCP server (`https://github.com/semgrep/mcp`) exposes `security_check`, `semgrep_scan`, `semgrep_scan_with_custom_rule`, `get_abstract_syntax_tree`, `semgrep_findings`, `supported_languages`, `semgrep_rule_schema`, plus the built-in `write_custom_semgrep_rule` prompt. In the AI-DLC it runs in **Claude Code** via its project-scoped MCP support (the server is also broadly compatible with other MCP clients such as VS Code / Windsurf).
 
 ```bash
 # Add Semgrep MCP at project scope (committed to the repo's .mcp.json) — the framework standard, so each project stays isolated and concurrent projects keep independent config
@@ -112,7 +112,7 @@ claude
 > Via Trivy MCP, scan the current Dockerfile and the lockfile; summarise Critical and High CVEs and propose digest-pinned base-image upgrades.
 ```
 
-#### 0.4 — Install ggshield + the AI hook for Cursor / Claude Code / Copilot
+#### 0.4 — Install ggshield + the AI hook for Claude Code / Copilot
 
 ggshield's AI hook (March 2026) is the **third** secrets layer, after pre-commit and platform-side. It intercepts at three points in the AI loop:
 
@@ -131,7 +131,7 @@ ggshield auth login
 # 1. Pre-commit hook (developer-side)
 ggshield install --mode local
 
-# 2. AI hook (developer-side, supports Cursor / Claude Code / Copilot)
+# 2. AI hook (developer-side, supports Claude Code / Copilot)
 ggshield ai install              # configures the hook for detected AI tools
 ggshield ai status               # verify which clients are wired up
 
@@ -185,14 +185,14 @@ If the product itself contains AI features, plan the **NIST AI RMF + ISO/IEC 420
 
 #### 0.8 — Add a security conventions section to `AGENTS.md`
 
-The `AGENTS.md` already committed for Phase 6 (and Phase 3) is the canonical project context file — Pulumi Neo, Claude Code, Cursor, and Copilot all read it. Add a **Security conventions** section: forbidden APIs (e.g., raw SQL string concatenation), required input validators, auth middleware that must wrap every endpoint, secret-handling rules ("never call `console.log` on objects that may contain credentials"), and the Phase 3 / 5 AI-generated-code review escalation path. Without this, every prompt drifts; with it, each agent fences itself within team standards.
+The `AGENTS.md` already committed for Phase 6 (and Phase 3) is the canonical project context file — Pulumi Neo, Claude Code, and Copilot all read it. Add a **Security conventions** section: forbidden APIs (e.g., raw SQL string concatenation), required input validators, auth middleware that must wrap every endpoint, secret-handling rules ("never call `console.log` on objects that may contain credentials"), and the Phase 3 / 5 AI-generated-code review escalation path. Without this, every prompt drifts; with it, each agent fences itself within team standards.
 
 #### Verification checklist
 
 - [ ] `claude /security-review` runs locally and posts findings on a synthetic vulnerable diff
 - [ ] `.github/workflows/claude-security-review.yml` committed; smoke-tested on a draft PR with an injected SQL-i string — Critical comment appears within ~3 minutes
 - [ ] `claude mcp list` shows `semgrep`, `trivy`, and (if applicable) `vanta` / `drata` connected
-- [ ] `ggshield ai status` confirms hook active for Cursor / Claude Code / Copilot
+- [ ] `ggshield ai status` confirms hook active for Claude Code / Copilot
 - [ ] GitGuardian historical scan complete; any leaks routed through Step 5 incident response
 - [ ] Dependabot active on every repo; auto-merge configured for patch-level CVE fixes
 - [ ] Copilot Autofix on (or Snyk DeepCode auth'd) for the languages in scope
@@ -281,7 +281,7 @@ The `AGENTS.md` already committed for Phase 6 (and Phase 3) is the canonical pro
 
 **3.3 — Reachability-aware triage (the noise cut).** Traditional SAST / SCA generates 80–90% false positives; **reachability analysis** (does our code path actually call into the vulnerable function?) reduces alert noise by 70–97%.
 
-- **Endor Labs AURI** (primary if budget allows) — function-level reachability across 40+ languages; AURI for AI-driven coding launched March 2026; the Autonomous Plane acquisition (Feb 2026) gives full-stack reachability code-to-container. Customers include OpenAI, Cursor, Snowflake, Atlassian.
+- **Endor Labs AURI** (primary if budget allows) — function-level reachability across 40+ languages; AURI for AI-driven coding launched March 2026; the Autonomous Plane acquisition (Feb 2026) gives full-stack reachability code-to-container. Customers include OpenAI, Snowflake, Atlassian.
 - **Snyk Open Source** (alt) — reachability + auto-fix PRs trained on millions of human-written fixes; 47-day faster CVE detection vs NVD.
 
 When reachability is unavailable, run [`reachability-triage`](./PROMPTS.md#reachability-triage) in Claude Code: feed the CVE list + the project's call graph (or a tree-sitter-derived map) and Claude returns a ranked "definitely reachable / probably reachable / not reachable in current code" classification. **Treat this as a noise-reduction aid, not a final answer** — Critical and High findings still go through the full upgrade flow.
@@ -338,7 +338,7 @@ When reachability is unavailable, run [`reachability-triage`](./PROMPTS.md#reach
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Every commit (local + pushed), every external channel (Slack, email, paste), every AI-tool prompt and tool call |
-| **Tools** | **GitGuardian** (platform, real-time push scan, 500+ detectors) + **ggshield** (pre-commit) + **ggshield AI hook** (March 2026; Cursor / Claude Code / Copilot pre-prompt + pre-tool-use + post-tool-use) + **Bitwarden / 1Password** (storage); platform-side runtime secrets via Pulumi ESC (Phase 6) or AWS Secrets Manager / Azure Key Vault / GCP Secret Manager |
+| **Tools** | **GitGuardian** (platform, real-time push scan, 500+ detectors) + **ggshield** (pre-commit) + **ggshield AI hook** (March 2026; Claude Code / Copilot pre-prompt + pre-tool-use + post-tool-use) + **Bitwarden / 1Password** (storage); platform-side runtime secrets via Pulumi ESC (Phase 6) or AWS Secrets Manager / Azure Key Vault / GCP Secret Manager |
 | **Output** | Zero secrets in code; zero secrets leaked through AI prompts or tool calls; rotation closure within 1 hour for production-grade leaks |
 | **Human** | Every developer runs ggshield + AI hook; Security Champion manages incidents |
 

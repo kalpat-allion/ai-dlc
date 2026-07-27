@@ -18,7 +18,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI/tool-driven action (Cursor, Claude Code, CodeRabbit, SonarQube, Linear Agent) |
+| 🤖 | AI/tool-driven action (Claude Code, CodeRabbit, SonarQube, Linear Agent) |
 | 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 🔁 | Auto-transition driven by Linear's git integration (PR open / merge) |
 | 👤 | Human-led action |
@@ -57,25 +57,19 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 ## Step 0: One-Time Setup
 
-One-off MCP wiring per developer. Path A is the primary surface — Claude Code in the terminal. Path B is optional in-IDE Linear browsing through Cursor's MCP support. After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens Claude Code's Linear tool-permission settings from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
+One-off MCP wiring per developer — Claude Code in the terminal (or its IDE extension). After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens Claude Code's Linear tool-permission settings from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
 
 ```mermaid
 flowchart TD
     S0_START([Start: Phase 3 prerequisites<br/>Linear connected from Phase 1<br/>+ Claude Code installed]) --> S0_ANTH
 
     S0_ANTH[Tech Lead: widen Linear tool-permissions in Claude Code settings<br/>allow update_issue, assign_issue,<br/>create_issue with parentId<br/>keep delete_issue DENIED<br/>👤 Tech Lead]
-    S0_ANTH --> S0_PATH{Choose surface}
+    S0_ANTH --> S0_A1
 
-    S0_PATH -- Claude Code CLI primary --> S0_A1
-    S0_PATH -- Cursor in-IDE optional --> S0_B1
-
-    S0_A1[Path A 1: claude mcp add --transport http --scope project<br/>linear https://mcp.linear.app/mcp<br/>🤖 Claude Code]
-    S0_A1 --> S0_A2[Path A 2: claude - /mcp - select linear - approve OAuth<br/>👤 each developer]
-    S0_A2 --> S0_A3[Path A 3: verify with linear-next-task prompt<br/>response includes branchName field<br/>🤖 Claude Code + 🔌 Linear MCP]
+    S0_A1[1: claude mcp add --transport http --scope project<br/>linear https://mcp.linear.app/mcp<br/>🤖 Claude Code]
+    S0_A1 --> S0_A2[2: claude - /mcp - select linear - approve OAuth<br/>👤 each developer]
+    S0_A2 --> S0_A3[3: verify with linear-next-task prompt<br/>response includes branchName field<br/>🤖 Claude Code + 🔌 Linear MCP]
     S0_A3 --> S0_GIT
-
-    S0_B1[Path B 1: Cursor Settings - MCP - Add Server<br/>linear https://mcp.linear.app/mcp + OAuth<br/>👤 developer]
-    S0_B1 --> S0_GIT
 
     S0_GIT[Linear git integration ON<br/>Settings - Integrations - GitHub/GitLab/Bitbucket<br/>auto-link PRs by branch name,<br/>auto In Review on PR open,<br/>auto Done on PR merge<br/>👤 Tech Lead]
     S0_GIT --> S0_AGENT
@@ -165,7 +159,7 @@ flowchart TD
 
 ## Step 3: Feature Development
 
-Entry point is the working branch from Step 2. **Step 3.0** is a read-only per-story design pass via `software-architect` for non-trivial stories (cross-module touch, schema change, new endpoint surface, new external integration, no clear in-pattern reference module); in-pattern stories skip it and go directly to scaffolding. Sub-stages 3.1 → 3.5 scaffold the feature with Cursor Composer or Claude Code, write tests alongside code, post checkpoint comments to the Linear issue at substantive milestones, and self-review the diff before opening a PR. The Linear Agent fallback (LA) is an alternative entry where a Tech Lead routes a clearly scoped low-risk story directly to a Linear Agent — agent-authored output still flows through Step 4. The **Multi-agent** branch (MA) is an overlay on the standard path: the developer fans out across Claude Code subagents, an experimental Agent Team, parallel git worktrees, or [Conductor](https://www.conductor.build/) for cross-layer stories, sibling stories in flight, or adversarial review/debug — file-scoped before spawn, capped at 3–5 parallel agents, with `linear-task-agent` retaining sole Linear-write authority. When parallel branches reach merge time, `conflict-resolver` is invoked **inside each affected worktree** to resolve rebase conflicts — single-writer per working tree, never `--abort` without explicit instruction. Drain in-flight implementation specialists before spawning the resolver in the same session (Pattern A); for Conductor (Pattern D), use the dashboard's diff-first review to spot which agent's branch needs resolution vs which can be archived as redundant. Detail and decision rules live in [PROCESS.md → Multi-agent development patterns](./PROCESS.md#multi-agent-development-patterns). There is no gate at the end of Step 3 — Critical/High self-review issues must be resolved before PR open, then flow runs into Step 4.
+Entry point is the working branch from Step 2. **Step 3.0** is a read-only per-story design pass via `software-architect` for non-trivial stories (cross-module touch, schema change, new endpoint surface, new external integration, no clear in-pattern reference module); in-pattern stories skip it and go directly to scaffolding. Sub-stages 3.1 → 3.5 scaffold the feature with Claude Code, write tests alongside code, post checkpoint comments to the Linear issue at substantive milestones, and self-review the diff before opening a PR. The Linear Agent fallback (LA) is an alternative entry where a Tech Lead routes a clearly scoped low-risk story directly to a Linear Agent — agent-authored output still flows through Step 4. The **Multi-agent** branch (MA) is an overlay on the standard path: the developer fans out across Claude Code subagents, an experimental Agent Team, parallel git worktrees, or [Conductor](https://www.conductor.build/) for cross-layer stories, sibling stories in flight, or adversarial review/debug — file-scoped before spawn, capped at 3–5 parallel agents, with `linear-task-agent` retaining sole Linear-write authority. When parallel branches reach merge time, `conflict-resolver` is invoked **inside each affected worktree** to resolve rebase conflicts — single-writer per working tree, never `--abort` without explicit instruction. Drain in-flight implementation specialists before spawning the resolver in the same session (Pattern A); for Conductor (Pattern D), use the dashboard's diff-first review to spot which agent's branch needs resolution vs which can be archived as redundant. Detail and decision rules live in [PROCESS.md → Multi-agent development patterns](./PROCESS.md#multi-agent-development-patterns). There is no gate at the end of Step 3 — Critical/High self-review issues must be resolved before PR open, then flow runs into Step 4.
 
 ```mermaid
 flowchart TD
@@ -186,13 +180,13 @@ flowchart TD
     F_PLAN_LOG --> F_TYPE
 
     F_TYPE{Task type}
-    F_TYPE -- Standard --> F_CURSOR[Cursor Composer<br/>in-pattern multi-file scaffolding in IDE<br/>🤖 Cursor]
+    F_TYPE -- In-pattern --> F_INPATTERN[Claude Code + specialist<br/>frontend-engineer / backend-engineer<br/>in-pattern multi-file scaffolding<br/>🤖 Claude Code]
     F_TYPE -- Complex --> F_CC[Claude Code<br/>multi-module - reads codebase,<br/>runs tests, iterates<br/>🤖 Claude Code]
     F_TYPE -- MCP integration --> F_MCP[Claude Code + MCP<br/>Figma / GitHub / Postman / etc.<br/>deepest MCP support<br/>🤖 Claude Code]
     F_TYPE -- Autonomous --> F_LA[Linear Agent<br/>Tech Lead routes - assigned in Linear<br/>April 2026 onwards - Business plan and above<br/>🤖 Linear Agent]
     F_TYPE -- Multi-agent --> F_MA[Fan out across patterns A-D<br/>A: Claude Code subagents in-process<br/>B: Agent Teams - peer messaging, experimental<br/>C: Git worktrees - parallel sessions<br/>D: Conductor - macOS dashboard<br/>cap at 3-5 agents, file-scoped per agent,<br/>linear-task-agent stays sole Linear writer<br/>🤖 Claude Code multi-session]
 
-    F_CURSOR --> F_TESTS
+    F_INPATTERN --> F_TESTS
     F_CC --> F_TESTS
     F_MCP --> F_TESTS
     F_LA --> F_TESTS
@@ -203,7 +197,7 @@ flowchart TD
     F_MA_CR --> F_MA_LAND
     F_MA_LAND -- No --> F_TESTS
 
-    F_TESTS[3.3 Tests alongside code<br/>test-generation prompt with example test<br/>happy + error + edge + AC mapping<br/>🤖 Claude Code or Cursor] --> F_PROG
+    F_TESTS[3.3 Tests alongside code<br/>test-generation prompt with example test<br/>happy + error + edge + AC mapping<br/>🤖 Claude Code] --> F_PROG
     F_PROG[3.4 linear-progress-comment at checkpoints<br/>create_comment with diff summary<br/>checkpoint comments only on substantive change<br/>🔌 Claude Code + Linear MCP] --> F_SELF
     F_SELF[3.5 self-review prompt<br/>severity-ranked issue list:<br/>correctness, security, performance,<br/>error handling, edge cases, naming, tests, docs<br/>🤖 Claude Code] --> F_FIX
 
@@ -278,7 +272,7 @@ flowchart TD
 
 ## Step 5: Refactoring
 
-Entry point is identified tech-debt: SonarQube findings or Claude Code's structural-improvement scan. Sub-stages 5.1 → 5.4 file `tech-debt`-labelled Linear issues, scope the change explicitly (what changes, what does not), execute via Claude Code (large-scale) or Cursor Composer (localised), and verify behaviour preservation through existing tests. The strict rule is enforced at PR review: refactor PRs may not introduce features. There is no dedicated gate at the end of Step 5 — refactor PRs go through Step 4 like any PR.
+Entry point is identified tech-debt: SonarQube findings or Claude Code's structural-improvement scan. Sub-stages 5.1 → 5.4 file `tech-debt`-labelled Linear issues, scope the change explicitly (what changes, what does not), execute via Claude Code (large-scale or localised), and verify behaviour preservation through existing tests. The strict rule is enforced at PR review: refactor PRs may not introduce features. There is no dedicated gate at the end of Step 5 — refactor PRs go through Step 4 like any PR.
 
 ```mermaid
 flowchart TD
@@ -289,7 +283,7 @@ flowchart TD
 
     REF3{Scale}
     REF3 -- Large-scale --> REF4A[5.3a Claude Code<br/>multi-file refactor - extract service,<br/>rename across codebase,<br/>test-runner loop<br/>🤖 Claude Code]
-    REF3 -- Localised --> REF4B[5.3b Cursor Composer<br/>extract function, simplify conditional,<br/>visual diffs in IDE<br/>🤖 Cursor]
+    REF3 -- Localised --> REF4B[5.3b Claude Code<br/>extract function, simplify conditional<br/>🤖 Claude Code]
 
     REF4A --> REF5
     REF4B --> REF5
@@ -305,13 +299,13 @@ flowchart TD
 
 ## Step 6: Documentation
 
-Entry point is implementation code (continuous, alongside Step 3). Sub-stages 6.1 → 6.4 generate inline docs continuously in Cursor, generate module READMEs when modules cross the threshold (~500 lines or > 3 public exports), auto-generate API docs from `/docs/api/openapi.yaml` (no hand-written API references), and draft operational runbooks via Claude Code with SRE review. There is no dedicated gate — documentation is verified at Phase Handoff.
+Entry point is implementation code (continuous, alongside Step 3). Sub-stages 6.1 → 6.4 generate inline docs continuously in Claude Code, generate module READMEs when modules cross the threshold (~500 lines or > 3 public exports), auto-generate API docs from `/docs/api/openapi.yaml` (no hand-written API references), and draft operational runbooks via Claude Code with SRE review. There is no dedicated gate — documentation is verified at Phase Handoff.
 
 ```mermaid
 flowchart TD
     DOC_IN([Trigger: code merged to main<br/>or new module crosses threshold<br/>or runbook needed]) --> DOC1
 
-    DOC1[6.1 Inline docs continuous<br/>Cursor generates docstrings as code is written<br/>review and refine in same commit<br/>🤖 Cursor + 👤 developer] --> DOC_CHECK
+    DOC1[6.1 Inline docs continuous<br/>Claude Code generates docstrings as code is written<br/>review and refine in same commit<br/>🤖 Claude Code + 👤 developer] --> DOC_CHECK
 
     DOC_CHECK{Module crosses<br/>500 lines or 3 public exports?}
     DOC_CHECK -- Yes --> DOC2[6.2 module-readme prompt<br/>overview, architecture, key concepts,<br/>usage, configuration, testing, limitations<br/>🤖 Claude Code]
@@ -342,7 +336,7 @@ flowchart TD
     DW_DESIGN -- Yes --> DW_D[software-architect → plan →<br/>developer approves →<br/>linear-task-agent posts plan summary<br/>🤖 Claude Code + 🔌 Linear MCP]
     DW_D --> DW_C
 
-    DW_C --> DW_C1[Cursor / Claude Code implement + tests<br/>🤖]
+    DW_C --> DW_C1[Claude Code implement + tests<br/>🤖]
     DW_C1 --> DW_C2[Checkpoint comments on Linear issue<br/>at substantive change<br/>🔌 Claude Code + Linear MCP]
     DW_C2 --> DW_C3[self-review prompt<br/>resolve Critical/High before PR<br/>🤖 Claude Code]
     DW_C3 --> DW_R([Review])

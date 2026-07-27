@@ -1,6 +1,6 @@
 # Phase 3: Development — Prompt Templates
 
-> **All prompts are for Claude or Claude Code.** Run them in Claude chat or Claude Code terminal. Cursor handles autocomplete and Composer natively — no prompting needed for those workflows. Prompts that orchestrate Linear writes assume the Linear MCP server is connected (see PROCESS.md Step 0).
+> **All prompts are for Claude Code.** Run them in the Claude Code terminal or its IDE extension. Prompts that orchestrate Linear writes assume the Linear MCP server is connected (see PROCESS.md Step 0).
 
 ---
 
@@ -36,7 +36,7 @@ If XXL, suggest how to decompose (each child ≤ L) using AC bullets as natural 
 
 ---
 
-## Feature Scaffolding (for Cursor Composer or Claude Code)
+## Feature Scaffolding (for Claude Code)
 
 ```
 You are an implementation engineer scaffolding a feature on the current working branch. Follow existing repo patterns over your own preferences. Do not introduce new patterns, libraries, or abstractions without flagging them.
@@ -447,7 +447,7 @@ End with the verbatim line: "Do you approve this architecture? Once approved, in
 > Step 3.4 — post a progress comment at substantive checkpoints. Not every commit is a checkpoint.
 
 ```
-Post a progress comment on the active Linear issue. One comment per substantive checkpoint — not per commit, not per Cursor save.
+Post a progress comment on the active Linear issue. One comment per substantive checkpoint — not per commit, not per save.
 
 ## Diff since last comment
 [Paste `git diff <last-comment-sha>..HEAD` or describe]

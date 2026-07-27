@@ -1,6 +1,6 @@
 # Phase 5: Security & Compliance — Prompt Templates
 
-> **All prompts are for Claude Code, Cursor, GitHub Copilot, or Snyk DeepCode.** SonarQube, Semgrep (with the MCP server's built-in rule writer), Trivy (with the MCP plugin), Checkov, OPA / Conftest, GitGuardian + ggshield, and Vanta / Drata run natively — the AI generates the rules, fixes, threat models, and audit narrative.
+> **All prompts are for Claude Code, GitHub Copilot, or Snyk DeepCode.** SonarQube, Semgrep (with the MCP server's built-in rule writer), Trivy (with the MCP plugin), Checkov, OPA / Conftest, GitGuardian + ggshield, and Vanta / Drata run natively — the AI generates the rules, fixes, threat models, and audit narrative.
 
 The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) steps. Anchors below are referenced from PROCESS.md; keep the heading slugs stable.
 
@@ -394,7 +394,7 @@ Draft an MCP enforcement policy for this project.
 
 ## Inventory (current)
 - **MCP servers in use:** [list — Linear, GitHub, Pulumi, Datadog, Sentry, Semgrep, Trivy, Vanta, Drata, custom internal, etc.]
-- **For each: MCP scope (project / user), tool scope (read / write / state-changing), auth (OAuth / token), connecting clients (Claude Code, Cursor)]
+- **For each: MCP scope (project / user), tool scope (read / write / state-changing), auth (OAuth / token), connecting clients (Claude Code)]
 
 ## Project / agent intended capabilities
 [What the agent legitimately needs to do — read issues, propose code, scan diffs, run tests, etc.]

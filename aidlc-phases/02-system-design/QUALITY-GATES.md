@@ -64,7 +64,7 @@ Four gates align with the four blocks in [PROCESS.md](./PROCESS.md) and the [FLO
 - [ ] Tech stack ADRs complete for every major decision (language, framework, datastore, cache, broker, IaC, observability, auth)
 - [ ] Each unfamiliar tech choice has a training plan attached to its ADR
 - [ ] Team reviewed and agreed (no unresolved objections)
-- [ ] Any fallback tool used (Figma / v0 / Cursor / Bolt) recorded with the reason in the ADR for that flow
+- [ ] Any fallback tool used (Figma / v0 / Bolt) recorded with the reason in the ADR for that flow
 
 **Pass:** All checked. Wireframes approved by PM. Stack approved by team.
 
