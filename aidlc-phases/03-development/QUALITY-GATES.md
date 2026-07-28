@@ -31,10 +31,13 @@
 - [ ] Build succeeds
 - [ ] No secrets in code
 
-### AI Review (CodeRabbit)
-- [ ] CodeRabbit review completed
-- [ ] No unresolved Critical/High comments
-- [ ] Each comment addressed or dismissed with justification
+### AI Review
+
+Applies to whichever reviewer(s) the project configured at [Step 4.3](./PROCESS.md#step-4-code-review) — CodeRabbit, the [Claude PR review bot](./PR-REVIEW-BOT.md), or both. At least one must be configured.
+
+- [ ] Every configured AI reviewer completed a pass on the current head — or posted a degraded-mode notice that the reviewer has seen and accepted (AI review is [non-blocking by design](./PR-REVIEW-BOT.md#8-failure-posture--fail-open-always); a provider outage does not hold the merge)
+- [ ] No unresolved Critical/High findings from any configured reviewer
+- [ ] Each comment addressed or dismissed with justification, and every thread marked `✅ Fixed` / `❌ Disagreed` / `⏭ Deferred` (the Claude bot reads these on its next pass to avoid re-raising settled findings)
 
 ### Human Review
 - [ ] ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations)
@@ -45,7 +48,7 @@
 - [ ] No new patterns without team discussion
 - [ ] Branch is rebased onto current main and the merge button is unblocked (use `conflict-resolver` when conflicts arise; never `--abort` without explicit reason — reflexive aborts have lost completed resolution work in past incidents)
 
-**Pass:** All automated green + CodeRabbit addressed + human approval + DoD checked.
+**Pass:** All automated green + every configured AI reviewer addressed + human approval + DoD checked.
 
 ---
 

@@ -6,9 +6,9 @@ This document defines the AI-assisted workflow for the Development phase, using 
 
 **Phase Duration:** Sprint-based (typically 2–8 weeks for MVP)
 **Phase Owner:** Tech Lead / Engineering Manager
-**Tools Used:** **Claude Code** (AI coding agent — terminal + IDE extension), **CodeRabbit** (AI PR review), **SonarQube** (static analysis), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
+**Tools Used:** **Claude Code** (AI coding agent — terminal + IDE extension), **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** (`anthropics/claude-code-action` in CI), configured per project, **SonarQube** (static analysis), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
 
-> **Tool Philosophy:** Claude Code is the AI coding agent for all development — scaffolding, multi-file editing, complex refactors, debugging, long-running autonomous tasks, and **all** Linear MCP work — driven from the terminal or its IDE extension, with role-scoped specialist subagents for focused work. CodeRabbit reviews every PR. SonarQube enforces static-analysis gates in CI. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. Four tools, zero overlap.
+> **Tool Philosophy:** Claude Code is the AI coding agent for all development — scaffolding, multi-file editing, complex refactors, debugging, long-running autonomous tasks, and **all** Linear MCP work — driven from the terminal or its IDE extension, with role-scoped specialist subagents for focused work. **Automated AI review on every PR is mandatory; the reviewer is a per-project choice** between CodeRabbit (hosted, zero-upkeep, vendor-tuned) and the Claude PR review bot (self-hosted in CI, driven by a checklist committed in the repo) — peers, not a primary and a fallback, and a project may run either or both. SonarQube enforces static-analysis gates in CI. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. One tool per job — and where a project deliberately runs both reviewers, the overlap is cheap next to the blind spots each one closes for the other.
 
 > **Inline completion is optional.** Claude Code is a request-response agent, not a ghost-text autocompleter. Teams that want inline as-you-type completion can add **Supermaven standalone** (free tier or ~$10/mo Pro) or their IDE's native completion alongside Claude Code — optional, and it changes none of the decision rules, gates, or quality bars below.
 
@@ -130,7 +130,7 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 **Purpose / when to invoke.** Drives Step 3.0 — a read-only, per-story design pass run between Step 2.4 (context pull) and Step 3.1 (scaffold) for non-trivial stories: cross-module touch, schema change, new endpoint surface, new external integration, or any story without a clear in-pattern reference module. Produces a markdown architecture plan in the developer's session — interfaces, data flow, file/module touch list, test strategy, risks, and an explicit "scaffold-ready" verdict — using the [`architecture-design`](./PROMPTS.md#architecture-design) prompt. The plan is the authoritative input to Step 3.1; implementation specialists must not be invoked until the developer explicitly approves it. Trigger phrases: "design the architecture for ENG-XXX", "scope the technical plan before I scaffold", "what's the design for this story", "design before I touch code".
 
-**When NOT to invoke.** In-pattern stories that follow an existing reference module → confirm the pattern in the kickoff comment and go straight to Step 3.1. Behaviour-preserving refactors → `refactor-specialist`. Pre-PR self-review of a finished diff → `code-reviewer`. Post-open PR review → CodeRabbit + human reviewer in Step 4. Linear writes / branch / PR open → `linear-task-agent`. System-wide architecture decisions, new-tech evaluation, or new service-boundary choices → escalate to a Phase 2 human-architect review; per-story design is this agent's remit, system-wide design is not.
+**When NOT to invoke.** In-pattern stories that follow an existing reference module → confirm the pattern in the kickoff comment and go straight to Step 3.1. Behaviour-preserving refactors → `refactor-specialist`. Pre-PR self-review of a finished diff → `code-reviewer`. Post-open PR review → the AI reviewers + human reviewer in Step 4. Linear writes / branch / PR open → `linear-task-agent`. System-wide architecture decisions, new-tech evaluation, or new service-boundary choices → escalate to a Phase 2 human-architect review; per-story design is this agent's remit, system-wide design is not.
 
 **Operating boundaries.**
 - **Read-only.** Must not edit any file, stage any change, run any mutating command, or run any command that touches a production-like service. Dry-run linter / type-checker and `git diff` / `git log` are allowed.
@@ -170,9 +170,9 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 #### `code-reviewer`
 
-**Purpose / when to invoke.** Performs the pre-PR self-review in Step 3.5 — produces a severity-ranked issue list across correctness, security, performance, error handling, edge cases, naming, tests, and docs. **Read-only**: it reports, it does not patch. Complements CodeRabbit (which runs *after* PR open) by catching issues before review bandwidth is spent. Embeds the [`self-review`](./PROMPTS.md#self-review-before-pr) prompt. Trigger phrases: "review my diff before I open the PR", "self-review this branch", "what's wrong with this change", "anything to fix before I PR".
+**Purpose / when to invoke.** Performs the pre-PR self-review in Step 3.5 — produces a severity-ranked issue list across correctness, security, performance, error handling, edge cases, naming, tests, and docs. **Read-only**: it reports, it does not patch. Complements the Step 4 AI reviewers (which run *after* PR open) by catching issues before review bandwidth is spent. Embeds the [`self-review`](./PROMPTS.md#self-review-before-pr) prompt. Where a repo runs the [Claude PR review bot](./PR-REVIEW-BOT.md), point this subagent at the **same** committed `.claude/prompts/pr-review-checklist.md` — one checklist, two consumers, so a rule agreed after an incident applies to both the local gate and CI without being written twice. Trigger phrases: "review my diff before I open the PR", "self-review this branch", "what's wrong with this change", "anything to fix before I PR".
 
-**When NOT to invoke.** Implementing fixes the review surfaces — that's `frontend-engineer` or `backend-engineer`. Reviewing already-open PRs — that's CodeRabbit + the human reviewer in Step 4. Architectural review of new patterns — escalate to a Phase 2 system-architect-style review.
+**When NOT to invoke.** Implementing fixes the review surfaces — that's `frontend-engineer` or `backend-engineer`. Reviewing already-open PRs — that's the project's configured Step 4 AI reviewer(s) plus the human reviewer. Architectural review of new patterns — escalate to a Phase 2 system-architect-style review.
 
 **Operating boundaries.**
 - **Read-only.** Must not edit any file, run any test that mutates state, or stage any change. If the developer asks for a fix, refuse and redirect to `frontend-engineer` / `backend-engineer`.
@@ -660,7 +660,7 @@ The new directory is a fully checked-out copy on its own branch. Multiple worktr
 
 **Constraints.** macOS only (Apple Silicon and Intel) as of mid-2026 — verify before committing the team. The PR opening flow is Conductor's, not `linear-task-agent`'s, so teams adopting Conductor must make sure the PR title still includes `[ENG-XXX]` and the body still includes `Closes ENG-XXX` (configurable in Conductor's PR template) — otherwise Linear's git integration will not auto-transition. Treat Conductor's PR template as code-reviewed infrastructure, same as `.claude/agents/linear-task-agent.md`.
 
-**What it does not change.** Step 4 (Code Review) is identical — every Conductor PR runs through CodeRabbit, SonarQube, and human review like any other PR. Conductor accelerates *opening* PRs; it does not bypass *merging* gates.
+**What it does not change.** Step 4 (Code Review) is identical — every Conductor PR runs through the configured AI reviewer(s), SonarQube, and human review like any other PR. Conductor accelerates *opening* PRs; it does not bypass *merging* gates.
 
 ##### Choosing the right pattern
 
@@ -687,7 +687,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 - **Wire `TaskCompleted` hooks (Pattern B).** Block task completion until the local test suite is green and the linter is clean. Without this, agent teams routinely close tasks while CI would fail at PR open.
 - **Token budget per cycle.** A four-teammate Pattern B session can 4–5× a single-session token bill. Track per-cycle token spend in the retro alongside velocity; if multi-agent does not also lift PR throughput, it is a cost line, not a capability.
 - **Cap parallelism at 5.** Across all four patterns, three to five agents is the sweet spot industry-wide (Anthropic, Conductor, Osmani 2026). Beyond five, coordination cost dominates parallelism gain — and the developer's ability to actually verify each output collapses.
-- **Verification is the bottleneck — staff for it.** With three agents producing PRs in parallel, the human review queue must clear at the same rate or the Cycle stalls in *In Review*. Pair multi-agent adoption with a CodeRabbit-tuned review pipeline and a named secondary reviewer; do not adopt multi-agent and a thin review bench at the same time.
+- **Verification is the bottleneck — staff for it.** With three agents producing PRs in parallel, the human review queue must clear at the same rate or the Cycle stalls in *In Review*. Pair multi-agent adoption with a tuned AI review pipeline (Step 4.3) and a named secondary reviewer; do not adopt multi-agent and a thin review bench at the same time.
 
 ##### Pitfalls
 
@@ -721,7 +721,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Feature branch with passing local tests, linked Linear issue |
-| **Tool** | **CodeRabbit** (AI PR review) + **SonarQube** (SAST + coverage gate) + **GitHub/GitLab/Bitbucket** + **Linear MCP** for status |
+| **Tool** | **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** ([PR-REVIEW-BOT.md](./PR-REVIEW-BOT.md)), configured per project at Step 4.3 — + **SonarQube** (SAST + coverage gate) + **GitHub/GitLab/Bitbucket** + **Linear MCP** for status |
 | **Output** | Merged PR, Linear issue auto-transitioned to **Done** by the git integration, SonarQube clean on main |
 | **Human** | Architecture alignment, business-logic validation, final approval |
 
@@ -729,17 +729,41 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 
 **4.1 — Open the PR with the right title and description.** Before opening, rebase the feature branch onto the latest main; if conflicts arise, invoke [`conflict-resolver`](#conflict-resolver) to work through them — never `--abort` without an explicit reason, since reflexive aborts have lost already-done resolution work in past incidents. Then run the [`pr-description`](./PROMPTS.md#pr-description) prompt. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
 
-**4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → SonarQube SAST → coverage gate (≥ 80% on new code). A failure here blocks CodeRabbit and human review until fixed.
+**4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → SonarQube SAST → coverage gate (≥ 80% on new code). A failure here blocks AI and human review until fixed.
 
-**4.3 — CodeRabbit reviews automatically.** CodeRabbit posts inline comments on bugs, security issues, code quality, and test gaps. **Critical and High comments must be resolved**; Medium/Low can be dismissed with a one-line reason. Re-running CodeRabbit happens automatically on every push.
+**4.3 — The configured AI reviewer(s) run automatically.** Every PR gets at least one automated AI review, re-running on every push. **Which reviewer is a per-project configuration decision** — made once when the repo is set up, recorded in the tech-stack ADR, and wired in [Phase 6 → Step 4.2](../06-cicd-devops/PROCESS.md#step-4-cicd-pipeline-setup). The AI-DLC supports two, as peers:
+
+| | **CodeRabbit** | **Claude PR review bot** |
+|---|---|---|
+| **What it is** | Hosted GitHub app | `anthropics/claude-code-action` in your own CI ([PR-REVIEW-BOT.md](./PR-REVIEW-BOT.md)) |
+| **Knowledge source** | Vendor model reasoning from the diff | A checklist committed in the repo (`.claude/prompts/pr-review-checklist.md`) + full repo read access |
+| **Best at** | General bugs, security smells, code quality, test gaps — the failures that generalise across every codebase | Team conventions, domain invariants, architectural drift — the rules that exist only in this repo |
+| **Tuning** | Vendor config file; behaviour changes are the vendor's call | A Markdown checklist any developer can PR; a wrong finding is fixed the same day |
+| **Cost model** | Flat per-seat subscription (~$24/mo) — predictable regardless of PR volume | Per-run token spend — cheaper on low volume, needs explicit controls on high volume |
+| **Setup + upkeep** | Install the app; near-zero upkeep | Commit three files + one secret; **the checklist must be actively maintained or the value evaporates** |
+| **Severity vocabulary** | Critical / High / Medium / Low | Critical / Important / Suggestion / Strengths (matches the Step 3.5 self-review prompt) |
+
+**Choosing.** There is no default and no fallback relationship — neither is a degraded version of the other.
+
+- **Configure CodeRabbit** when the team wants review coverage with no maintenance commitment, when PR volume is high enough that per-run token spend beats a flat seat price, or when nobody has bandwidth to own a checklist.
+- **Configure the Claude PR review bot** when the repo has real conventions worth enforcing mechanically, when the team already runs the Step 3.5 [`code-reviewer`](#code-reviewer) gate locally (the same checklist drives both — one file, two consumers), or when review rules need to be versioned and reviewable like code.
+- **Configure both** when the repo is large or high-blast-radius enough to justify two passes. Where they overlap the duplication is cheap; where they don't, each covers the other's blind spot. Budget for both cost models.
+- **Configure neither** only if the Step 3.5 local gate is genuinely enforced — automated review is not optional in this phase, but *where* it runs can be.
+
+Whichever is configured, the same rules apply:
+
+- **Critical / High findings must be resolved** before merge — fixed, or dismissed with a one-line reason in the thread. Medium / Low / Suggestion findings are the author's judgement call.
+- **No AI reviewer approves a PR.** They post findings; human approval remains the gate (4.4).
+- **No AI reviewer is a required status check.** Both depend on third-party services, and a provider outage must not freeze the merge queue. The Claude bot makes this explicit with a degraded-mode notice on failure; see [PR-REVIEW-BOT.md § Failure posture](./PR-REVIEW-BOT.md#8-failure-posture--fail-open-always).
+- **Mark every thread** `✅ Fixed`, `❌ Disagreed`, or `⏭ Deferred`. For the Claude bot this is load-bearing, not politeness — it reads prior threads on the next pass and will not re-raise a finding you have answered, provided the code at that location is unchanged. **A finding it gets wrong is a checklist bug**: fix the checklist in the same PR, which is the whole reason it is committed rather than vendor-hosted.
 
 **4.4 — Human review.** A non-author teammate reviews architecture alignment, business-logic correctness, naming, cross-service impacts, and the AI-generated sections that the developer flagged in the PR description. **One human approval is the minimum**; high-blast-radius changes (auth, payments, schema migrations) require two.
 
-**4.5 — Merge.** Required before merge: CI green + CodeRabbit comments resolved + ≥ 1 human approval + Linear issue is the same one referenced in the PR title (sanity check — wrong identifier means an unrelated issue auto-closes). If main has moved during review and the merge button is blocked by conflicts, invoke `conflict-resolver` for the resolution before retrying the merge.
+**4.5 — Merge.** Required before merge: CI green + Critical/High findings from every configured AI reviewer resolved or dismissed with a reason + ≥ 1 human approval + Linear issue is the same one referenced in the PR title (sanity check — wrong identifier means an unrelated issue auto-closes). If main has moved during review and the merge button is blocked by conflicts, invoke `conflict-resolver` for the resolution before retrying the merge.
 
 **4.6 — Verify Linear auto-transition.** After merge, the Linear issue should be **Done** within ~30 seconds (Linear's webhook). If not, the developer manually closes it and files an issue against the Linear ↔ git integration.
 
-**Code Review Checklist:** [../templates/code-review-checklist.md](../templates/code-review-checklist.md).
+**Code Review Checklist:** [../templates/code-review-checklist.md](../templates/code-review-checklist.md) — the human-reviewer checklist. Its machine-enforced counterpart is the repo-committed `.claude/prompts/pr-review-checklist.md` read by both the Claude PR review bot and the local [`code-reviewer`](#code-reviewer) subagent; see [PR-REVIEW-BOT.md § The three artifacts](./PR-REVIEW-BOT.md#2-the-three-artifacts).
 
 **PR requirements (enforced by template):**
 - Title contains the Linear identifier in `[ENG-XXX]` form
@@ -829,7 +853,7 @@ Coding (Claude Code):
 Review:
   4.1  Open PR with [ENG-XXX] title + Closes ENG-XXX → Linear auto-moves to In Review
   4.2  CI: lint + types + tests + SonarQube + coverage
-  4.3  CodeRabbit AI review
+  4.3  AI review: configured reviewer(s) — CodeRabbit and/or Claude PR review bot
   4.4  Human review (≥ 1 approval, 2 for high-blast-radius)
   4.5  Merge to main
   4.6  Linear auto-transitions to Done
@@ -894,7 +918,7 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
               ↳ if rebase conflicts → conflict-resolver
            → Linear auto-transitions to In Review
 [Step 4.2] CI: lint + types + tests + SonarQube + coverage
-[Step 4.3] CodeRabbit AI review
+[Step 4.3] AI review: configured reviewer(s) — CodeRabbit and/or Claude bot
 [Step 4.4] Human review
    │
    ▼  GATE 2: PR MERGE — PR merged
@@ -911,7 +935,7 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 [Phase 4: Testing & QA]
 ```
 
-Three explicit gates ensure that **no code reaches main without CI + CodeRabbit + human approval**, and **every merged commit is traceable to a Linear issue** through the PR title and `Closes` keyword.
+Three explicit gates ensure that **no code reaches main without CI + AI review + human approval**, and **every merged commit is traceable to a Linear issue** through the PR title and `Closes` keyword.
 
 ---
 
@@ -923,6 +947,9 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 | **Wrong issue closed** — PR title typo (`ENG-274` vs `ENG-247`) auto-closes an unrelated issue | Step 4.5 sanity-check: reviewer confirms the linked issue matches the diff before merging. The Linear `update_issue` audit log + git diff together identify the mistake within hours; reopen and fix forward. |
 | **Silent state-change scope creep** — a Claude prompt accidentally moves backlog issues to In Progress | Claude Code's tool-permission settings (committed per project) keep `update_issue` to the dev team's repos only; the audit log on Linear records every state change. Off-board old developers by revoking OAuth in Linear. |
 | **Hallucinated APIs / dependencies in AI-generated code** — Claude Code invents a method that does not exist | Run tests after every AI edit (Step 3.3). CI catches imports of non-existent modules. CodeRabbit flags hallucinated APIs in 70%+ of cases (CodeRabbit telemetry). |
+| **AI review token spend runs away** (Claude PR review bot only — CodeRabbit is flat-rate) — it re-reviews on every label add, every draft push, and every 200-file dependency bump | Size gate with a skip-notice comment, `dependabot[bot]` exclusion, `concurrency` + `cancel-in-progress`, `--max-turns` cap, and an `if:` clause that drops `labeled` events for any label other than the draft opt-in. See [PR-REVIEW-BOT.md § Cost and scope controls](./PR-REVIEW-BOT.md#5-cost-and-scope-controls). |
+| **AI reviewer gets muted** — it re-raises findings the author already answered, so the team stops reading it | Applies to whichever reviewer is configured. Authors mark every thread `✅ Fixed` / `❌ Disagreed` / `⏭ Deferred`; for the Claude bot this is mechanical — its prompt reads prior inline threads **and** prior review summary bodies before posting and skips settled findings where the code is unchanged. Test the second pass explicitly before rollout; a wrong finding is fixed in the committed checklist, not worked around. See [PR-REVIEW-BOT.md § Idempotency across passes](./PR-REVIEW-BOT.md#4-idempotency-across-passes). |
+| **A provider outage blocks the merge queue** — the review job fails and CI goes red on every open PR | No AI reviewer is a required status check, whichever is configured. The Claude bot's review step is additionally `continue-on-error` and posts a sticky degraded-mode comment (deleted on the next successful pass) so a skipped review is visible rather than mistaken for a clean one. |
 | **Linear Agent over-assignment** — Tech Lead routes too many stories to the Linear Agent without human review-bandwidth | Cap agent-authored PRs in flight per cycle (e.g., ≤ 3). The `agent-authored` label triggers two human reviewers, not one. Agent quality is reviewed at cycle close; under-performing patterns roll back to human-only. |
 | **Refactor PRs introduce features** — Claude generalises during a refactor and adds capability that nobody asked for | Step 5.4: PRs against `tech-debt` issues that introduce features are rejected at review and split. The reviewer checklist explicitly asks "is any new behaviour added?". |
 | **Comment spam on Linear** — every Claude Code session posts a kickoff + checkpoint + EOD comment, drowning real discussion | Comment discipline: one kickoff, checkpoint comments only on substantive change, one EOD only if not merged. Aggregate progress in the PR description, not on the issue. |
@@ -937,6 +964,8 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 - [Prompt Templates →](./PROMPTS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
+- [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
+- [Specialist Subagent Prompts →](./subagent-prompts/README.md)
 - [Code Review Checklist →](../templates/code-review-checklist.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
 
@@ -956,5 +985,6 @@ Three explicit gates ensure that **no code reaches main without CI + CodeRabbit 
 - [The Code Agent Orchestra (Addy Osmani, 2026)](https://addyosmani.com/blog/code-agent-orchestra/) — multi-agent roles, scope boundaries, pitfalls
 - [Linear's git integration (auto-link, auto-transition)](https://linear.app/docs/github) — branch-name auto-link, `Closes` keyword
 - [CodeRabbit Pro](https://www.coderabbit.ai/) — AI PR review
+- [`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action) — the GitHub Action behind the Claude PR review bot (pin an exact version)
 - [SonarQube Community](https://www.sonarsource.com/products/sonarqube/) — SAST and coverage gate
 - [Phase 3 Tools Evaluation](../../docs/tools-evaluation/3.Development_Phase_Tools.md)

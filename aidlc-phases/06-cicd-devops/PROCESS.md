@@ -55,7 +55,7 @@ This document defines the AI-assisted workflow for the CI/CD & DevOps phase of t
 |-----------|--------|
 | **Input** | Pulumi Cloud account (Team or above), GitHub org with Copilot Pro / Copilot Business licences, Anthropic API key (or Bedrock / Vertex / Foundry credentials), Datadog OR Grafana Cloud workspace, Docker Desktop 4.61+, Claude Code installed |
 | **Tools** | **Pulumi MCP server**, **Anthropic Claude Code Action**, **Pulumi ESC**, **Datadog/Grafana MCP**, **Sentry MCP**, **Docker Gordon** |
-| **Output** | Every developer's Claude Code can read Pulumi state, every PR is reviewed by Claude Code Action, ESC manages all CI secrets, observability MCP servers connected for incident workflows |
+| **Output** | Every developer's Claude Code can read Pulumi state, `@claude` fix-on-mention live on the repo, the project's chosen AI PR reviewer wired (Step 4.2), ESC manages all CI secrets, observability MCP servers connected for incident workflows |
 | **Human** | DevOps Lead authorises the org-level MCP servers; each developer authenticates once per project via OAuth |
 
 This step is done **once per project**. The cost of skipping it is paying the "AI tax" by hand on every story for the rest of the phase.
@@ -88,7 +88,9 @@ claude  # opens Claude Code
 > /install-github-app
 ```
 
-The slash command provisions: a fine-grained PAT or GitHub App, the `ANTHROPIC_API_KEY` repository secret (or `AWS_BEDROCK_*` / `GCP_VERTEX_*` / `AZURE_FOUNDRY_*` if using a cloud provider's Claude endpoint), and a starter `.github/workflows/claude.yml`. Commit the workflow; the team gets `@claude` review on every PR going forward.
+The slash command provisions: a fine-grained PAT or GitHub App, the `ANTHROPIC_API_KEY` repository secret (or `CLAUDE_CODE_OAUTH_TOKEN`, or `AWS_BEDROCK_*` / `GCP_VERTEX_*` / `AZURE_FOUNDRY_*` if using a cloud provider's Claude endpoint), and a starter `.github/workflows/claude.yml`. Commit the workflow; the team gets `@claude` review on every PR going forward.
+
+> **`@claude` fix-on-mention and AI PR review are separate decisions.** Fix-on-mention is what this Step 0.2 setup buys you and is worth having on any repo. Automated PR *review* is a per-project choice between CodeRabbit and the Claude PR review bot — see [Phase 3 → Step 4.3](../03-development/PROCESS.md#step-4-code-review) — and if the project picks the Claude bot, the starter workflow's review-mode is a **bootstrap, not the production reviewer**: it has no size gate, no re-review idempotency, and no fail-open handling, the three things that decide whether it stays useful past week two. Build it from [PR-REVIEW-BOT.md](../03-development/PR-REVIEW-BOT.md) instead and keep `claude.yml` for fix-on-mention only (Step 4.2).
 
 #### 0.3 — Configure GitHub Copilot Agentic Workflows for repository automation
 
@@ -259,7 +261,7 @@ Commit the generated `pulumi.yaml`, `Pulumi.<stack>.yaml`, and the language scaf
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Repo, test suite (Phase 4), security tools (Phase 5), IaC (Step 3), `AGENTS.md` |
-| **Tools** | **GitHub Actions** + **GitHub Copilot** (workflow generation) + **Claude Code Action** (PR review, fix-on-mention) + **Copilot Agentic Workflows** (autonomous repository tasks); **GitLab CI + GitLab Duo** as fallback |
+| **Tools** | **GitHub Actions** + **GitHub Copilot** (workflow generation) + **Claude Code Action** (`@claude` fix-on-mention) + the project's chosen AI PR reviewer — **CodeRabbit** and/or the **Claude PR review bot** ([Phase 3 Step 4.3](../03-development/PROCESS.md#step-4-code-review)) — + **Copilot Agentic Workflows** (autonomous repository tasks); **GitLab CI + GitLab Duo** as fallback |
 | **Output** | Fully automated PR-to-prod pipeline with AI-generated YAML, AI PR review, AI-driven failure RCA, AI-fixable lint/test debt |
 | **Human** | Review pipeline for least-privilege, secrets handling, manual approval gates |
 
@@ -278,12 +280,21 @@ Commit the generated `pulumi.yaml`, `Pulumi.<stack>.yaml`, and the language scaf
 9. **Deploy to production** — manual approval gate, blue/green or canary.
 10. **Post-deploy verification** — smoke tests + Grafana / Datadog deploy annotation.
 
-**4.2 — Wire the Anthropic Claude Code Action into the PR workflow.** Generate `.github/workflows/claude.yml` with the [`claude-code-action--pr-review-workflow`](./PROMPTS.md#claude-code-action--pr-review-workflow) prompt. Two trigger patterns committed in that file:
+**4.2 — Wire AI review and `@claude` fix-on-mention into the PR workflow.** Two independent decisions; keep them in separate workflow files.
 
-- **Auto-review on PR open** — Claude Code reads the diff + linked Linear issue + ADRs + relevant tests, and posts a review with the same severity buckets (Critical / High / Medium / Low) as the Phase 3 self-review prompt.
-- **`@claude` mention for fixes** — a developer types `@claude please fix the failing TypeScript build` on a PR comment; Claude opens a follow-up commit on the same branch with the fix and re-runs CI.
+**a) Automated AI PR review — configure the project's chosen reviewer.** The selection rule belongs to [Phase 3 → Step 4.3](../03-development/PROCESS.md#step-4-code-review), which offers two peers (not a primary and a fallback). This step is where the choice gets wired:
 
-Pin the version (`anthropics/claude-code-action@v1`), use the smallest credential scope possible (a fine-grained PAT or GitHub App with read/write only on the relevant repos), and gate the action behind `if: github.actor != 'dependabot[bot]'` so it doesn't burn API tokens on bot PRs.
+| Choice | What Phase 6 does |
+|--------|-------------------|
+| **CodeRabbit** | Install the GitHub app on the repo and commit its config file. No workflow to author, no secret to manage, nothing in `.github/workflows/`. |
+| **Claude PR review bot** | Commit the workflow, prompt template, and checklist specified in full in **[Phase 3 → PR-REVIEW-BOT.md](../03-development/PR-REVIEW-BOT.md)** — trigger matrix and draft opt-in, the size gate that keeps token spend bounded, the prompt-template / checklist split, idempotency across re-review passes, the `REQUEST_CHANGES`-never-`APPROVE` output contract, prompt-injection hardening for untrusted PR titles, and the fail-open posture. Build it from that document rather than from scratch — review *policy* belongs to Phase 3; the CI wiring here only hosts it. |
+| **Both** | Do both of the above. Budget for both cost models. |
+
+Whichever is configured, **the AI review job is never a required status check** (Step 4.6).
+
+**b) `@claude` mention for fixes — independent of the above.** Generate `.github/workflows/claude.yml` with the [`claude-code-action--pr-review-workflow`](./PROMPTS.md#claude-code-action--pr-review-workflow) prompt. A developer types `@claude please fix the failing TypeScript build` on a PR comment; Claude opens a follow-up commit on the same branch with the fix and re-runs CI. This is worth having on any repo regardless of which reviewer was chosen — including a CodeRabbit-only repo. Unlike a reviewer, it **writes to the branch**: scope its token accordingly and never grant it to workflows triggered by `pull_request_target`.
+
+Platform rules for every `claude-code-action` workflow: pin an exact version (`anthropics/claude-code-action@v1.0.158`, not a floating `@v1`) so behaviour changes arrive as a reviewed PR; declare the narrowest `permissions:` block the job needs; use the smallest credential scope possible (a fine-grained PAT or GitHub App with read/write only on the relevant repos); and gate on `if: github.actor != 'dependabot[bot]'` so none of them burn tokens on bot PRs.
 
 **4.3 — Add Copilot Agentic Workflows for repository hygiene.** In `.github/agentic-workflows/` commit Markdown agents for: triaging stale issues, generating release notes from merged PRs, repairing the most-flaky test of the week, fixing top-N lint debt. Each is a Markdown file declaring trigger, agent engine (set to Claude Code), and safe outputs (create PR, add comment) — no write access without an explicit safe-output declaration.
 
@@ -291,7 +302,7 @@ Pin the version (`anthropics/claude-code-action@v1`), use the smallest credentia
 
 **4.5 — Secrets in CI.** Pulumi ESC is the source of truth (see Step 0.4). For platform-native secrets that *must* live in GitHub (e.g., the Pulumi access token bootstrap) use GitHub-encrypted secrets with environment scoping (`production` environment requires reviewer approval before secrets are released to a job).
 
-**4.6 — Branch protection.** `main` requires: PR + passing CI + Claude Code Action review acknowledged + 1 human approval + Linear issue identifier in the title (Phase 3 convention). High-blast-radius changes (auth, schema migrations, IAM) require **2** humans.
+**4.6 — Branch protection.** `main` requires: PR + passing CI + AI review acknowledged (whichever reviewer the project configured) + 1 human approval + Linear issue identifier in the title (Phase 3 convention). High-blast-radius changes (auth, schema migrations, IAM) require **2** humans. **Do not make the AI review job a required check** — it depends on a third-party LLM provider, and a rate-limit spike would freeze the merge queue. Acknowledgement is a human responsibility at Gate 2, enforced by the reviewer, not by branch protection.
 
 > **Gate 2 — CI/CD pipeline operational** must pass before the team relies on automation for deploys. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-cicd-pipeline-operational).
 
@@ -415,7 +426,9 @@ When CI/CD & DevOps is complete, the following artefacts hand off to **Phase 7: 
 | Pulumi ESC environments | YAML in Pulumi Cloud | `acme/<env>-ci` per environment |
 | CrossGuard policy packs | TS/Python or Rego | `/policy-packs/` in Git |
 | CI/CD workflows | YAML + Markdown agentic workflows | `.github/workflows/` + `.github/agentic-workflows/` |
-| Claude Code Action config | YAML | `.github/workflows/claude.yml` |
+| Claude Code Action config (`@claude` fix-on-mention) | YAML | `.github/workflows/claude.yml` |
+| AI PR reviewer — *if CodeRabbit* | Vendor config | `.coderabbit.yaml` (app installed on the repo) |
+| AI PR reviewer — *if Claude PR review bot* | YAML + Markdown | `.github/workflows/claude-pr-review.yml` + `.github/prompts/pr-review.md` + `.claude/prompts/pr-review-checklist.md` |
 | Dockerfiles + .dockerignore | Per service | Service directories |
 | K8s manifests / Helm charts (if K8s) | YAML / Helm | `/deploy/` |
 | Observability dashboards | Datadog / Grafana JSON | `/observability/dashboards/` |
@@ -439,7 +452,7 @@ When CI/CD & DevOps is complete, the following artefacts hand off to **Phase 7: 
 - [ ] Cost estimate validated and within budget; cost-on-PR active
 - [ ] All secrets resolved through Pulumi ESC; no hardcoded credentials anywhere
 - [ ] Pulumi Cloud audit log enabled; GitHub audit log enabled
-- [ ] Claude Code Action posts a review on every PR; `@claude` fix workflow tested
+- [ ] The project's chosen AI PR reviewer ([Phase 3 Step 4.3](../03-development/PROCESS.md#step-4-code-review)) posts a review on every PR and is **not** a required check — if the Claude PR review bot, also size-gated and verified not to re-raise findings the author already answered on a second pass ([PR-REVIEW-BOT.md § Adoption checklist](../03-development/PR-REVIEW-BOT.md#9-adoption-checklist)); `@claude` fix workflow tested separately
 - [ ] Bits AI SRE / Grafana Sift configured with on-call rotation
 - [ ] AGENTS.md committed and referenced by Pulumi Neo and Claude Code
 
@@ -472,7 +485,7 @@ Morning:
 
 Pipeline work:
   4. Open PR for IaC or pipeline change
-  5. Anthropic Claude Code Action posts review automatically
+  5. Configured AI reviewer posts review automatically (advisory; never blocks)
   6. CrossGuard + Pulumi preview comment on PR (cost delta + policy result)
   7. Address review comments; @claude for routine fixes
   8. Human approves; merge → staging auto-deploys via Pulumi Deployments
