@@ -25,6 +25,7 @@
 - [ ] Document header status updated to **Approved v1.0**
 - [ ] Sign-offs (PM, Tech Lead, Sponsor) checked in the Document's `## Sign-offs` section
 - [ ] Linear Project moved to `Backlog` (or `Started` when Step 3 has begun)
+- [ ] `publish-prd-to-linear` skill committed under `.claude/skills/`, placeholders filled, and smoke-tested — it stopped for a literal `go` before the write, and the section-anchor map it returned was **read back from the created Document**, not predicted
 
 **Pass:** All items checked. **Escalation:** PM → Tech Lead (technical) or Project Sponsor (scope).
 
@@ -54,6 +55,8 @@
 - [ ] Pre-flight duplicate check ran in `stories-to-linear-push`; flagged duplicates resolved before creation
 - [ ] **AI Inbox cleared** — the saved view `ai-generated AND needs-human-review` is empty before phase handoff
 - [ ] No story without a valid PRD deep-link reached the Backlog
+- [ ] `scaffold-linear-milestones` skill committed under `.claude/skills/` and smoke-tested — it refused to scaffold against a Document not yet marked Approved, and reported any requirement section claimed by no epic or by more than one
+- [ ] `push-linear-stories` skill committed under `.claude/skills/` and smoke-tested — the duplicate pre-flight ran read-only before any create, and a story with no valid anchor-map entry was refused rather than linked to the Document root
 
 **Pass:** All items checked. **Escalation:** If PRD gaps found, loop back to Gate 1.
 

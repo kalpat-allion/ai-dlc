@@ -2,7 +2,7 @@
 
 This directory holds the **system-prompt templates** for the Phase 6 specialist Claude Code subagents referenced in [`../PROCESS.md`](../PROCESS.md) (Step 0.6 → "Install the Phase 6 subagents and skills"). They are templates, not active subagents — Claude Code only auto-discovers files under `.claude/agents/`.
 
-Both agents here are **name-invoked**, so they face no auto-trigger competition. The auto-triggering counterparts live in [`../skill-prompts/`](../skill-prompts/) and hand work to these two by name.
+Both agents here are **name-invoked**, so they face no auto-trigger competition. The auto-triggering counterparts live in [`../skill-prompts/`](../skill-prompts/) and hand work to these two by name. Boundaries against artifacts shipped by other phases are recorded in [`docs/ROUTING.md`](../../../docs/ROUTING.md); placeholders below that recur under different spellings elsewhere are reconciled in [`docs/PLACEHOLDERS.md`](../../../docs/PLACEHOLDERS.md).
 
 ## Files
 

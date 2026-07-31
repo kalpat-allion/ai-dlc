@@ -3,6 +3,8 @@
 > **All prompts in this file are designed for Claude Code.** Copy the prompt, replace `[PLACEHOLDERS]` with your project content, and run. Each prompt produces a structured output that requires human review.
 >
 > Prompts marked **Linear-aware** require the **project-scoped Linear MCP server to be connected in Claude Code** (`.mcp.json` + `/mcp` OAuth). See [PROCESS.md → Step 0](./PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp) for setup.
+>
+> **Eight of these prompts are also wrapped by the three Phase 1 skills** ([`skill-prompts/`](./skill-prompts/)), which chain them into one procedure per gate and add the confirm-before-write stop, the duplicate pre-flight and the anchor read-back. This file remains the source of truth for the prompt text itself, and the paste path stays valid for teams that have not installed the skills.
 
 ---
 
