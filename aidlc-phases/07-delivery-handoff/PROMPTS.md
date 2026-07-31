@@ -258,8 +258,7 @@ For each term:
 
 ### For Troubleshooting
 Generate from:
-- Linear bug history (paste summary)
-- Sentry top errors (paste summary)
+- Linear bug history (paste summary — group by root-cause label so recurring causes show as counts)
 - Known issues from QA
 
 For each issue:
@@ -270,7 +269,7 @@ For each issue:
 - **Prevention:** [How to avoid recurrence]
 
 Rules:
-- **Only generate entries the source material supports.** Each FAQ/Glossary/Troubleshooting entry must trace to a specific transcript, PRD section, Linear ID, or Sentry issue. Do not pad to hit a target count — 12 grounded FAQ entries beats 20 invented ones.
+- **Only generate entries the source material supports.** Each FAQ/Glossary/Troubleshooting entry must trace to a specific transcript, PRD section, or Linear issue ID. Do not pad to hit a target count — 12 grounded FAQ entries beats 20 invented ones.
 - **No template content.** "How do I get started?" with a generic answer is noise; either ground it in the actual onboarding flow or omit it.
 - **Cross-link every entry** to the canonical code path, runbook, or ADR it references. KB pages with no outbound links rot fastest.
 
@@ -281,7 +280,7 @@ Output markdown ready for the knowledge base platform.
 
 ## Quarterly KB Completeness Check
 
-> Used at PROCESS.md Step 7.5. Variant of Doc Completeness Check tuned for KB scope (FAQ + Glossary + Troubleshooting + Onboarding). Runs against the live KB via the Atlassian Rovo MCP or Notion MCP, and pulls live signal from Sentry MCP and Linear MCP.
+> Used at PROCESS.md Step 7.5. Variant of Doc Completeness Check tuned for KB scope (FAQ + Glossary + Troubleshooting + Onboarding). Runs against the live KB via the Atlassian Rovo MCP or Notion MCP, and pulls live signal from Linear MCP.
 
 ```
 Audit our knowledge base against live signal from the last 90 days and surface additions, edits, and deletions.
@@ -292,8 +291,7 @@ Audit our knowledge base against live signal from the last 90 days and surface a
 - **Content types in scope:** [FAQ / Glossary / Troubleshooting / Onboarding — pick from PROCESS.md Step 7]
 
 ## Live Signal to Diff Against
-- **Sentry top issues (last 90d):** [paste from Sentry MCP — top 20 by event-count, with first/last seen]
-- **Linear closed bugs (last 90d):** [paste from Linear MCP — title, root-cause label, fix commit]
+- **Linear bugs (last 90d):** [paste from Linear MCP — title, root-cause label, severity, fix commit, opened/closed dates. Group by root-cause label and include the issue count per group — that count is the recurrence signal the rules below key off.]
 - **KT session summaries appended since last check:** [paste links from handoff doc]
 - **Production incidents (last 90d):** [paste from incident.io / PagerDuty]
 
@@ -304,16 +302,16 @@ For each finding, output one row in the table below:
 
 | Action | KB Page | Reason | Source Signal | Suggested Owner | Effort |
 |--------|---------|--------|----------------|-----------------|--------|
-| [ADD] | [proposed page title + parent space] | [what's missing] | [Sentry issue ID / Linear ID / incident #] | [from CODEOWNERS or KB owner registry] | [S/M/L] |
+| [ADD] | [proposed page title + parent space] | [what's missing] | [Linear ID(s) / incident #] | [from CODEOWNERS or KB owner registry] | [S/M/L] |
 | [EDIT] | [existing page URL] | [what's stale + suggested change] | [signal] | [page owner of record] | [S/M/L] |
 | [DELETE] | [existing page URL] | [why it's no longer relevant] | [no traffic in last 90d / contradicts current code] | [page owner] | [S] |
 
 Rules:
-1. **Only flag changes the live signal supports** — do not invent gaps. If an issue appears 3+ times in Sentry and isn't in Troubleshooting, that's an ADD. If it appears once, that's not.
+1. **Only flag changes the live signal supports** — do not invent gaps. If a root cause produced **3 or more separate Linear bug issues** in the window (or 1+ production incident) and isn't in Troubleshooting, that's an ADD. A root cause behind a single Linear issue and no incident is not — it is a one-off until it recurs.
 2. **Prefer EDIT over ADD** when an existing page is 70%+ correct.
 3. **Flag pages with no owner in the KB owner registry** as a DELETE candidate after 90 days of no edits — ownerless pages decay.
 4. **Cross-link suggestions** — if an EDIT or ADD references code/runbook/ADR, include the link target.
-5. Group output by Action (all ADDs first, then EDITs, then DELETEs). Sort within each group by descending live-signal weight (event count for Sentry, severity for Linear/incidents).
+5. Group output by Action (all ADDs first, then EDITs, then DELETEs). Sort within each group by descending live-signal weight — Linear issue count per root cause first, then severity, then incident count.
 
 Output as a markdown table the recipient KB owner can paste straight into a Linear `kb-quarterly` issue with one sub-issue per row.
 ```
@@ -419,7 +417,7 @@ Two sub-lists:
 - **Owner to research:** [name]
 
 **Cross-link targets** — every artefact mentioned that should be linked from the handoff doc and KB:
-- **Type:** [Runbook / ADR / Code path / Dashboard / Sentry issue / Linear issue]
+- **Type:** [Runbook / ADR / Code path / Dashboard / Linear issue]
 - **Reference:** [URL or repo path with line range]
 - **Mentioned at:** `[mm:ss]`
 - **Suggested KB section to backlink from:** [FAQ / Troubleshooting / Glossary / Onboarding]
@@ -431,63 +429,6 @@ Rules:
 - **No invented content.** If the transcript is ambiguous, mark the entry `[AMBIGUOUS — review transcript at mm:ss]` rather than guessing.
 
 Output as a single markdown block ready to append to the handoff document and to feed into the KB Seeding prompt downstream.
-```
-
----
-
-## Inherited Error Triage
-
-> Used at PROCESS.md Step 8.3. Runs in the recipient's Claude Code session via the Sentry MCP (`mcp.sentry.dev/mcp`). Produces a Linear-import-ready CSV so the recipient's support-period queue is bounded and prioritised, not a flat list of 200 issues.
-
-```
-Triage the inherited Sentry error backlog into a prioritised, Linear-importable CSV.
-
-## Sentry MCP Context
-- **Sentry org / project slugs in scope:** [paste from Sentry MCP `list_projects`]
-- **Time window:** [last 30 / 90 / 180 days — set per handoff agreement]
-- **Event-count threshold:** [issues below this volume go straight to WONTFIX — typical default: 10 events]
-- **Already-Seer'd:** [Yes if Seer has already produced root-cause hypotheses on the top N — paste the relevant Seer output / No]
-
-## Recipient Context
-- **Recipient team's bandwidth:** [headcount + hours/week available for support-period bug fixing]
-- **AGENTS.md severity rubric:** [paste the recipient's S0/S1/S2/S3 definitions]
-- **CODEOWNERS / on-call rotation:** [paste so suggested owners map to real people]
-
-## Existing Linear Triage State
-- **Already-imported issues:** [list any Linear IDs that already mirror Sentry issues — avoid duplicate import]
-- **`inherited-bug` label exists:** [Yes / No — create it via Linear MCP if No]
-
-For each Sentry issue in scope, produce one CSV row with the columns below. The output CSV is imported directly into Linear via Linear's CSV import; do not add explanatory prose around it.
-
-## CSV Columns (in order)
-
-```csv
-Title,Description,Severity,SuggestedOwner,SeerConfidence,Classification,SentryIssueURL,FirstSeen,LastSeen,EventCount,UsersAffected,SuggestedLabels
-```
-
-Per row:
-- **Title** — short, action-oriented, prefixed with `[INHERITED]`. Example: `[INHERITED] NullPointer in /api/profile when SSO claim missing`.
-- **Description** — three lines: (1) one-sentence symptom; (2) Seer's root-cause hypothesis if available, otherwise "No Seer hypothesis — manual investigation required"; (3) link to the most relevant code path.
-- **Severity** — S0 / S1 / S2 / S3 per the recipient's rubric. Anchor on user impact + event count, not Sentry's default.
-- **SuggestedOwner** — Linear username derived from CODEOWNERS for the file path the error originates in.
-- **SeerConfidence** — `high` / `medium` / `low` / `none`. `none` means Seer was not run or returned no hypothesis.
-- **Classification** — exactly one of: `fix-me-first` / `watch` / `wontfix`.
-  - `fix-me-first`: real user impact, fix during support period.
-  - `watch`: low impact today, monitor — auto-promote if event count doubles.
-  - `wontfix`: known acceptable, deprecated path, or duplicate of an existing Linear issue.
-- **SentryIssueURL** — full Sentry issue link.
-- **FirstSeen / LastSeen** — ISO 8601 from Sentry.
-- **EventCount / UsersAffected** — integers from Sentry.
-- **SuggestedLabels** — comma-separated, always include `inherited-bug`. Add `seer-high-confidence` when applicable; add `regression` if first-seen is after the handoff date; add `customer-facing` if the issue surfaces in a frontend project.
-
-Rules:
-1. **Cap `fix-me-first` at the recipient's bandwidth.** If their bandwidth maps to ~12 issues over the support period, do not classify more than 12 as `fix-me-first`. Push the next-best candidates to `watch`.
-2. **De-duplicate against the already-imported Linear list.** Skip issues whose Sentry URL is already linked from a Linear issue.
-3. **Never auto-classify as `wontfix` for a customer-facing issue with `UsersAffected > 0`.** Always at least `watch`. The recipient overrides if needed.
-4. **Output the CSV in `fix-me-first` first, then `watch`, then `wontfix` order.** Within each group, sort by descending `UsersAffected`.
-5. **No headers in the data rows.** First line is the header row above; subsequent lines are pure data — Linear's CSV import is strict.
-
-After the CSV block, output a single one-line summary: `Triaged N issues: A fix-me-first, B watch, C wontfix. Recipient bandwidth: D issues — fix-me-first within budget: Yes/No.` Nothing else.
 ```
 
 ---

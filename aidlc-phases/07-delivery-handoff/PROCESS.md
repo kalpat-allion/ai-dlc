@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines the AI-assisted workflow for the Delivery & Handoff phase of the AI-DLC. It is the phase where the engagement crosses from "we built it" to "the recipient runs it" — every artefact, secret, dashboard, runbook, and agentic workflow that was set up across Phases 1–6 has to be transferred so the recipient inherits the full AI-driven loop, not a skeleton repo. The process below is built around **semantic-release + the Anthropic Claude Code Action** for release notes, **Mintlify (or GitBook / Docusaurus + AI)** as the documentation platform driven by its hosted MCP server, **Claude Code with the Atlassian Remote MCP / Notion MCP** for handoff-document synthesis and knowledge-base seeding, **Fathom (or Loom AI)** for KT recording with structured chapter and action-item extraction, and **1Password + Pulumi ESC** for credential and infrastructure handoff that preserves the Phase 6 secrets posture. The handoff is **not** complete when the docs are written — it is complete when the recipient's Claude Code can run `@claude` reviews, query Sentry MCP, query Pulumi MCP, and operate the same agentic loop the delivery team used.
+This document defines the AI-assisted workflow for the Delivery & Handoff phase of the AI-DLC. It is the phase where the engagement crosses from "we built it" to "the recipient runs it" — every artefact, secret, dashboard, runbook, and agentic workflow that was set up across Phases 1–6 has to be transferred so the recipient inherits the full AI-driven loop, not a skeleton repo. The process below is built around **semantic-release + the Anthropic Claude Code Action** for release notes, **Mintlify (or GitBook / Docusaurus + AI)** as the documentation platform driven by its hosted MCP server, **Claude Code with the Atlassian Remote MCP / Notion MCP** for handoff-document synthesis and knowledge-base seeding, **Fathom (or Loom AI)** for KT recording with structured chapter and action-item extraction, and **1Password + the project's secret manager** for credential and infrastructure handoff that preserves the Phase 6 secrets posture. The handoff is **not** complete when the docs are written — it is complete when the recipient's Claude Code can run `@claude` reviews, run `terraform plan` against the inherited state, query the observability MCP, and operate the same agentic loop the delivery team used.
 
 **Phase Duration:** 1–2 weeks (dedicated handoff period) + 30-day support window + 90-day debrief
 **Phase Owner:** Delivery Lead / Tech Lead
@@ -15,10 +15,10 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 - **Handoff document synthesis:** Claude Code with multi-repo `--add-dir` ingestion + Atlassian Remote MCP / Notion MCP for cross-platform context
 - **KT recording:** Fathom (recommended for action-item extraction quality) or Loom AI (recommended when screen-recording is the dominant format)
 - **KT synthesis:** NotebookLM Enterprise (recommended for multi-source post-session ingestion) + Claude Code summary prompt
-- **Credentials:** 1Password Business + 1Password CLI (`op run`) + Pulumi ESC handoff (transfers the Phase 6 secret-store posture intact)
-- **Infrastructure handoff:** Pulumi Cloud (state + ESC environments) + GitHub repo ownership transfer + MCP-server access transfer (Pulumi MCP, observability MCP, Sentry MCP)
+- **Credentials:** 1Password Business + 1Password CLI (`op run`) + secret-manager ownership transfer (carries the Phase 6 secrets posture intact)
+- **Infrastructure handoff:** remote state backend transfer (bucket + lock ownership, or `terraform init -migrate-state`) + GitHub repo ownership transfer + MCP-server access transfer (observability MCP)
 - **Knowledge base:** Atlassian Confluence (Atlassian Remote MCP, GA Feb 2026) or Notion (`mcp.notion.com/mcp`) — both seeded by Claude Code; Glean as the cross-platform discovery overlay when the org already has it
-- **Post-handoff:** Sentry + Seer + Sentry MCP for inherited error backlog; incident.io or PagerDuty AIOps inherits the Phase 6 on-call rotation; Linear MCP carries over from Phase 3 for the support-period bug pipeline
+- **Post-handoff:** incident.io or PagerDuty AIOps inherits the Phase 6 on-call rotation; Linear MCP carries over from Phase 3 as the support-period bug pipeline — production defects reach it from the on-call rotation, from customer reports, and from the weekly checkpoint
 
 > **Tool Philosophy.** Handoff is not a documentation exercise — it is a **transfer of an agentic operating model**. The recipient does not just inherit code and dashboards; they inherit the developers' Claude Code subagents, the `AGENTS.md`, the MCP server roster, the `@claude` PR-review workflow, and the secrets posture. AI accelerates every traditional handoff artefact (release notes, docs, handoff document, KT summaries, KB seeding) — but the larger win is that the recipient's first day looks identical to the delivery team's last day, because the same MCP servers and subagents are wired into their Claude Code. Five tool families, zero overlap, every credential transfer requires a human approval gate, every doc Claude generates is reviewed before it ships.
 
@@ -40,12 +40,11 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 | **KT recording (screen)** | Loom AI (auto chapters + auto CTA + summaries) | Fathom screen-recorder mode | Loom Business $15/user/mo |
 | **KT post-processing** | NotebookLM Enterprise (multi-source ingest, 300 sources / 500K words each) | Claude Code with transcript paste | NotebookLM Enterprise via Gemini Enterprise |
 | **Credential vault** | 1Password Business + 1Password CLI + Unified Access (Mar 2026 GA) | Bitwarden Teams | 1Password Business $7.99/user/mo |
-| **CI secrets handoff** | Pulumi ESC environment ownership transfer (carries over from Phase 6) | GitHub Actions secrets re-export | Bundled with Pulumi Cloud Team+ |
+| **CI secrets handoff** | Secret-manager ownership transfer (AWS Secrets Manager / Azure Key Vault / GCP Secret Manager / Vault / Doppler / 1Password — whichever Phase 6 chose) + CI OIDC trust-policy re-point to the recipient's identity | GitHub Actions secrets re-export | Cloud-native pricing; OIDC free |
 | **MCP-credential injection** | `op run -- claude` pattern (no plaintext secrets in `mcp.json`) | Direct env vars (off-board risk) | Free with 1Password |
-| **IaC handoff** | Pulumi Cloud workspace transfer (org → org) + Pulumi MCP access regrant | Terraform state migration | Free |
+| **IaC handoff** | Remote state backend transfer — bucket + lock ownership, or `terraform init -migrate-state` into the recipient's own backend | HCP Terraform / Spacelift workspace transfer (only if the project used a managed runner) | Free |
 | **Knowledge base** | Atlassian Confluence (Remote MCP, 72+ tools, GA Feb 2026) or Notion (`mcp.notion.com/mcp`) | Docusaurus (if no separate KB) | Confluence Standard $6.05/user/mo; Notion Business $15/user/mo |
 | **Cross-platform KB search** | Glean (when org already runs it; permissions-aware retrieval over Slack/Jira/Drive/Confluence) | Confluence/Notion native search | Enterprise pricing |
-| **Inherited error triage** | Sentry + Seer + Sentry MCP (`mcp.sentry.dev/mcp`) | Bugsnag | Sentry Team from $26/mo |
 | **Inherited on-call** | incident.io (Scribe transcribes incident calls) or PagerDuty AIOps | Grafana OnCall (archived 2026 — migrate) | incident.io from $20/responder/mo |
 
 **Optional upgrades:**
@@ -63,7 +62,7 @@ This document defines the AI-assisted workflow for the Delivery & Handoff phase 
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Phase 3 Linear MCP setup (carries over), Phase 6 Pulumi/observability MCP setup (carries over), GitHub org access, chosen docs-platform tenancy (Mintlify / GitBook / Docusaurus), chosen KB tenancy (Confluence / Notion), 1Password Business workspace, Anthropic API key already provisioned in Phase 6 |
+| **Input** | Phase 3 Linear MCP setup (carries over), Phase 6 observability MCP setup (carries over), GitHub org access, chosen docs-platform tenancy (Mintlify / GitBook / Docusaurus), chosen KB tenancy (Confluence / Notion), 1Password Business workspace, Anthropic API key already provisioned in Phase 6 |
 | **Tools** | **Mintlify MCP** (or **GitBook MCP**), **Atlassian Remote MCP** (or **Notion MCP**), **GitHub MCP**, **Anthropic Claude Code Action**, **1Password CLI**, **AGENTS.md** extension |
 | **Output** | Every delivery-team developer's Claude Code can read the docs site, the KB, and GitHub releases via MCP; release-note polish runs automatically on every tag; AGENTS.md carries handoff-specific context; a handoff subagent (optional) is committed under `.claude/agents/` for the recurring synthesis workflow |
 | **Human** | Delivery Lead authorises org-level OAuth grants on the docs/KB/credential platforms; each developer authenticates once per project via `/mcp`; recipient counterparts authorise on their side at handoff time |
@@ -129,7 +128,7 @@ Smoke test: `Via GitHub MCP, list the merged PRs in <org/repo> since the v2.4.0 
 
 Phase 6 already committed `.github/workflows/claude.yml` for `@claude` PR review. Phase 7 adds a second workflow that triggers on every tag push and runs the [`Release Notes Polish`](./PROMPTS.md#release-notes-polish) prompt against the semantic-release output, then posts the polished draft as a comment on the release PR (or as a draft GitHub Release) for the Release Manager to merge.
 
-The starter workflow lives under `.github/workflows/release-notes-polish.yml` and triggers on `release: created` or `push: tags: ['v*']`. It uses the same `anthropics/claude-code-action@v1` and `ANTHROPIC_API_KEY` (or Bedrock/Vertex/Foundry equivalents) the team already provisioned in Phase 6 Step 0.2 — no new secrets needed.
+The starter workflow lives under `.github/workflows/release-notes-polish.yml` and triggers on `release: created` or `push: tags: ['v*']`. It uses the same `anthropics/claude-code-action@v1` and `ANTHROPIC_API_KEY` (or Bedrock/Vertex/Foundry equivalents) the team already provisioned in Phase 6 Step 0.1 — no new secrets needed.
 
 > **Anti-pattern:** Do **not** auto-publish the polished release notes. Always gate publish on a human merge or "publish release" click — release notes are the customer-visible voice of the engagement and Claude can be confidently wrong about which feature is the star.
 
@@ -167,7 +166,7 @@ The `AGENTS.md` already committed in Phase 6 covers stack naming, region default
 - **Recipient context** — who they are, their tech stack, their on-call posture, what they already have in place (e.g., "recipient already runs Confluence; do not propose Notion"). Stops Claude from recommending tools the recipient already has under a different name.
 - **Forbidden content** — internal post-mortems, individual performance feedback, raw incident channel transcripts. Claude should never lift these into a customer artefact.
 
-The Phase 6 entry pointer (`pulumi.yaml` → AGENTS.md) carries over; no new wiring needed.
+The Phase 6 entry pointer carries over as `AGENTS.md` at the repo root; no new wiring is needed. Be aware of the honest difference from earlier versions: Terraform has no project manifest with a description field to point at `AGENTS.md`, so discovery relies on the agents' own root-level `AGENTS.md` convention rather than an explicit reference.
 
 #### 0.7 — (Recommended) Bundle the recurring handoff workflow into a Claude Code subagent
 
@@ -195,7 +194,7 @@ Verify with `/agents` once committed; smoke-test by asking the subagent to dry-r
 
 #### 0.8 — Verification checklist
 
-- [ ] `claude mcp list` shows `mintlify-docs` (or `gitbook-docs`), `atlassian` (or `notion`), `github`, plus the carried-over `pulumi`, `sentry`, `grafana`/`datadog`, `linear` from Phases 3/6 — all `connected` for every developer
+- [ ] `claude mcp list` shows `mintlify-docs` (or `gitbook-docs`), `atlassian` (or `notion`), `github`, plus the carried-over `grafana`/`datadog` and `linear` from Phases 3/6 — all `connected` for every developer
 - [ ] `.github/workflows/release-notes-polish.yml` committed; a draft tag triggers the action and posts a polished draft within ~3 minutes
 - [ ] `op signin` works for every delivery-team developer; `op run -- claude` resolves vault references without plaintext leakage
 - [ ] `AGENTS.md` updated with the Delivery & Handoff section (release-note tone, customer-vs-internal split, glossary URL, support-period defaults, recipient context, forbidden content)
@@ -303,7 +302,7 @@ For Mintlify specifically, the auto-generated `llms-full.txt` at the docs root i
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | PRD (Phase 1) + architecture & ADRs (Phase 2) + codebase structure + test coverage report (Phase 4) + security posture (Phase 5) + IaC + runbooks + observability dashboards (Phase 6) + release notes (Step 1) + the recipient's profile from `AGENTS.md` |
-| **Tools** | **Claude Code** with `--add-dir` across multiple repos + **docs MCP** (for cross-linking) + **Linear MCP** (for known-issue extraction) + **Sentry MCP** (for known-error extraction) + (optional) **handoff-agent** subagent from Step 0.7 |
+| **Tools** | **Claude Code** with `--add-dir` across multiple repos + **docs MCP** (for cross-linking) + **Linear MCP** (for known-issue and known-defect extraction) + (optional) **handoff-agent** subagent from Step 0.7 |
 | **Output** | A comprehensive handoff document at `/handoff/handoff-document.md`, reviewed by Delivery Lead + Tech Lead, shared with the recipient for feedback |
 | **Human** | Delivery Lead + Tech Lead review the synthesised draft for accuracy, fact-check across artefacts, edit for tone |
 
@@ -330,9 +329,9 @@ The deliverable structure (carries over from existing PROCESS):
 - Known limitations & tech debt — explicit, honest, prioritised
 - Recommended next steps — first 30 days, first 90 days, next 12 months
 - Contact & support — support terms, escalation path, key contacts
-- Appendices — links to docs site, KT recordings, Linear export, Sentry handoff
+- Appendices — links to docs site, KT recordings, Linear export
 
-**3.3 — Pull live operational signals at synthesis time, not from memory.** When generating "Known limitations" and "Recommended next steps", have Claude Code pull from Linear (`Via Linear MCP, list open issues labelled tech-debt OR bug, ordered by priority`) and from Sentry (`Via Sentry MCP, list the top 20 unresolved issues by event count over the last 30 days`). This prevents the document from being stale at the moment it is delivered.
+**3.3 — Pull live operational signals at synthesis time, not from memory.** When generating "Known limitations" and "Recommended next steps", have Claude Code pull from Linear (`Via Linear MCP, list open issues labelled tech-debt OR bug, ordered by priority; then list bugs closed in the last 90 days grouped by root-cause label`) rather than from the session's recollection of the engagement. This prevents the document from being stale at the moment it is delivered.
 
 **3.4 — Internal review.** Delivery Lead + Tech Lead read the synthesised draft together, fact-check claims against the source artefacts, edit for tone, and check the AGENTS.md customer-vs-internal split (no internal post-mortem language leaking into a recipient artefact). **Cross-check architecture diagrams and ADR cites** — Claude is most likely to hallucinate ADR numbers and component names when synthesising across artefacts.
 
@@ -404,8 +403,8 @@ Review the diff and apply.
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Every credential the engagement uses — cloud accounts, IAM roles, CI tokens, third-party SaaS, registrar, DNS, SSL, monitoring dashboards, AI/LLM API keys (Anthropic, Bedrock, Vertex), Pulumi access tokens, MCP-server OAuth grants |
-| **Tools** | **1Password Business** (shared vault for handoff) + **1Password CLI** (`op`) + **Pulumi ESC** environment ownership transfer + cloud-native IAM (AWS IAM Identity Center, GCP IAM, Azure RBAC) |
+| **Input** | Every credential the engagement uses — cloud accounts, IAM roles, CI tokens, third-party SaaS, registrar, DNS, SSL, monitoring dashboards, AI/LLM API keys (Anthropic, Bedrock, Vertex), state-backend and secret-manager credentials, the CI OIDC trust-policy configuration, MCP-server OAuth grants |
+| **Tools** | **1Password Business** (shared vault for handoff) + **1Password CLI** (`op`) + **secret-manager** ownership transfer + cloud-native IAM (AWS IAM Identity Center, GCP IAM, Azure RBAC) |
 | **Output** | Recipient owns every credential; delivery team's access is removed (or scheduled for removal at support-period end); shared credentials rotated by the recipient |
 | **Human** | Security Champion + recipient jointly verify access for every service; both sign the access-transfer log |
 
@@ -428,9 +427,9 @@ Save as `/handoff/credential-inventory.md`. This is the working sheet for Steps 
 **5.2 — Prefer role transfer over credential sharing — every time.** For every row in the inventory, classify:
 
 - **Cloud (AWS / GCP / Azure):** add the recipient's principal to the IAM role / IAM Identity Center group / Cloud IAM binding. Do **not** share access keys. AWS specifically: cross-account role assumption is the canonical pattern.
-- **SaaS admins (GitHub, Datadog, Sentry, Linear, Atlassian, Mintlify, etc.):** add the recipient as an org admin, then remove delivery-team admins post-handoff (or at support-period end if the contract requires continued access).
-- **MCP OAuth grants:** the recipient authenticates against each MCP server (Pulumi, GitHub, Sentry, Atlassian/Notion, Linear, docs platform) on their own machine via the same `claude mcp add` flow the delivery team used in Step 0 / Phase 6. **No OAuth token is "transferred" — every MCP grant is per-developer per-account.**
-- **Pulumi ESC environments:** transfer environment ownership (`pulumi env grant <env> <recipient-team>:admin`) so the recipient inherits the Phase 6 secrets posture without re-entering values. Revoke the delivery team's access at support-period end.
+- **SaaS admins (GitHub, Datadog, Linear, Atlassian, Mintlify, etc.):** add the recipient as an org admin, then remove delivery-team admins post-handoff (or at support-period end if the contract requires continued access).
+- **MCP OAuth grants:** the recipient authenticates against each MCP server (GitHub, Atlassian/Notion, Linear, docs platform) on their own machine via the same `claude mcp add` flow the delivery team used in Step 0 / Phase 6. **No OAuth token is "transferred" — every MCP grant is per-developer per-account.**
+- **Secret-manager secrets:** transfer ownership of the secret store (an IAM policy change, a vault group grant, or a 1Password vault move) so the recipient inherits the Phase 6 secrets posture without re-entering values, then re-point the CI OIDC trust policy to the recipient's GitHub identity. Revoke the delivery team's access at support-period end. **These are static, long-lived credentials** — 5.5's rotation requirement is not optional here, because unlike a dynamic-credential broker nothing expires them on its own.
 - **Only share raw credentials when role-based access isn't possible** — e.g., third-party API keys with no per-user model, registrar password (often single-account), pre-existing SSH keys for legacy systems.
 
 **5.3 — For shared credentials: transfer via the 1Password Business shared vault.**
@@ -453,7 +452,7 @@ The Security Champion **revokes the delivery team's access to "Engagement Handof
 
 **5.5 — Rotate every shared credential immediately after handoff.** Any credential that was transferred (not role-granted) is rotated by the recipient before the support-period ends. Why: even with a clean 1Password move, the credential existed in the delivery team's machines and CI environments at some point — rotation removes residual exposure.
 
-**5.6 — Remove delivery-team access on a schedule.** Delivery-team admin access on each SaaS is removed at the agreed milestone — typically support-period end (Day 30), but for high-blast-radius services (cloud root, Pulumi org admin) revocation happens immediately after the recipient verifies access. Document the schedule in the support agreement.
+**5.6 — Remove delivery-team access on a schedule.** Delivery-team admin access on each SaaS is removed at the agreed milestone — typically support-period end (Day 30), but for high-blast-radius services (cloud root, state-backend bucket admin, secret-manager admin) revocation happens immediately after the recipient verifies access. Document the schedule in the support agreement.
 
 > **Critical anti-patterns — never use for credential transfer.** Email. Slack. Teams DM. SMS. Unencrypted file shares. Screenshots in a document. PDF exports. Any of these is grounds for immediate rotation of the credential in question. The 1Password CLI + shared vault is the only path; if 1Password is unavailable for a specific recipient, fall back to Bitwarden Teams — never to messaging.
 
@@ -465,40 +464,48 @@ The Security Champion **revokes the delivery team's access to "Engagement Handof
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | The full Phase 6 stack — Pulumi IaC repo + Pulumi Cloud workspace + Pulumi ESC environments + CrossGuard policy packs + GitHub repo + `.github/workflows/` + `.github/agentic-workflows/` + observability dashboards + runbooks + AGENTS.md + the MCP server roster (Pulumi, GitHub, Sentry, observability) |
-| **Tools** | **Pulumi Cloud** workspace transfer (org → org) + **GitHub** repo ownership transfer + **MCP-server OAuth re-grant** on the recipient side + live reproducibility demo |
-| **Output** | Recipient owns the IaC repo, the Pulumi state, the ESC environments, the CI/CD workflows, the dashboards, and **the same AI ops loop the delivery team ran** — Claude Code with Pulumi MCP, Sentry MCP, observability MCP, CrossGuard fixes, agentic workflows |
-| **Human** | DevOps engineer demonstrates reproducibility live; recipient runs `pulumi preview` on their own machine before signoff |
+| **Input** | The full Phase 6 stack — Terraform IaC repo (`/modules`, `/envs`, `.terraform.lock.hcl`) + remote state backend (bucket + lock) + secret-manager secrets + CI OIDC trust policy + GitHub repo + `.github/workflows/` + `.github/agentic-workflows/` + observability dashboards + runbooks + AGENTS.md + `.claude/agents/` + `.claude/skills/` + the MCP server roster (GitHub, observability) |
+| **Tools** | **Remote state backend transfer** (bucket/container ownership, or `terraform init -migrate-state`) + **GitHub** repo ownership transfer + **secret-manager** ownership transfer + **CI OIDC trust-policy re-point** + **MCP-server OAuth re-grant** on the recipient side + live reproducibility demo |
+| **Output** | Recipient owns the IaC repo, the state backend, the secrets, the CI/CD workflows, the dashboards, and **the same AI ops loop the delivery team ran** — Claude Code with the observability MCP, the Phase 3 and Phase 6 subagents and skills, and the agentic workflows |
+| **Human** | DevOps engineer demonstrates reproducibility live; recipient runs `terraform plan` on their own machine and confirms it reports **no changes** before signoff |
 
 **Workflow:**
 
 **6.1 — Transfer the IaC repository.** Preferred: **move repo ownership** (GitHub: Settings → General → Transfer ownership). Fork-and-delete loses git history and breaks issue/PR continuity. After transfer the recipient receives all branches, tags, issues, PRs, Actions history, and the `.github/workflows/` + `.github/agentic-workflows/` directory intact.
 
-**6.2 — Transfer the Pulumi Cloud workspace.** Pulumi Cloud supports org-to-org transfer for stacks; ESC environments can be re-homed via `pulumi env grant` followed by ownership transfer. The recipient's Pulumi org now owns the state, the stacks, the policy packs, and the audit log. **Coordinate the transfer window** — `pulumi up` against the transferring stacks must be paused for ~15 minutes during the handover.
+**6.2 — Transfer the state backend.** There is no vendor workspace to transfer — the state lives in a bucket in a cloud account, so this is a cloud-account operation. Two patterns:
 
-**6.3 — Re-establish the MCP ops loop on the recipient's side.** This is the step that is most often forgotten. The Phase 6 Pulumi MCP, observability MCP, Sentry MCP, GitHub MCP, and Linear MCP wired into the delivery team's Claude Code sessions do not "move" — every recipient developer must re-run the `claude mcp add` commands from Phase 6 Step 0 + Phase 7 Step 0 against their own accounts. Walk them through it on the live session:
+- **State migration (default).** The recipient stands up their own backend per Phase 6 Step 3.4 (bucket, versioning, encryption, lock, IAM), then `terraform init -migrate-state` copies state across. Verified by `terraform plan` reporting **no changes** against the new backend. Prefer this: it leaves the delivery team's cloud account untouched, and its success criterion is a clean plan, which is checkable rather than asserted.
+- **Bucket ownership transfer.** Appropriate only when the whole cloud account transfers anyway. The backend block is unchanged; what changes is who owns the account it resolves in.
+
+**Back up state before touching it.** `terraform state pull > handoff-state-backup.json`, stored in the 1Password handoff vault and deleted at support-period end. This file contains resource IDs and, for many providers, secret values in plaintext — **treat it exactly like a credential.** Unlike a managed control plane there is no vendor-side version history to roll back to, so confirm bucket versioning is on before starting (Phase 6 Gate 1 requires it) and keep the pull as the belt to that braces.
+
+**Coordinate a freeze window** — no `apply` and no merges to `main` while state moves; budget ~15 minutes. Announce it, and **disable the scheduled drift workflow for the duration** so it does not race the migration.
+
+Re-point the **CI OIDC trust policy** to the recipient's GitHub organisation identity in the same window, or their first pipeline run fails on authorisation with a confusing error.
+
+**6.3 — Re-establish the MCP ops loop on the recipient's side.** This is the step that is most often forgotten. The observability MCP, GitHub MCP, and Linear MCP wired into the delivery team's Claude Code sessions do not "move" — every recipient developer must re-run the `claude mcp add` commands from Phase 6 Step 0 + Phase 7 Step 0 against their own accounts. Walk them through it on the live session:
 
 ```bash
 # Recipient side — re-establish the full Phase 6+7 MCP roster
-claude mcp add --transport http --scope project pulumi    https://mcp.ai.pulumi.com/mcp
 claude mcp add --transport http --scope project github    https://api.githubcopilot.com/mcp/
-claude mcp add --transport http --scope project sentry    https://mcp.sentry.dev/mcp
 claude mcp add --transport http --scope project grafana   https://<workspace>.grafana.net/api/mcp   # or datadog
 claude mcp add --transport http --scope project linear    https://mcp.linear.app/mcp
 claude mcp add --transport http --scope project mintlify-docs https://<your-docs>.mintlify.app/mcp   # or gitbook
 claude mcp add --transport http --scope project atlassian https://mcp.atlassian.com/v1/sse           # or notion
 ```
 
-Verify with `claude mcp list` on the recipient's machine — every server connected. **Smoke test:** `Via Pulumi MCP list_stacks for our org and run resource-search for tag:Environment=prod.` If the recipient's Claude Code returns real production stacks, the inheritance is live.
+Verify with `claude mcp list` on the recipient's machine — every server connected. **There is no IaC MCP server in the roster**: the recipient's infrastructure loop runs through the Terraform CLI in the Claude Code shell plus the `terraform-iac-engineer` subagent, both of which transfer with the repo. **Smoke test:** `terraform plan` against the migrated backend returns *no changes*, and `Via the observability MCP, list the services emitting the most 5xx responses in the last 24h.` If both land on the recipient's machine, the inheritance is live.
 
 **6.4 — Demonstrate reproducibility live.** In a 60-minute session walk through:
 
-1. **Provision a new dev environment from scratch** — `pulumi stack init dev-handoff-demo` → `pulumi config env add dev-handoff-demo acme/dev-ci` → `pulumi up`. Should complete in < 30 minutes from a clean clone (this is a Phase 6 handoff checklist requirement).
-2. **Make a change via PR** — recipient edits a tag, opens a PR, the Anthropic Claude Code Action posts a review, CrossGuard runs, `pulumi preview` posts the cost-delta comment. Confirms the full Phase 6 PR loop works on the recipient side.
-3. **Recover from a corrupted state simulation** — delete the dev-handoff-demo stack, recover via `pulumi refresh` + the documented procedure in `/docs/infrastructure.md`. Recipient runs the keystrokes; Delivery DevOps observes.
+1. **Provision a new dev environment from scratch** — copy `/envs/dev` to `/envs/dev-handoff-demo`, then `terraform init` → `terraform apply`. Should complete in < 30 minutes from a clean clone (a Phase 6 handoff checklist requirement).
+2. **Make a change via PR** — recipient edits a tag, opens a PR, the Anthropic Claude Code Action posts a review and CI posts the `terraform plan` output plus the Infracost delta comment. Confirms the full Phase 6 PR loop works on the recipient side, under their own credentials.
+3. **Run the state-recovery drill** — this replaces the old managed-control-plane recovery path and is materially more manual, which is exactly why it is rehearsed rather than documented. Against `dev-handoff-demo` only: corrupt or delete the state object, restore the prior version from the versioned bucket, `terraform plan` to confirm no changes. Then simulate a stuck lock and clear it with `terraform force-unlock` **after** confirming in the Actions run list that no apply is in flight. Recipient runs the keystrokes; Delivery DevOps observes and corrects the runbook on the spot if a step is wrong.
 4. **Trigger an `@claude` mention on a PR** — confirms the recipient's `ANTHROPIC_API_KEY` (or Bedrock/Vertex/Foundry credential) is in place and the action runs against their own quota.
+5. **Tear down** `dev-handoff-demo` with `terraform destroy` so the demo does not become a permanent orphaned environment.
 
-**6.5 — Subagents transfer with the repo.** All Phase 3 and Phase 6 subagents committed to `.claude/agents/` (`linear-task-agent`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, plus any Phase 6 ops subagents) carry over with the repo transfer. The recipient inherits them automatically. Walk through `/agents` together — confirm each appears, smoke-test one (`Use the linear-task-agent to fetch my next assigned issue`).
+**6.5 — Subagents and skills transfer with the repo.** All Phase 3 and Phase 6 subagents committed to `.claude/agents/` (`linear-task-agent`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, plus `terraform-iac-engineer` and `container-image-engineer`) and all Phase 6 bring-up skills under `.claude/skills/` carry over with the repo transfer. The recipient inherits them automatically. Walk through `/agents` together — confirm each appears, smoke-test one Phase 3 agent (`Use the linear-task-agent to fetch my next assigned issue`) and one Phase 6 helper (`Use the terraform-iac-engineer to run validate and summarise the current plan — do not apply`).
 
 **6.6 — Document any manual steps that aren't in IaC.** Should be rare — anything not in IaC by Phase 6 close was a gap. Capture residual manual steps in `/docs/infrastructure.md` under a "Manual Operations" section so the recipient can fix the gap on their own timeline.
 
@@ -514,7 +521,7 @@ Verify with `claude mcp list` on the recipient's machine — every server connec
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Handoff document (Step 3), KT session summaries (Step 4), Linear bug history, Sentry top issues, ADR set, glossary terms from PRD |
+| **Input** | Handoff document (Step 3), KT session summaries (Step 4), Linear bug history, ADR set, glossary terms from PRD |
 | **Tools** | **Atlassian Confluence** (via Atlassian Remote MCP) **or** **Notion** (via `mcp.notion.com/mcp`) — whichever the recipient already runs; **Claude Code** for content seeding; **Glean** as the cross-platform discovery overlay if the recipient has it |
 | **Output** | KB seeded with FAQ, Glossary, Troubleshooting, Onboarding pages — every page cross-linked to code, runbooks, and ADRs; named owners assigned; quarterly review cadence agreed |
 | **Human** | Recipient team designates content owners per area; both teams approve cross-link integrity |
@@ -527,7 +534,7 @@ Verify with `claude mcp list` on the recipient's machine — every server connec
 
 - **FAQ** — 15–20 questions derived from KT-session Q&A transcripts + anticipated PRD questions. Group by Getting Started / Billing / Features / Technical / Troubleshooting.
 - **Glossary** — domain terms from PRD + technical terms from architecture docs + internal naming from the codebase.
-- **Troubleshooting** — symptom / likely cause / diagnosis / resolution / prevention rows derived from Linear bug history (`Via Linear MCP, list closed issues labelled bug from the last 6 months`) + Sentry top errors (`Via Sentry MCP, list top 30 unresolved issues by event count`).
+- **Troubleshooting** — symptom / likely cause / diagnosis / resolution / prevention rows derived from Linear bug history (`Via Linear MCP, list closed issues labelled bug from the last 6 months, grouped by root-cause label with a count per group`) + the known-issues list from QA. Write a row for each root cause that recurred; a root cause behind one issue is a footnote, not a page.
 - **Onboarding** — new-team-member runbook covering local dev, MCP setup, first PR, support-period contacts.
 
 Example invocation (Confluence):
@@ -544,7 +551,7 @@ claude
 **7.3 — Cross-link discipline.** Every KB page links to:
 
 - The **canonical code location** (file path or module name) it describes
-- The **runbook** (if operational) at `/docs/runbooks/<alert>.md`
+- The **runbook** (if operational) at `/docs/runbooks/alerts/<alert-name>.md`
 - The **ADR** (if architectural) at `/docs/adr/<n>.md`
 - The **Linear label** for related ongoing work
 
@@ -552,19 +559,19 @@ No isolated KB pages. A page with no cross-links is a candidate for deletion at 
 
 **7.4 — Assign named owners per content area.** Recipient team designates one named human (not a team alias) per content area: FAQ owner, Glossary owner, Troubleshooting owner, Onboarding owner. Ownerless docs decay within months — this is the single most reliable predictor of KB health.
 
-**7.5 — Set the review cadence — quarterly.** Every quarter the owners run the [`Quarterly KB Completeness Check`](./PROMPTS.md#quarterly-kb-completeness-check) prompt against the live KB + Linear backlog + Sentry top issues:
+**7.5 — Set the review cadence — quarterly.** Every quarter the owners run the [`Quarterly KB Completeness Check`](./PROMPTS.md#quarterly-kb-completeness-check) prompt against the live KB + the Linear backlog:
 
 ```bash
 claude
 > Via Atlassian MCP, fetch the Troubleshooting page in the KB.
-> Via Sentry MCP, list top 20 unresolved issues by event count last 90 days.
-> Via Linear MCP, list closed bugs labelled customer-impact last 90 days.
+> Via Linear MCP, list bugs labelled customer-impact created or closed in the last 90 days.
+>   Group them by root-cause label and give me the issue count per group.
 > Now run the Quarterly KB Completeness Check prompt — diff the KB against the live signal
 >   and emit ADD/EDIT/DELETE rows in the prompt's table format. Only flag changes the
 >   live signal supports.
 ```
 
-The prompt's "only flag what the live signal supports" rule is what keeps the review honest — without it, an AI can fabricate gaps that look plausible but trace to nothing. This is the same shape as Step 2's completeness check; it works because the KB and the source-of-truth signals (Linear, Sentry) all expose MCP servers.
+The prompt's "only flag what the live signal supports" rule is what keeps the review honest — without it, an AI can fabricate gaps that look plausible but trace to nothing. **Linear is the live signal, so "supported" means recurrence**: a root cause behind three or more separate bug issues in the window (or behind any production incident) is a real gap; a root cause behind one issue is a one-off until it repeats. This is the same shape as Step 2's completeness check; it works because the KB and the source-of-truth signal both expose MCP servers.
 
 **7.6 — Layer Glean if the recipient already runs it.** Glean's permissions-aware retrieval over Slack + Confluence + Notion + Drive + Linear answers the cross-platform "where is this documented?" question that no single KB tool solves. If the recipient already runs Glean, ensure the new KB pages are indexed (Glean autodiscovers from connected sources) and link the Glean answer URLs into the handoff document. **Don't introduce Glean** at handoff — it's an org-level commitment, not a per-project tool.
 
@@ -576,8 +583,8 @@ The prompt's "only flag what the live signal supports" rule is what keeps the re
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Completed handoff (Steps 1–7), agreed support terms (typically 30 days), inherited error backlog (Sentry), inherited on-call rotation (incident.io / PagerDuty) |
-| **Tools** | **Linear MCP** (bug pipeline carries over from Phase 3) + **Sentry + Seer + Sentry MCP** (error triage) + **incident.io** or **PagerDuty AIOps** (on-call) + **Anthropic Claude Code Action** (`@claude` review on PRs) + the full inherited MCP roster from Step 6 |
+| **Input** | Completed handoff (Steps 1–7), agreed support terms (typically 30 days), the inherited Linear bug pipeline, inherited on-call rotation (incident.io / PagerDuty) |
+| **Tools** | **Linear MCP** (bug pipeline carries over from Phase 3) + **incident.io** or **PagerDuty AIOps** (on-call) + **Anthropic Claude Code Action** (`@claude` review on PRs) + the full inherited MCP roster from Step 6 |
 | **Output** | Recipient operates the system independently using the same agentic loop the delivery team used; every issue raised during the support period traces back to a doc/runbook update |
 | **Human** | Delivery team as on-call backup within agreed SLA; recipient owns the primary on-call rotation; both teams meet weekly during the support period |
 
@@ -588,33 +595,22 @@ The prompt's "only flag what the live signal supports" rule is what keeps the re
 **8.2 — Recipient's Claude Code inherits the full agentic stack.** Confirmed in Step 6.3 + 6.4 + 6.5 — the recipient's developers can:
 
 - Run `@claude` review on every PR via the inherited Claude Code Action workflow
-- Query Pulumi MCP for infra changes, drift, cost
-- Query Sentry MCP for inherited error backlog (`Via Sentry MCP, list top 10 issues by event count last 24h; for the top one, ask Seer for a root-cause hypothesis`)
+- Run `terraform plan` for drift, read the scheduled drift workflow's issues, and read the Infracost delta comments on PRs for cost
 - Query observability MCP (Grafana / Datadog) for dashboards and SLO breaches
 - Query Linear MCP for the support-period bug pipeline
 - Use the `linear-task-agent` and specialist subagents (carried over) for fixes during the support period
 
+Every support-period defect lands in Linear — filed by the recipient's on-call off a runbook or alert, raised by a customer, or surfaced at the weekly checkpoint. From there it is a normal Phase 3 story: `linear-task-agent` picks it up, the appropriate specialist subagent implements the fix, the Claude Code Action reviews the PR. **The agentic loop is the support process.**
+
 This is what "the support period is partly the recipient learning to run the AI loop themselves" means in practice. Schedule one paired-Claude-Code session per week during the first month so the delivery team can answer "how do I prompt this" questions in real time.
 
-**8.3 — Inherited error backlog — triage with Sentry + Seer.** The recipient's first job week one is to scan the inherited Sentry issues. Seer auto-prioritises and proposes fixes; the recipient runs the [`Inherited Error Triage`](./PROMPTS.md#inherited-error-triage) prompt, which produces a Linear-import-ready CSV with explicit headers, severity, suggested owner from CODEOWNERS, and Seer confidence per row:
+**8.3 — Inherited on-call — incident.io or PagerDuty AIOps.** Whichever incident-management tool the engagement set up in Phase 6 carries over. incident.io's Scribe transcribes incident calls in real time and extracts root-cause and follow-ups, which feed into post-mortems and the KB Troubleshooting page. PagerDuty AIOps groups noisy alerts before paging — both reduce the cognitive load on the recipient's first weeks of on-call. The Phase 6 runbook-per-alert convention carries over; on-call hits a runbook, runs the steps, files a Linear issue if the runbook is wrong.
 
-```bash
-claude
-> Via Sentry MCP, list top 30 unresolved issues in project <recipient-project>
->   ranked by event count last 30 days. Now run the Inherited Error Triage prompt
->   with our S0/S1/S2/S3 rubric, our CODEOWNERS, and our support-period bandwidth
->   so the fix-me-first cap stays inside what we can actually deliver.
-```
+**8.4 — Every issue reveals a documentation/runbook gap — close the loop.** The discipline that makes the support period valuable: every support request is a defect in the handoff package. After resolution, the on-call (or the Tech Lead) updates the relevant doc/runbook/KB page **the same day** — Claude Code can do the rewrite from the issue thread + the actual fix commit in ~10 minutes. Track "support-period issues that updated docs" as a metric — should be 80%+ in a healthy handoff.
 
-The recipient imports the CSV into Linear with the `inherited-bug` label. Each is then a normal Phase 3 story — `linear-task-agent` picks it up, the appropriate specialist subagent implements the fix, the Claude Code Action reviews the PR. **The agentic loop is the support process.**
+**8.5 — Weekly checkpoint during the support period.** 30-minute sync between delivery Tech Lead and recipient Tech Lead. Agenda: open support tickets, recurring confusion points, doc gaps closed this week, AI-loop friction (where is Claude not helping yet). Ten minutes of conversation here saves hours of unnecessary escalation.
 
-**8.4 — Inherited on-call — incident.io or PagerDuty AIOps.** Whichever incident-management tool the engagement set up in Phase 6 carries over. incident.io's Scribe transcribes incident calls in real time and extracts root-cause and follow-ups, which feed into post-mortems and the KB Troubleshooting page. PagerDuty AIOps groups noisy alerts before paging — both reduce the cognitive load on the recipient's first weeks of on-call. The Phase 6 runbook-per-alert convention carries over; on-call hits a runbook, runs the steps, files a Linear issue if the runbook is wrong.
-
-**8.5 — Every issue reveals a documentation/runbook gap — close the loop.** The discipline that makes the support period valuable: every support request is a defect in the handoff package. After resolution, the on-call (or the Tech Lead) updates the relevant doc/runbook/KB page **the same day** — Claude Code can do the rewrite from the issue thread + the actual fix commit in ~10 minutes. Track "support-period issues that updated docs" as a metric — should be 80%+ in a healthy handoff.
-
-**8.6 — Weekly checkpoint during the support period.** 30-minute sync between delivery Tech Lead and recipient Tech Lead. Agenda: open support tickets, recurring confusion points, doc gaps closed this week, AI-loop friction (where is Claude not helping yet). Ten minutes of conversation here saves hours of unnecessary escalation.
-
-**8.7 — 30-day support-period closure.** Hold a formal closure meeting:
+**8.6 — 30-day support-period closure.** Hold a formal closure meeting:
 
 - Review every issue raised: resolved? doc updated?
 - Confirm delivery-team admin access has been removed where the schedule says it should be
@@ -624,7 +620,7 @@ The recipient imports the CSV into Linear with the `inherited-bug` label. Each i
 
 After this meeting the delivery team transitions to **on-demand availability only** — paid engagement, defined scope, no implicit obligation.
 
-**8.8 — 90-day debrief (final).** A second meeting at Day 90 — the recipient has now run the system without backup for 60 days. Review:
+**8.7 — 90-day debrief (final).** A second meeting at Day 90 — the recipient has now run the system without backup for 60 days. Review:
 
 - What broke that the handoff didn't anticipate?
 - Has the doc decayed already? Run the Step 7.5 quarterly check.
@@ -650,8 +646,8 @@ This is the final phase — there is no next phase. "Handoff" here means the com
 | (Optional) NotebookLM Enterprise notebook | Hosted | Shared with recipient with read access |
 | Credential inventory | Markdown (no secrets) | `/handoff/credential-inventory.md` |
 | Credential vault access | 1Password Business shared vault | Transferred to recipient, delivery access revoked |
-| Pulumi Cloud workspace | Cloud-hosted | Org-transferred to recipient |
-| Pulumi ESC environments | YAML in Pulumi Cloud | Ownership granted to recipient team |
+| Remote state backend | S3 + DynamoDB / Azure Blob / GCS in the recipient's cloud account | Ownership transferred, or state migrated via `terraform init -migrate-state` and verified by a clean plan |
+| Secret-manager secrets + CI OIDC trust policy | Cloud secret manager / Vault / Doppler / 1Password + IAM | Ownership granted to recipient team; trust policy re-pointed; every static secret rotated post-handoff |
 | IaC repository | Git | Repo ownership transferred to recipient |
 | `.github/workflows/` + `.github/agentic-workflows/` | YAML + Markdown | Transferred with the repo |
 | `.github/workflows/claude.yml` (PR review) + `release-notes-polish.yml` | YAML | Transferred with the repo |
@@ -660,10 +656,9 @@ This is the final phase — there is no next phase. "Handoff" here means the com
 | MCP server roster transferred | Per-developer OAuth grants | Re-established on recipient side via `claude mcp add` |
 | Observability dashboards | Datadog / Grafana JSON + dashboards | `/observability/dashboards/` + transferred workspace access |
 | SLO + alert definitions | YAML / Datadog config | `/observability/slos/` |
-| Runbooks per alert | Markdown | `/docs/runbooks/` |
+| Runbooks per alert | Markdown | `/docs/runbooks/alerts/` |
 | Knowledge base | Atlassian Confluence / Notion | Seeded with FAQ + Glossary + Troubleshooting + Onboarding |
 | Linear workspace access | Per-developer OAuth | Recipient-side `claude mcp add` |
-| Sentry project access | Per-developer OAuth | Recipient-side `claude mcp add` |
 | Post-handoff support agreement | Contract / MSA | Signed document |
 
 **Handoff Complete Checklist:**
@@ -674,16 +669,17 @@ This is the final phase — there is no next phase. "Handoff" here means the com
 - [ ] Handoff document reviewed by recipient, all feedback integrated
 - [ ] KT sessions completed, recorded, and structured-summarised
 - [ ] All credentials transferred via 1Password Business (NEVER email / Slack)
-- [ ] Pulumi Cloud workspace transferred; ESC environments re-homed; recipient runs `pulumi preview` successfully on their machine
+- [ ] State backend transferred (or state migrated with `terraform init -migrate-state`); recipient runs `terraform plan` on their own machine and it reports **no changes**
+- [ ] Pre-migration `terraform state pull` backup taken, stored in the 1Password handoff vault, and scheduled for deletion at support-period end
+- [ ] CI OIDC trust policy re-pointed to the recipient's GitHub identity; their first pipeline run applies successfully
 - [ ] IaC repository transferred; recipient provisions a fresh dev environment from scratch in < 30 minutes (live demo)
 - [ ] `.github/workflows/` + `.github/agentic-workflows/` carried over; `@claude` mention works on a recipient PR
 - [ ] All `.claude/agents/` subagents listed by `/agents` on the recipient's machine; smoke test passes
 - [ ] `AGENTS.md` (with Phase 7 section) committed at repo root
-- [ ] Recipient's Claude Code shows the full inherited MCP roster as `connected`: `pulumi`, `github`, `sentry`, `grafana`/`datadog`, `linear`, `mintlify-docs`/`gitbook-docs`, `atlassian`/`notion`
+- [ ] Recipient's Claude Code shows the full inherited MCP roster as `connected`: `github`, `grafana`/`datadog`, `linear`, `mintlify-docs`/`gitbook-docs`, `atlassian`/`notion`
 - [ ] Knowledge base seeded with named owners; quarterly review cadence agreed
-- [ ] Sentry inherited-error triage CSV imported into Linear with `inherited-bug` label
 - [ ] On-call rotation transferred (incident.io / PagerDuty AIOps); recipient is primary, delivery is backup for the support period
-- [ ] Pulumi Cloud audit log enabled on recipient side; GitHub audit log enabled; KB audit log enabled
+- [ ] Cloud-native audit enabled on the recipient's state backend (CloudTrail data events / Storage logging / GCS audit logs); GitHub audit log enabled; KB audit log enabled
 - [ ] Post-handoff support period defined in writing with SLAs and escalation
 - [ ] Recipient confirms operational independence
 
@@ -699,17 +695,16 @@ This is the final phase — there is no next phase. "Handoff" here means the com
 | Risk | Mitigation |
 |------|------------|
 | **AI-polished release notes ship with confidently-wrong feature emphasis** — Claude promotes a minor feature as the star, or under-emphasises a breaking change | Step 1.4 mandates Release Manager review of every polished draft. Breaking changes in the prompt are pinned to "render at the top with migration guidance"; the human verifies. |
-| **Hallucinated facts in the handoff document** — wrong ADR number, wrong component name, wrong runbook path | Step 3.3 has Claude pull live signals from Linear/Sentry MCP at synthesis time, not from memory. Step 3.4 mandates fact-check across artefacts. The `handoff-agent` subagent's system prompt requires inline source citation — uncited claims are removed. |
+| **Hallucinated facts in the handoff document** — wrong ADR number, wrong component name, wrong runbook path | Step 3.3 has Claude pull live signals from Linear MCP at synthesis time, not from memory. Step 3.4 mandates fact-check across artefacts. The `handoff-agent` subagent's system prompt requires inline source citation — uncited claims are removed. |
 | **Customer-facing docs leak internal information** — internal post-mortem language, performance feedback, raw incident channel quotes | `AGENTS.md` Phase 7 section explicitly lists forbidden content. The `handoff-agent` subagent must escalate when an artefact would breach the customer/internal split. Mintlify supports `/authed/mcp` for an internal-only docs surface — keep internal handoff docs there, not on the public site. |
 | **Credential leak via plaintext in `mcp.json` / settings / Claude Code transcript** | Step 5.1 + 0.5: `op run -- claude` brokers vault access; Claude receives item names not values. Step 5 anti-pattern list: never email/Slack/SMS. |
-| **MCP OAuth grants forgotten at off-boarding** — delivery developer leaves the engagement, retains access to the recipient's docs site / Pulumi / Sentry | Off-board checklist includes revoking OAuth grants in every MCP-issuing platform: Pulumi, GitHub, Sentry, Atlassian/Notion, Mintlify/GitBook, Linear, 1Password. Audit log on every platform makes orphan grants visible. |
+| **MCP OAuth grants forgotten at off-boarding** — delivery developer leaves the engagement, retains access to the recipient's docs site / cloud / Linear | Off-board checklist includes revoking OAuth grants in every MCP-issuing platform — GitHub, Atlassian/Notion, Mintlify/GitBook, Linear, 1Password — plus the state-backend and secret-manager IAM policies. Audit log on every platform makes orphan grants visible. |
 | **MCP roster doesn't transfer** — recipient inherits the IaC repo but their Claude Code has no MCP servers wired, so they fall back to manual ops | Step 6.3 explicitly walks the recipient through the full `claude mcp add` sequence on their own machine during the live handoff session. Verification checklist at handoff-complete includes `claude mcp list` showing every server connected on a recipient developer's box. |
 | **Subagents stop working after repo transfer** — `.claude/agents/` files reference paths or tool scopes that the recipient's environment does not have | Step 6.5 smoke-tests at least one subagent on the recipient's machine before signoff. Subagent system prompts use placeholders for repo-specific values (`{{TEST_RUNNER}}` etc.) so the recipient can refill without rewriting the boundary rules. |
 | **KT recording becomes the only source of truth** — "watch the Loom" replaces a written runbook | Step 4.5 rolls every recording's structured summary into the handoff doc and a runbook update. Step 7.2 derives FAQ + Troubleshooting from KT transcripts so the searchable form lives in the KB, not just in the video. |
 | **KB decays within 90 days** — pages have no owner, no cross-links, and no review cadence | Step 7.4 mandates named owners per content area (not team aliases). Step 7.5 requires the quarterly Claude Code completeness check. Pages with no cross-links are candidates for deletion. |
-| **Inherited error backlog overwhelms the recipient in support week 1** | Step 8.3 has Seer + Sentry MCP triage the backlog into fix-me-first / watch / WONTFIX before the recipient touches it. The CSV import into Linear with `inherited-bug` label means the support-period queue is bounded and prioritised, not a flat list of 200 issues. |
-| **Support-period issues don't close the doc-loop** — recipient resolves an issue but never updates the runbook/FAQ | Step 8.5 metric: "support-period issues that updated docs" tracked at weekly checkpoint. Falling below 80% triggers the Tech Lead to redo the doc Claude Code prompt for the affected area. |
-| **Recipient never adopts the agentic loop** — they treat MCP servers as optional, fall back to manual ops, and the AI productivity gains evaporate post-handoff | Step 6.4 reproducibility demo includes an `@claude` PR review and a Pulumi MCP query on the recipient's machine. Step 8.2 schedules paired Claude Code sessions weekly for the first month — the recipient sees the loop in real-time on their codebase. |
+| **Support-period issues don't close the doc-loop** — recipient resolves an issue but never updates the runbook/FAQ | Step 8.4 metric: "support-period issues that updated docs" tracked at weekly checkpoint. Falling below 80% triggers the Tech Lead to redo the doc Claude Code prompt for the affected area. |
+| **Recipient never adopts the agentic loop** — they treat MCP servers as optional, fall back to manual ops, and the AI productivity gains evaporate post-handoff | Step 6.4 reproducibility demo includes an `@claude` PR review, a `terraform plan` run, and an observability-MCP query on the recipient's machine. Step 8.2 schedules paired Claude Code sessions weekly for the first month — the recipient sees the loop in real-time on their codebase. |
 | **Glean / NotebookLM Enterprise introduced for handoff that the recipient won't keep** — extra SaaS the recipient never adopts | Step 7.6 + Step 4.7 explicitly say: don't introduce them at handoff. They are recipient-side org commitments, not per-engagement tools. |
 
 ---
@@ -718,11 +713,13 @@ This is the final phase — there is no next phase. "Handoff" here means the com
 
 ```
 Day 1 (Mon):
-  1. Pulumi Cloud workspace transfer + ESC re-home (~15 min downtime window)
+  1. State backend transfer / terraform init -migrate-state + secret-manager re-home + OIDC trust re-point
+     (~15 min freeze window — no applies, no merges to main, drift workflow disabled)
   2. GitHub repo ownership transfer (instant)
   3. Recipient runs claude mcp add for full Phase 6+7 roster on their machine
   4. claude mcp list smoke test on recipient side — every server connected
-  5. Live reproducibility demo: pulumi up against fresh dev stack (60 min)
+  5. Live reproducibility demo: terraform apply against a fresh dev environment
+     + the state-recovery drill (60 min)
 
 Day 2 (Tue):
   6. KT session 1 — Architecture deep-dive (Fathom recording)
@@ -745,13 +742,12 @@ Day 5 (Fri):
 
 Days 6-30 (Support period):
  17. Recipient on-call primary; delivery on-call backup within SLA
- 18. Inherited error backlog triaged via Seer + Sentry MCP; CSV imported to Linear
- 19. Every issue → doc/runbook/KB update by EOD
- 20. Weekly 30-min checkpoint Tech Lead ↔ Tech Lead
- 21. Day-30: closure meeting + retrospective filed
+ 18. Every issue → doc/runbook/KB update by EOD
+ 19. Weekly 30-min checkpoint Tech Lead ↔ Tech Lead
+ 20. Day-30: closure meeting + retrospective filed
 
 Day 90:
- 22. 90-day debrief; doc decay check; lessons to AI-DLC framework owner
+ 21. 90-day debrief; doc decay check; lessons to AI-DLC framework owner
 ```
 
 ---
@@ -765,7 +761,7 @@ Day 90:
 - [Release Notes Template →](../templates/release-notes-template.md)
 - [ADR Template →](../templates/adr-template.md)
 - [Phase 3 Linear MCP setup (carries over) →](../03-development/PROCESS.md#step-0-one-time-setup--connect-claude-code-to-linear-via-mcp)
-- [Phase 6 Pulumi / GitHub / observability MCP setup (carries over) →](../06-cicd-devops/PROCESS.md#step-0-one-time-setup--wire-ai-tools-into-the-devops-loop)
+- [Phase 6 GitHub / observability MCP setup (carries over) →](../06-cicd-devops/PROCESS.md#step-0-one-time-setup--wire-ai-tools-into-the-devops-loop)
 - [Delivery & Handoff Tools Evaluation →](../../docs/tools-evaluation/7.Delivery_Handoff_Phase_Tools.md)
 
 ## External References
@@ -782,8 +778,8 @@ Day 90:
 - [Loom AI](https://loom.com/) — screen-recording with auto-chapters + auto-CTAs + summaries
 - [NotebookLM Enterprise](https://cloud.google.com/resources/notebooklm-enterprise) — multi-source ingestion, 300 sources × 500K words; April 2026 auto-source-labelling update
 - [1Password Business + CLI](https://developer.1password.com/) — `op run` pattern, vault references, Unified Access (March 2026 GA)
-- [Pulumi ESC environment ownership transfer](https://www.pulumi.com/docs/esc/) — `pulumi env grant` for re-homing CI secrets at handoff
-- [Sentry Seer + MCP server](https://docs.sentry.io/product/sentry-mcp/) — `mcp.sentry.dev/mcp`; inherited error backlog triage
+- [`terraform init -migrate-state`](https://developer.hashicorp.com/terraform/cli/commands/init#backend-initialization) — moving state between backends at handoff
+- [`terraform state pull`](https://developer.hashicorp.com/terraform/cli/commands/state/pull) — pre-migration state backup (contains secrets — treat as a credential)
 - [incident.io Scribe](https://incident.io/) — real-time incident-call transcription + post-mortem extraction
 - [PagerDuty AIOps](https://www.pagerduty.com/platform/aiops/) — alert grouping and noise reduction for inherited on-call
 - [Glean](https://www.glean.com/) — permissions-aware enterprise AI search overlay

@@ -11,8 +11,7 @@ This flowchart visualises the [Phase 7 PROCESS](./PROCESS.md). The phase flow is
 | API | Application Programming Interface |
 | CCA | Claude Code Action (Anthropic's GitHub App) |
 | CI | Continuous Integration |
-| CSV | Comma-Separated Values |
-| ESC | Pulumi Environments, Secrets and Configuration |
+| OIDC | OpenID Connect |
 | FAQ | Frequently Asked Questions |
 | IaC | Infrastructure as Code |
 | IAM | Identity and Access Management |
@@ -24,9 +23,7 @@ This flowchart visualises the [Phase 7 PROCESS](./PROCESS.md). The phase flow is
 | OSS | Open Source Software |
 | PR | Pull Request |
 | RC | Release Candidate |
-| RCA | Root Cause Analysis |
 | SaaS | Software as a Service |
-| Seer | Sentry's AI debugging / RCA agent |
 | SLA | Service Level Agreement |
 
 ---
@@ -238,9 +235,9 @@ flowchart TD
         CREDS[Inventory Credentials<br/>🤖 op run -- claude over 1Password CLI] --> ROLE_PREF{Role transfer<br/>possible?}
         ROLE_PREF -- Yes --> ROLE_GRANT[Grant Recipient Role<br/>👤 IAM / SaaS admin]
         ROLE_PREF -- No --> VAULT[Share via 1Password Business<br/>🤖 shared vault + audit log]
-        ROLE_GRANT --> ESC_HANDOFF[Pulumi ESC Ownership Transfer<br/>👤 pulumi env grant + re-home]
-        VAULT --> ESC_HANDOFF
-        ESC_HANDOFF --> VERIFY[Recipient Verifies Access<br/>👤 service-by-service]
+        ROLE_GRANT --> SECRETS_HANDOFF[Secret-Manager Ownership Transfer<br/>👤 IAM / vault grant + OIDC trust re-point]
+        VAULT --> SECRETS_HANDOFF
+        SECRETS_HANDOFF --> VERIFY[Recipient Verifies Access<br/>👤 service-by-service]
         VERIFY --> ROTATE[Rotate Shared Credentials<br/>👤 recipient action]
     end
 
@@ -260,10 +257,10 @@ flowchart TD
     ENTRY([From Step 5]) --> INFRA
 
     subgraph INFRA_STEP["Step 6: Infrastructure + AI Loop Handoff"]
-        INFRA[Transfer IaC Repository<br/>👤 Git ownership] --> STATE_MIG[Migrate Pulumi/Terraform State<br/>👤 coordinated]
-        STATE_MIG --> MCP_ROSTER[Recipient Wires MCP Roster<br/>👤 Pulumi + GitHub + Sentry + Datadog/Grafana + docs/KB]
+        INFRA[Transfer IaC Repository<br/>👤 Git ownership] --> STATE_MIG[Transfer State Backend<br/>👤 bucket ownership or -migrate-state]
+        STATE_MIG --> MCP_ROSTER[Recipient Wires MCP Roster<br/>👤 GitHub + Datadog/Grafana + Linear + docs/KB]
         MCP_ROSTER --> SUBAGENT_TEST[Smoke-test Subagents on Recipient Box<br/>🤖 handoff-agent + linear-task-agent]
-        SUBAGENT_TEST --> REPRO_DEMO[Reproducibility Demo<br/>👤 pulumi up against fresh stack]
+        SUBAGENT_TEST --> REPRO_DEMO[Reproducibility Demo<br/>👤 terraform apply + state-recovery drill]
         REPRO_DEMO --> AT_CLAUDE[Live @claude PR Review<br/>🤖 Claude Code Action on recipient repo]
         AT_CLAUDE --> CLOUD_HANDOFF[Hand Off Cloud Accounts<br/>👤 + Step 5 creds]
     end
@@ -289,7 +286,7 @@ flowchart TD
         KB[Use Existing KB Platform<br/>👤 Atlassian Rovo MCP / Notion MCP] --> SEED[Seed Initial Content<br/>🤖 Claude: FAQ/glossary/troubleshooting]
         SEED --> CROSS_LINK[Cross-link Articles<br/>👤 to code/runbooks/ADRs]
         CROSS_LINK --> OWNERS[Assign Named Owners<br/>👤 recipient team]
-        OWNERS --> CADENCE[Schedule Quarterly KB Completeness Check<br/>🤖 Claude prompt vs Sentry/Linear signal]
+        OWNERS --> CADENCE[Schedule Quarterly KB Completeness Check<br/>🤖 Claude prompt vs recurring Linear bugs]
     end
 
     CADENCE --> GATE4{Gate 4:<br/>Handoff<br/>Execution}
@@ -311,8 +308,7 @@ flowchart TD
     ENTRY([From Gate 4]) --> SUPPORT
 
     subgraph SUPPORT_STEP["Step 8: Post-Handoff Support Period"]
-        SUPPORT[30-Day Support Begins<br/>👤 agreed terms] --> SEER_TRIAGE[Inherited Error Triage<br/>🤖 Sentry Seer + MCP → Linear CSV]
-        SEER_TRIAGE --> ESCALATION[Clear Escalation Path<br/>👤 recipient → delivery team]
+        SUPPORT[30-Day Support Begins<br/>👤 agreed terms] --> ESCALATION[Clear Escalation Path<br/>👤 recipient → delivery team]
         ESCALATION --> PAIRED[Weekly Paired Claude Code Session<br/>👤 recipient + delivery on real tasks]
         PAIRED --> ISSUES{Issues arise?}
         ISSUES -- Yes --> HELP[Delivery Team Assists<br/>👤 within SLA]
@@ -373,28 +369,28 @@ Mintlify (customer-facing) or Docusaurus (OSS) over the Docs MCP; Claude generat
 Claude generates KT scripts; sessions are Fathom-recorded; Claude auto-summarises transcripts and appends to the handoff doc + KB; live Q&A clarifications captured. See [PROCESS.md → Step 4](./PROCESS.md#step-4-knowledge-transfer-kt-sessions).
 
 ### Step 5: Credential & Access Handoff
-1Password CLI (`op run -- claude`) inventories credentials without exposing plaintext; role-based transfer preferred over vault sharing; Pulumi ESC ownership re-homed; recipient verifies service-by-service and rotates shared creds. See [PROCESS.md → Step 5](./PROCESS.md#step-5-credential--access-handoff).
+1Password CLI (`op run -- claude`) inventories credentials without exposing plaintext; role-based transfer preferred over vault sharing; secret-manager ownership re-homed and the CI OIDC trust policy re-pointed; recipient verifies service-by-service and rotates shared creds. See [PROCESS.md → Step 5](./PROCESS.md#step-5-credential--access-handoff).
 
 ### Step 6: Infrastructure Handoff
-IaC repo + state migration; recipient wires their MCP roster and smoke-tests the inherited subagents; live `pulumi up` reproducibility demo; first `@claude` PR review on the recipient repo. See [PROCESS.md → Step 6](./PROCESS.md#step-6-infrastructure-handoff).
+IaC repo + state-backend transfer; recipient wires their MCP roster and smoke-tests the inherited subagents and skills; live `terraform apply` reproducibility demo plus the state-recovery drill; first `@claude` PR review on the recipient repo. See [PROCESS.md → Step 6](./PROCESS.md#step-6-infrastructure-handoff).
 
 ### Step 7: Knowledge Base Population
-Atlassian Rovo MCP or Notion MCP; Claude seeds FAQ/glossary/troubleshooting from the codebase + handoff doc; recipient assigns named owners; quarterly Claude-driven completeness check vs Sentry top issues + Linear closed bugs. See [PROCESS.md → Step 7](./PROCESS.md#step-7-knowledge-base-population).
+Atlassian Rovo MCP or Notion MCP; Claude seeds FAQ/glossary/troubleshooting from the codebase + handoff doc; recipient assigns named owners; quarterly Claude-driven completeness check vs recurring Linear bugs. See [PROCESS.md → Step 7](./PROCESS.md#step-7-knowledge-base-population).
 
 ### Step 8: Post-Handoff Support Period
-30-day support begins; Sentry Seer + MCP triages the inherited error backlog into a Linear CSV; weekly paired Claude Code session; every issue closes a doc/runbook/KB gap. See [PROCESS.md → Step 8](./PROCESS.md#step-8-post-handoff-support-period).
+30-day support begins; production defects arrive through Linear (on-call, customer reports, weekly checkpoint) and run the inherited Phase 3 agentic loop; weekly paired Claude Code session; every issue closes a doc/runbook/KB gap. See [PROCESS.md → Step 8](./PROCESS.md#step-8-post-handoff-support-period).
 
 ### Final: 90-Day Debrief
-Day-90 retrospective meeting between delivery + recipient; Claude generates the retro from support-period artefacts; lessons learned feed back into the AI-DLC framework owner. Documented inside [PROCESS.md → Step 8.8](./PROCESS.md#step-8-post-handoff-support-period).
+Day-90 retrospective meeting between delivery + recipient; Claude generates the retro from support-period artefacts; lessons learned feed back into the AI-DLC framework owner. Documented inside [PROCESS.md → Step 8.7](./PROCESS.md#step-8-post-handoff-support-period).
 
 ---
 
 ## Key Decision Points
 
-1. **Gate S — Setup verification (`claude mcp list`).** Step 0 is one-time per engagement. Until every required server is connected (docs, KB, GitHub, Sentry, Pulumi, Linear, 1Password, Anthropic Claude Code Action installed) and smoke tests pass, Phase 7 cannot start. Skipping Step 0 means paying the AI tax by hand on every release, every doc page, every credential transfer for the rest of the phase.
+1. **Gate S — Setup verification (`claude mcp list`).** Step 0 is one-time per engagement. Until every required server is connected (docs, KB, GitHub, Linear, 1Password, Anthropic Claude Code Action installed) and smoke tests pass, Phase 7 cannot start. Skipping Step 0 means paying the AI tax by hand on every release, every doc page, every credential transfer for the rest of the phase.
 2. **Role transfer possible?** Always prefer IAM role transfer or SaaS admin-grant over credential sharing. Only share raw credentials when role-based access isn't available. Any shared credential must be rotated by the recipient after handoff. The 1Password CLI (`op run -- claude`) brokers vault access without exposing plaintext to Claude Code transcripts.
-3. **Gaps found in completeness check?** Claude's Doc Completeness Check cross-references the codebase against the expected documentation list; the Quarterly KB Completeness Check diffs the live KB against Sentry top issues + Linear closed bugs. Gaps loop back to content generation before publishing.
-4. **Issues in support period?** Delivery team assists within SLA during the support period. Every issue reveals a documentation or runbook gap — update accordingly so the next recipient doesn't hit the same issue. The Inherited Error Triage prompt bounds the support-period queue at the start so the recipient isn't drowned in 200 unprioritised Sentry issues.
+3. **Gaps found in completeness check?** Claude's Doc Completeness Check cross-references the codebase against the expected documentation list; the Quarterly KB Completeness Check diffs the live KB against recurring Linear bugs (three or more issues sharing a root cause) and production incidents. Gaps loop back to content generation before publishing.
+4. **Issues in support period?** Delivery team assists within SLA during the support period. Every issue reveals a documentation or runbook gap — update accordingly so the next recipient doesn't hit the same issue. Support-period defects enter through Linear — filed by the recipient's on-call, raised by customers, or surfaced at the weekly checkpoint — and run the same Phase 3 agentic loop the delivery team used.
 
 ---
 
@@ -422,13 +418,13 @@ Week -1 before handoff:
   Dry-run the infrastructure reproducibility demo
 
 Handoff Week:
-  Day 1: Pulumi Cloud workspace transfer + ESC re-home; recipient wires MCP roster on their machine; live reproducibility demo
+  Day 1: State backend transfer / -migrate-state + secret-manager re-home + OIDC trust re-point; recipient wires MCP roster on their machine; live reproducibility demo
   Day 2-4: Deliver KT sessions (Fathom-recorded; KT Session Summary auto-appended to handoff doc)
   Day 4: Credential transfer via 1Password Business shared vault; recipient verifies service-by-service
   Day 5: KB seeding via Atlassian/Notion MCP; agenda-less Q&A; support period scheduled
 
 Day 1-30 (Support Period):
-  Inherited Error Triage: Seer + Sentry MCP → Linear CSV import (bounds the queue)
+  Support-period defects land in Linear (on-call, customer reports, weekly checkpoint)
   Weekly paired Claude Code session (recipient + delivery) on real tasks
   Every issue → docs/runbook/KB update by EOD via Claude Code
   Day-30: closure meeting + retrospective filed

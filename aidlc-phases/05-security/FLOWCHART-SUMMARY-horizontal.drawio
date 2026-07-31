@@ -22,19 +22,19 @@
         <mxCell id="START" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="&lt;b&gt;Phase 5 Entry&lt;/b&gt;&lt;br&gt;&lt;br&gt;Continuous from project start" vertex="1">
           <mxGeometry height="120" width="200" x="80" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="S0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire the security tool chain across IDE, CI, and policy.&lt;br&gt;&lt;br&gt;· /security-review · Semgrep · Trivy · ggshield" vertex="1">
+        <mxCell id="S0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire the security tool chain across IDE and CI.&lt;br&gt;&lt;br&gt;· /security-review · CodeQL · Dependabot · ggshield" vertex="1">
           <mxGeometry height="150" width="200" x="310" y="125" as="geometry" />
         </mxCell>
         <mxCell id="S1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 1: Threat Modelling&lt;/b&gt;&lt;br&gt;&lt;br&gt;STRIDE + OWASP LLM/Agentic if AI is in product.&lt;br&gt;P0 mitigations → Linear.&lt;br&gt;&lt;br&gt;· Claude Code · Linear MCP" vertex="1">
           <mxGeometry height="150" width="200" x="540" y="125" as="geometry" />
         </mxCell>
-        <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: SAST&lt;/b&gt;&lt;br&gt;&lt;br&gt;SonarQube + Semgrep + /security-review on every PR.&lt;br&gt;Copilot Autofix for low-risk patches.&lt;br&gt;&lt;br&gt;· SonarQube · Semgrep" vertex="1">
+        <mxCell id="S2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 2: SAST&lt;/b&gt;&lt;br&gt;&lt;br&gt;CodeQL + /security-review on every PR.&lt;br&gt;Copilot Autofix for low-risk patches.&lt;br&gt;&lt;br&gt;· CodeQL · custom queries" vertex="1">
           <mxGeometry height="150" width="200" x="770" y="125" as="geometry" />
         </mxCell>
-        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: SCA&lt;/b&gt;&lt;br&gt;&lt;br&gt;Dependabot + Trivy + reachability triage.&lt;br&gt;0 Critical CVEs in prod deps.&lt;br&gt;&lt;br&gt;· Dependabot · Trivy · Endor Labs" vertex="1">
+        <mxCell id="S3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 3: Dependency Review&lt;/b&gt;&lt;br&gt;&lt;br&gt;Dependabot alerts and fix PRs.&lt;br&gt;0 Critical CVEs in prod deps.&lt;br&gt;&lt;br&gt;· Dependabot · package-manager audit" vertex="1">
           <mxGeometry height="150" width="200" x="1000" y="125" as="geometry" />
         </mxCell>
-        <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Container &amp;amp; IaC&lt;/b&gt;&lt;br&gt;&lt;br&gt;Trivy + Checkov + OPA Gatekeeper.&lt;br&gt;7-day dryrun before deny.&lt;br&gt;&lt;br&gt;· Trivy · Checkov · OPA" vertex="1">
+        <mxCell id="S4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 4: Container &amp;amp; IaC Review&lt;/b&gt;&lt;br&gt;&lt;br&gt;Human review — no automated scanner.&lt;br&gt;Digest-pinned images; required-controls checklist.&lt;br&gt;&lt;br&gt;· AGENTS.md · reviewer" vertex="1">
           <mxGeometry height="150" width="200" x="1000" y="420" as="geometry" />
         </mxCell>
         <mxCell id="S5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 5: Secrets - Layered&lt;/b&gt;&lt;br&gt;&lt;br&gt;ggshield pre-commit + GitGuardian + AI hook.&lt;br&gt;Rotate first, scrub second.&lt;br&gt;&lt;br&gt;· ggshield · GitGuardian" vertex="1">
@@ -43,7 +43,7 @@
         <mxCell id="S6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 6: AI / Agent Security&lt;/b&gt;&lt;br&gt;&lt;i&gt;(skip if no AI in product)&lt;/i&gt;&lt;br&gt;&lt;br&gt;OWASP LLM + Agentic + MCP allow-list. Anthropic model-layer defences.&lt;br&gt;&lt;br&gt;· Claude Code · MCP policy" vertex="1">
           <mxGeometry height="150" width="200" x="540" y="420" as="geometry" />
         </mxCell>
-        <mxCell id="S7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 7: Compliance&lt;/b&gt;&lt;br&gt;&lt;i&gt;(skip if no formal scope)&lt;/i&gt;&lt;br&gt;&lt;br&gt;Claude checklists + evidence dossier.&lt;br&gt;Vanta / Drata for certifications.&lt;br&gt;&lt;br&gt;· Claude Code · Vanta / Drata" vertex="1">
+        <mxCell id="S7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" value="&lt;b&gt;Step 7: Compliance&lt;/b&gt;&lt;br&gt;&lt;i&gt;(skip if no formal scope)&lt;/i&gt;&lt;br&gt;&lt;br&gt;Claude checklists + evidence dossier.&lt;br&gt;Manual attestation where not automated.&lt;br&gt;&lt;br&gt;· Claude Code · CodeQL SARIF" vertex="1">
           <mxGeometry height="150" width="200" x="310" y="420" as="geometry" />
         </mxCell>
         <mxCell id="END" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1B3A5C;fontColor=#FFFFFF;strokeColor=#0E1F33;fontSize=12;arcSize=40;" value="&lt;b&gt;← Phase 6 / 7: Delivery&lt;/b&gt;&lt;br&gt;&lt;br&gt;Security posture verified.&lt;br&gt;Audit-ready if in scope." vertex="1">

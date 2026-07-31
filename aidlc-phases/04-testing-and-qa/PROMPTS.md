@@ -1,6 +1,6 @@
 # Phase 4: Testing & QA — Prompt Templates
 
-> **All prompts are for Claude or Claude Code.** Playwright, k6, Appium, and testing frameworks run natively — no prompting needed once the test code is generated. Prompts that read or write Linear / Sentry assume the Linear MCP and Sentry MCP servers are connected (see PROCESS.md Step 0).
+> **All prompts are for Claude or Claude Code.** Playwright, k6, Appium, and testing frameworks run natively — no prompting needed once the test code is generated. Prompts that read or write Linear assume the Linear MCP server is connected (see PROCESS.md Step 0).
 
 ---
 
@@ -362,24 +362,24 @@ Refuse to generate the script if NFR targets are missing — a load test without
 ## Debugging (Bug Investigation)
 
 ```
-You are a production-bug debugger. The bug already shipped, users are affected, and you have Sentry data. Form hypotheses from evidence, rank by blast radius and likelihood, verify the most likely one before patching. The fix is the last step, not the first.
+You are a production-bug debugger. The bug already shipped, users are affected, and your evidence is whatever the reporter captured on the tracker issue. Form hypotheses from evidence, rank by blast radius and likelihood, verify the most likely one before patching. The fix is the last step, not the first.
 
 Help me debug this production issue.
 
 ## Bug Report
-[Paste the bug report / Sentry issue]
+[Paste the Linear bug issue body]
 
 ## Expected vs. Actual Behaviour
 - **Expected:** [what should happen]
 - **Actual:** [what is happening]
 
-## Production Context (from Sentry)
-- **Stack trace:** [paste full stack from Sentry event]
-- **Affected users:** [count + segmentation, e.g., "234 users, all on iOS 17.2"]
-- **First seen:** [timestamp + release version]
-- **Frequency:** [events/hour]
+## Production evidence (from the tracker issue)
+- **Stack trace:** [paste the full stack trace attached to the issue, if there is one]
+- **Logs / request traces:** [paste any application log excerpt, request trace, or HAR attached to the issue]
+- **First seen:** [timestamp + release version, if known]
 - **Environment:** [prod / staging]
-- **Breadcrumbs:** [relevant Sentry breadcrumbs leading to the error]
+- **How widespread (optional):** [report count, or "one report"]
+- **Affected-user segmentation (optional):** [any pattern the reporter could establish — e.g., "3 reports, all on iOS 17.2". Usually unavailable; do not block on it.]
 
 ## Reproduction Steps
 1. [Step 1]
@@ -393,64 +393,33 @@ Help me debug this production issue.
 [List debugging attempts and results]
 
 Approach, in order:
-1. **Analyse the error and rank 2-3 likely root causes** by evidence weight (which Sentry breadcrumbs / affected-user segmentation / release-version correlation supports each).
+1. **Analyse the error and rank 2-3 likely root causes** by evidence weight (which stack frame, log excerpt, reproduction step, or release-version correlation supports each).
 2. **Examine the relevant code paths** to confirm or eliminate each hypothesis.
 3. **Trace data flow** to find where actual diverges from expected.
 4. **Propose a fix** with reasoning that selected it over the alternatives. State the **blast radius** of the fix (which other call sites it touches).
-5. **Suggest a regression test** that would have caught this bug — and add it as part of the fix (this becomes the failing test in Step 8.3 → 8.5 of the bug fix loop).
+5. **Suggest a regression test** that would have caught this bug — and add it as part of the fix (this becomes the failing test in Step 8.2 → 8.4 of the bug fix loop).
 6. **Recommend related code** that may have the same issue (same pattern, same author, same release).
 
-If the stack trace, reproduction steps, or affected-user segmentation are missing, refuse to guess and ask. A production-bug debugging session without evidence produces plausible-looking fixes that paper over the real bug — and the bug recurs in the next release.
-```
-
----
-
-## sentry-context-pull
-
-> Step 8.2 — pull fresh Sentry context for a triaged bug before fixing.
-
-```
-You are starting a bug fix. Pull fresh Sentry context via the Sentry MCP server — Seer's RCA on the Linear issue may be hours old. Read-only at this stage.
-
-## Bug
-- **Linear identifier:** [e.g., ENG-512]
-- **Sentry issue ID or URL:** [from the Linear issue body or the `source:sentry` link]
-
-Call, in order, via Sentry MCP:
-1. `get_issue` for the Sentry issue ID — get the latest summary, status, assignee, release-introduced.
-2. `get_event` for the **latest** event on that issue — get the full stack trace, breadcrumbs, request context, user context, tags.
-3. `seer_status` to check whether Seer's RCA is current (re-running may take minutes; use the existing analysis if recent).
-
-Output, in order:
-- **Latest event timestamp** and how stale Seer's existing RCA is by comparison.
-- **Stack trace** (full, not truncated)
-- **Affected users** (count + segmentation by OS / release / locale where Sentry tags it)
-- **Release version that introduced it** (`firstRelease`) and the current release (`lastSeen`)
-- **Breadcrumbs** — the last ~10 breadcrumbs leading to the error, with timestamps relative to the error
-- **Suspected commit** (if Sentry's commit-suspects feature has flagged one)
-
-If `get_event` returns an event older than 24h, recommend re-running Seer (`seer_run`) before continuing — a stale RCA on an evolving production issue often points at the wrong line.
-
-Read-only. Do NOT call `update_issue`, `resolve`, or `assign` from this prompt — those happen in Step 8.7 after the fix lands.
+You need **either a stack trace or a deterministic reproduction** to proceed. If neither is present, refuse to guess and ask for one — a debugging session with no anchor produces plausible-looking fixes that paper over the real bug, and the bug recurs in the next release. Everything else is optional: affected-user segmentation, event frequency, and breadcrumb trails are rarely available for a human-reported bug, so treat their absence as normal and say what you would do differently if you had them.
 ```
 
 ---
 
 ## bug-reproduction
 
-> Step 8.3 — write a failing test that reproduces the bug locally before any fix is attempted.
+> Step 8.2 — write a failing test that reproduces the bug locally before any fix is attempted.
 
 ```
-You are reproducing a production bug locally as a failing test. The test you write here is the regression test that ships in the same diff as the fix (Step 8.5) — get it right.
+You are reproducing a production bug locally as a failing test. The test you write here is the regression test that ships in the same diff as the fix (Step 8.4) — get it right.
 
 ## Bug
 - **Linear identifier:** [e.g., ENG-512]
 - **One-line summary:** [what the bug does]
 
-## Sentry context (from sentry-context-pull)
+## Evidence from the Linear issue
 - **Stack trace:** [paste]
-- **Affected user segmentation:** [paste]
-- **Breadcrumbs:** [paste relevant breadcrumbs]
+- **Affected users (if known):** [paste]
+- **Logs / request traces:** [paste any log excerpt or request trace attached to the issue]
 - **Release version:** [the release that introduced it]
 
 ## Reproduction steps (from the Linear issue)
@@ -475,19 +444,19 @@ Refuse to write the test if the reproduction steps cannot deterministically trig
 ## Bug Triage & Severity Assignment
 
 ```
-You are a QA Lead validating an auto-filed Linear bug (filed by the Sentry Agent for Linear, with Seer RCA attached) or triaging a manually-filed bug. The Sentry Agent's auto-severity is a starting point — calibrate against business impact.
+You are a QA Lead triaging a bug filed in Linear by QA, by a test that failed on main, or by a user report. Nothing has pre-assigned a severity — the call is yours, and it is made on business impact.
 
 Triage this bug report and assign severity.
 
 ## Bug Report
-[Paste bug report — include the Sentry-Agent-filed Linear issue body if present]
+[Paste the Linear bug issue body, including reproduction steps and any attached stack trace or logs]
 
-## Production Context (if applicable)
-- **Affected users:** [count from Sentry — segmented if possible]
-- **Revenue impact:** [if measurable: $/hour, % of transactions, etc.]
-- **Frequency:** [events/hour]
-- **Workaround available:** [Yes / No / partial]
-- **Auto-severity from Sentry Agent:** [if filed automatically]
+## Impact Context (supplied by the reporter and the QA Lead)
+- **Who is affected:** [describe the user group as far as it is known — e.g., "everyone on the checkout flow", "one enterprise customer", "unknown, single report"]
+- **How widespread:** [one report / several reports / every attempt at this flow / unknown]
+- **Reproducibility:** [always / intermittent / observed once]
+- **Revenue impact:** [if measurable: $/hour, % of transactions, etc. — otherwise "unmeasured"]
+- **Workaround available:** [Yes / No / partial — and would a user find it unaided?]
 
 ## Project Context
 - **Current sprint priorities:** [brief]
@@ -495,12 +464,12 @@ Triage this bug report and assign severity.
 - **Compliance / data sensitivity:** [PII / financial / health — material on severity]
 
 Analyse and provide:
-1. **Severity:** S0 Critical / S1 High / S2 Medium / S3 Low — with rationale tied to the severity scale below. If revising the auto-severity, state why.
-2. **Impact Assessment:** users affected, revenue, data, security implications. Cite the Sentry numbers.
+1. **Severity:** S0 Critical / S1 High / S2 Medium / S3 Low — with rationale tied to the severity scale below.
+2. **Impact Assessment:** who is affected, revenue, data, security implications. Cite the reporter's evidence, and name what is unknown rather than estimating it.
 3. **Duplicate Check:** Linear's Triage Intelligence runs this automatically — but cross-check by searching for similar stack traces or symptoms in recent issues; flag potential duplicates the auto-check missed.
 4. **Suggested Assignee:** which team or person based on affected code path (use file ownership / recent commits as the signal).
 5. **Fix Urgency:** immediate / this cycle / next cycle / backlog (consistent with severity).
-6. **Initial Investigation Prompt:** first steps to diagnose — usually "run sentry-context-pull, then debugging".
+6. **Initial Investigation Prompt:** first steps to diagnose — usually "reproduce with bug-reproduction, then debugging".
 7. **Regression-test seam:** which test layer (unit / integration / E2E) should carry the regression test for this bug.
 
 Severity scale:
@@ -509,17 +478,17 @@ Severity scale:
 - **S2 (Medium):** Feature broken with workaround, or minor feature broken. Fix within 2 cycles.
 - **S3 (Low):** Cosmetic, nice-to-have. Backlog.
 
-Refuse to assign a severity that contradicts the business-impact evidence — a bug affecting one user but draining the database is not S3, and a bug affecting thousands of users with a one-click workaround is not S0. The auto-severity is a starting point, not the answer.
+Refuse to assign a severity that contradicts the business-impact evidence — a bug affecting one user but draining the database is not S3, and a bug affecting thousands of users with a one-click workaround is not S0. Where the blast radius is genuinely unknown, say so and assign on the worst plausible case, not the most convenient one: report count is a floor on impact, never a measure of it.
 
 ### Example output
 
-> **Severity:** S1 (was auto-S2 from Sentry Agent — revising up)
-> **Rationale:** 234 affected users, all checkout flow, no workaround (the Cancel button is what's broken). Auto-severity used affected-user count alone; checkout breakage is revenue-critical → S1.
-> **Impact:** ~$2.4k/hour at current cart-abandonment rate; PII exposure: none.
+> **Severity:** S1
+> **Rationale:** Every attempt at cart-cancel fails and reproduces on every run. No workaround — the Cancel button is what's broken. Checkout breakage is revenue-critical → S1.
+> **Impact:** Checkout flow, all users on the cancel path. Revenue exposure unmeasured; support has 6 reports in 4 hours, which is a floor on the real count. PII exposure: none.
 > **Duplicates:** None in last 30 days (Triage Intelligence confirmed; manual cross-check on stack-trace top frame returned 0).
 > **Assignee:** Checkout module — recent commits by @alice; route to her.
 > **Urgency:** This cycle. Release blocker for Friday's deploy.
-> **Investigation:** Run `sentry-context-pull` for the Sentry issue, then `debugging` with the breadcrumbs.
+> **Investigation:** Run `bug-reproduction` from the support reports, then `debugging` with the failing test.
 > **Regression-test seam:** Integration (POST /checkout/cancel) + E2E happy-path for cart-cancel.
 ```
 
@@ -536,7 +505,7 @@ Analyse test coverage gaps in this module.
 [Paste module code or file paths for Claude Code]
 
 ## Current Test Coverage Report
-[Paste coverage percentages from SonarQube / Istanbul / etc. — line + branch + function where available]
+[Paste coverage percentages from the CI coverage artefact (Istanbul / c8 / coverage.py / JaCoCo) — line + branch + function where available]
 
 ## Acceptance Criteria for This Module
 [Paste AC from related user stories from the cycle]
@@ -582,7 +551,7 @@ Refuse to flag gaps in code paths that are deliberately untested (config getters
 
 ## post-mortem
 
-> Step 8.8 — seed a brief post-mortem comment on the Linear issue for every closed S0/S1 bug.
+> Step 8.7 — seed a brief post-mortem comment on the Linear issue for every closed S0/S1 bug.
 
 ```
 You are drafting a brief post-mortem comment for an S0 or S1 bug that has just been fixed and merged. This goes on the Linear issue, not a separate doc — the bug issue is the post-mortem record. Terse and honest. The audience is the next person to touch this code.
@@ -594,10 +563,10 @@ You are drafting a brief post-mortem comment for an S0 or S1 bug that has just b
 
 ## Fix details
 - **PR identifier and merge SHA:** [e.g., PR #482, merged abc123]
-- **Release that introduced the bug:** [from Sentry `firstRelease`]
+- **Release that introduced the bug:** [from `git bisect` against the regression test, or the earliest report]
 - **Release that contains the fix:** [the deploy after merge]
-- **Time-to-fix:** [first-seen to merge]
-- **Affected users at peak:** [from Sentry]
+- **Time-to-fix:** [first report to merge]
+- **Affected users at peak:** [as far as it is known — report count, support ticket count, or "unknown"]
 
 ## Root cause
 [2-4 sentences. The actual cause, not the symptom. If it was a regression of a previous bug, link the original Linear issue.]
@@ -610,7 +579,7 @@ Produce a comment with these sections, in order, terse:
 1. **Root cause** — 2-4 sentences from above.
 2. **Why tests missed it** — 1-2 sentences from above.
 3. **Regression test added** — file path + test name (the test from `bug-reproduction` that ships in the same diff as the fix).
-4. **Monitoring / alerting added** — Sentry alert tuning, dashboard panel, log assertion. If none, say "none — fix is structural and the regression test guards it" (only if true).
+4. **Monitoring / alerting added** — dashboard panel, log assertion, or an alert on the metric that would have surfaced this before a user did. If none, say "none — fix is structural and the regression test guards it" (only if true).
 5. **Prevention** — one concrete action (lint rule, type narrowing, code review checklist item, ADR update). One owner. Filed as a Linear issue with label `tech-debt` and parent = this bug.
 6. **Time-to-fix** — line for the metric.
 
@@ -628,7 +597,7 @@ Do NOT blame individuals. The post-mortem is a system question, not a people que
 >
 > **Regression test added:** `tests/integration/auth.callback.spec.ts · "preserves state when redirect_uri has fragment"` (in PR #482).
 >
-> **Monitoring added:** Sentry alert tuned to fire on `OAuthCallbackError` at >5 events/hour (was 50). Dashboard panel for callback success rate.
+> **Monitoring added:** Dashboard panel for OAuth callback success rate, with an alert below 98% over a 15-minute window — this bug would have shown as a cliff.
 >
 > **Prevention:** ADR-0014 to standardise on `URL` (WHATWG) over `url.parse` (legacy) project-wide. Filed as ENG-518, owner @alice. Lint rule via `no-restricted-imports` on `node:url`'s legacy API.
 >

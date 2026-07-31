@@ -25,7 +25,7 @@
           <mxGeometry x="75" y="140" width="260" height="120" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire the security tool chain into IDE and CI.&lt;br&gt;&lt;br&gt;· /security-review · Trivy · ggshield · OPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire the security tool chain into IDE and CI.&lt;br&gt;&lt;br&gt;· /security-review · CodeQL · ggshield · Dependabot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="365" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
@@ -33,11 +33,11 @@
           <mxGeometry x="655" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S2" value="&lt;b&gt;Step 2: Code &amp;amp; Dependency Security&lt;/b&gt;&lt;br&gt;&lt;br&gt;SonarQube + /security-review on every PR.&lt;br&gt;Dependabot + Trivy + Claude reachability triage.&lt;br&gt;&lt;br&gt;· SonarQube · Dependabot · Trivy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S2" value="&lt;b&gt;Step 2: Code &amp;amp; Dependency Security&lt;/b&gt;&lt;br&gt;&lt;br&gt;CodeQL + /security-review on every PR.&lt;br&gt;Dependabot alerts and fix PRs.&lt;br&gt;&lt;br&gt;· CodeQL · /security-review · Dependabot" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="945" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S3" value="&lt;b&gt;Step 3: Container &amp;amp; IaC&lt;/b&gt;&lt;br&gt;&lt;br&gt;Trivy + Checkov scans.&lt;br&gt;OPA Gatekeeper after 7-day dryrun.&lt;br&gt;&lt;br&gt;· Trivy · Checkov · OPA" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S3" value="&lt;b&gt;Step 3: Container &amp;amp; IaC Review&lt;/b&gt;&lt;br&gt;&lt;br&gt;Human review — no automated scanner.&lt;br&gt;Digest-pinned images; required-controls checklist.&lt;br&gt;&lt;br&gt;· AGENTS.md · reviewer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="945" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 
@@ -45,7 +45,7 @@
           <mxGeometry x="655" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S5" value="&lt;b&gt;Step 5: AI Security &amp;amp; Compliance&lt;/b&gt;&lt;br&gt;&lt;i&gt;(skip parts if no AI / no formal scope)&lt;/i&gt;&lt;br&gt;&lt;br&gt;OWASP LLM + MCP allow-list.&lt;br&gt;Claude checklists + Vanta/Drata if certifying.&lt;br&gt;&lt;br&gt;· Claude Code · Vanta / Drata" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S5" value="&lt;b&gt;Step 5: AI Security &amp;amp; Compliance&lt;/b&gt;&lt;br&gt;&lt;i&gt;(skip parts if no AI / no formal scope)&lt;/i&gt;&lt;br&gt;&lt;br&gt;OWASP LLM + MCP allow-list.&lt;br&gt;Claude checklists + evidence dossier.&lt;br&gt;&lt;br&gt;· Claude Code · AGENTS.md" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="365" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 

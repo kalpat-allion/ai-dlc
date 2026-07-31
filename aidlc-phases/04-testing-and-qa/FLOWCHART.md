@@ -20,16 +20,14 @@ The phase is split into nine per-step flowcharts so each can be navigated, embed
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI/tool-driven action (Claude Code, Playwright, k6, CodeRabbit, SonarQube, BrowserStack) |
-| 🔌 | Claude Code calling the **Linear MCP** or **Sentry MCP** server (read or write) |
-| 🤝 | **Sentry Agent for Linear** acting as an assignable Linear Agent |
+| 🤖 | AI/tool-driven action (Claude Code, Playwright, k6, CodeRabbit, BrowserStack) |
+| 🔌 | Claude Code calling the **Linear MCP** server (read or write) |
 | 🔁 | Auto-transition driven by Linear ↔ git integration (PR open / merge) |
 | 👤 | Human-led action |
 | Diamond | Decision point or quality gate |
 | Dark navy node | Phase / step entry or exit |
 | Purple node | One-time setup callout (Step 0) |
-| Blue node | Linear or Sentry MCP write action |
-| Teal node | Sentry Agent for Linear action |
+| Blue node | Linear MCP write action |
 | Green node | Auto-transition driven by Linear ↔ git integration |
 | Red node | Bug-pipeline action |
 | Amber node | Fallback / escalation branch |
@@ -58,7 +56,6 @@ The phase is split into nine per-step flowcharts so each can be navigated, embed
 | RPS | Requests Per Second |
 | S0 / S1 / S2 / S3 | Severity tiers (Critical / High / Medium / Low) |
 | SAST | Static Application Security Testing |
-| Seer | Sentry's AI debugging / RCA agent |
 | SR | Screen Reader |
 | WCAG | Web Content Accessibility Guidelines |
 
@@ -66,41 +63,35 @@ The phase is split into nine per-step flowcharts so each can be navigated, embed
 
 ## Step 0: One-Time Setup
 
-One-off connector and integration wiring per workspace and per developer/QA. Linear MCP is already connected from Phase 1 (with Phase 3's widened scopes); Phase 4 adds (a) the Sentry MCP server for direct Sentry queries from Claude Code, and (b) the Sentry Agent for Linear, an in-app Linear Agent that auto-files production errors as triaged Linear bugs with Seer RCA pre-attached. Output is a verified end-to-end Sentry → Linear pipeline.
+Phase 4 adds no new MCP server. The Linear MCP connection from Phase 1 (with Phase 3's widened scopes) is the only integration this phase needs, because bugs are filed by people rather than by an automated error feed. Step 0 therefore confirms the carry-over, widens Claude Code's Linear tool permissions to cover Resolved/Done transitions and regression-test sub-issues, then creates the Phase 4 labels and the Bug Triage saved view that Step 7 runs on.
 
 ```mermaid
 flowchart TD
-    S0_START([Start: Phase 4 prerequisites<br/>Linear MCP from Phase 1 with Phase 3 scopes<br/>+ Sentry org admin<br/>+ Claude Code tool-permission settings]) --> S0_ANTH
+    S0_START([Start: Phase 4 prerequisites<br/>Linear MCP from Phase 1 with Phase 3 scopes<br/>+ Claude Code tool-permission settings]) --> S0_MCP
 
-    S0_ANTH[Tech Lead - Claude Code tool-permission settings:<br/>Linear - widen to allow Resolved/Done transitions<br/>and create_issue with parentId + regression-test label<br/>Sentry - allow find_issues, get_issue, get_event,<br/>seer_status, seer_run<br/>delete_event and bulk ops DENIED<br/>👤 Tech Lead]
-    S0_ANTH --> S0_PA
+    S0_MCP[Confirm the Linear MCP carry-over<br/>claude mcp list shows linear connected<br/>else re-add at --scope project and approve OAuth<br/>smoke test - list open bug issues for the team<br/>🔌 Claude Code + Linear MCP + 👤 each developer/QA]
+    S0_MCP --> S0_PERM
 
-    S0_PA[Path A: Sentry MCP for Claude Code<br/>claude mcp add --transport http --scope project<br/>sentry https://mcp.sentry.dev/mcp<br/>then /mcp - select sentry - approve OAuth<br/>verify with find_issues smoke test<br/>🤖 Claude Code + 👤 each developer/QA]
-    S0_PA --> S0_PB
+    S0_PERM[Tech Lead - Claude Code tool-permission settings:<br/>Linear - widen to allow Resolved/Done transitions<br/>and create_issue with parentId + regression-test label<br/>👤 Tech Lead]
+    S0_PERM --> S0_LABELS
 
-    S0_PB[Path B: Sentry Agent for Linear<br/>Linear admin - Settings - Integrations - Sentry - Connect<br/>Sentry admin - map Sentry projects to Linear teams<br/>👤 Linear + Sentry admins]
-    S0_PB --> S0_PC
+    S0_LABELS[QA Lead - Phase 4 workspace labels<br/>bug, source:qa, source:user,<br/>severity:S0 to severity:S3,<br/>regression-test, coverage-gap, flaky-test<br/>👤 QA Lead]
+    S0_LABELS --> S0_VIEW
 
-    S0_PC[Sentry triage rules<br/>trigger - new issue or affects N+ users<br/>action - create Linear issue via Sentry Agent<br/>state Triage, labels source:sentry + bug + severity:auto<br/>👤 QA Lead]
-    S0_PC --> S0_PD
+    S0_VIEW[QA Lead - Bug Triage saved view<br/>filter state = Triage<br/>confirm Triage Intelligence is on for the team<br/>👤 QA Lead + 🤖 Triage Intelligence]
+    S0_VIEW --> S0_VERIFY
 
-    S0_PD[Sentry Agent settings on Linear side<br/>Auto-run Seer RCA - ON<br/>Auto-create PR - OFF<br/>Auto-update status - ON<br/>👤 QA Lead]
-    S0_PD --> S0_TEST
+    S0_VERIFY{Verification checklist:<br/>linear connected and smoke-tested,<br/>tool permissions widened,<br/>Phase 4 labels created,<br/>Bug Triage view live,<br/>Triage Intelligence on,<br/>audit logs on?}
 
-    S0_TEST[Smoke test in non-prod project<br/>throw a deliberate error<br/>Linear Triage issue appears within 60s<br/>with stack trace + Seer RCA comment<br/>+ severity proposal + duplicate check<br/>🤝 Sentry Agent + 🤖 Seer + 🤖 Triage Intelligence]
-    S0_TEST --> S0_VERIFY{Verification checklist:<br/>linear + sentry both connected,<br/>integration mapped,<br/>auto-Seer ON, auto-PR OFF,<br/>smoke-test issue created with RCA,<br/>audit logs on?}
-
-    S0_VERIFY -- No --> S0_ANTH
+    S0_VERIFY -- No --> S0_MCP
     S0_VERIFY -- Yes --> S0_END([Setup complete<br/>Ready for Step 1: Test Plan Creation])
 
     style S0_START fill:#1B3A5C,color:#fff
     style S0_END fill:#1B3A5C,color:#fff
-    style S0_ANTH fill:#5C2E8A,color:#fff
-    style S0_PA fill:#5C2E8A,color:#fff
-    style S0_PB fill:#5C2E8A,color:#fff
-    style S0_PC fill:#5C2E8A,color:#fff
-    style S0_PD fill:#5C2E8A,color:#fff
-    style S0_TEST fill:#1F8B8B,color:#fff
+    style S0_MCP fill:#3D6B9F,color:#fff
+    style S0_PERM fill:#5C2E8A,color:#fff
+    style S0_LABELS fill:#5C2E8A,color:#fff
+    style S0_VIEW fill:#5C2E8A,color:#fff
 ```
 
 ---
@@ -144,7 +135,7 @@ flowchart TD
     UT2[2.2 unit-test-generation<br/>source file + framework + example test<br/>covers happy + error + edge + AC mapping<br/>🤖 Claude Code] --> UT3
 
     UT3[2.3 Review tests line-by-line<br/>reject:<br/>always-true assertions,<br/>testing implementation not behaviour,<br/>missing edge cases,<br/>unrealistic test data<br/>👤 developer] --> UT4
-    UT4[2.4 CI enforcement<br/>SonarQube coverage gate<br/>greater than or equal to 80 percent on new code<br/>🤖 SonarQube] --> UT_END
+    UT4[2.4 CI enforcement<br/>test runner coverage threshold<br/>greater than or equal to 80 percent on new code<br/>fails the CI job below target<br/>report published as a CI artefact<br/>🤖 CI] --> UT_END
 
     UT_END --> UT5{Sprint end?}
     UT5 -- Yes --> UT5A[2.5 test-coverage-gap-analysis<br/>across changed modules<br/>gaps become Linear issues<br/>label coverage-gap + phase:qa<br/>🔌 Claude Code + Linear MCP]
@@ -272,30 +263,36 @@ flowchart TD
 
 ## Step 7: Bug Intake & Triage
 
-The most automated workflow in Phase 4 — the Sentry Agent for Linear handles steps 1–4 without human input; the QA Lead enters at 7.5. Sub-stages 7.1 → 7.6 cover production-error path (Sentry → Sentry Agent → Linear Triage with Seer RCA + duplicate check) and manual-bug path (QA / user reports filed directly with Triage Intelligence still running). Gate at 7.5 is the human validation step. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-per-sprint--test-coverage).
+Linear is the single bug ledger — QA-discovered bugs, tests that failed on main, and user or support reports all land in the same Triage queue, and nothing files a bug automatically. Sub-stages 7.1 → 7.5 file the bug with a source label, capture the evidence in the issue body at filing time, let Triage Intelligence collapse duplicates and propose labels, then hand the QA Lead the human gate at 7.4 where severity is assigned from scratch on business impact. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-per-sprint--test-coverage).
 
 ```mermaid
 flowchart TD
     B_SOURCE{Bug source}
 
-    B_SOURCE -- Production error --> B71[7.1 Sentry detects new issue<br/>or threshold crossed<br/>🤖 Sentry alert]
-    B71 --> B72[7.2 Sentry Agent files Linear issue<br/>create_issue in mapped team Triage state<br/>title from Sentry summary,<br/>desc with stack trace + affected users + release,<br/>labels source:sentry + bug + severity:auto<br/>🤝 Sentry Agent for Linear]
-    B72 --> B73[7.3 Seer RCA runs auto<br/>posts comment with probable root cause<br/>+ suspected line of code + fix proposal<br/>issue moves Triage → In Review<br/>🤖 Sentry Seer]
+    B_SOURCE -- Manual or exploratory QA --> B71A[7.1 Filed in Linear Triage<br/>labels bug + source:qa<br/>👤 QA]
+    B_SOURCE -- Failing test on main --> B71B[7.1 Filed in Linear Triage<br/>labels bug + source:qa<br/>👤 QA or the developer on the failing run]
+    B_SOURCE -- User or support report --> B71C[7.1 Filed in Linear Triage<br/>labels bug + source:user<br/>👤 PM/support]
+
+    B71A --> B72
+    B71B --> B72
+    B71C --> B72
+
+    B72[7.2 Evidence in the issue body at filing time<br/>expected vs actual, reproduction steps,<br/>environment + release version,<br/>stack trace / logs / screenshot / HAR<br/>Bug Report Template<br/>👤 reporter]
+    B72 --> B73
+
+    B73[7.3 Triage Intelligence<br/>semantic similarity vs existing issues<br/>surfaces Merge as related suggestion<br/>+ proposes labels and priority<br/>🤖 Triage Intelligence]
     B73 --> B74
 
-    B_SOURCE -- Manual QA --> B76A[Filed in Linear with label source:qa<br/>👤 QA]
-    B_SOURCE -- User report --> B76B[Filed in Linear with label source:user<br/>👤 PM/support]
-    B76A --> B74
-    B76B --> B74
+    B74[7.4 QA Lead human gate<br/>open Bug Triage saved view - state = Triage<br/>per issue:<br/>assign severity from scratch on business impact,<br/>bounce back if the evidence is not actionable,<br/>accept or reject the duplicate suggestion,<br/>confirm or override assignee,<br/>add severity:S0/S1/S2/S3<br/>👤 QA Lead]
+    B74 --> B_CONTEST
 
-    B74[7.4 Triage Intelligence<br/>semantic similarity vs existing issues<br/>surfaces Merge as related suggestion<br/>+ proposes labels and priority<br/>🤖 Triage Intelligence]
-    B74 --> B75
-
-    B75[7.5 QA Lead human gate<br/>open Bug Triage saved view<br/>per issue:<br/>validate severity vs business impact,<br/>validate Seer RCA - if wrong run debugging prompt,<br/>confirm or override assignee,<br/>add severity:S0/S1/S2/S3 + remove severity:auto<br/>👤 QA Lead]
+    B_CONTEST{Severity contested?}
+    B_CONTEST -- Yes --> B75[7.5 bug-triage prompt<br/>structures the impact assessment<br/>QA Lead still owns the call<br/>🤖 Claude Code]
     B75 --> B_DECIDE
+    B_CONTEST -- No --> B_DECIDE
 
     B_DECIDE{Severity}
-    B_DECIDE -- S0 Critical --> B_S0[Fix immediately<br/>rollback if no fix in 1h]
+    B_DECIDE -- S0 Critical --> B_S0[Fix immediately<br/>rollback if no fix in 1h<br/>escalate to on-call by hand -<br/>nothing pages off a Linear label]
     B_DECIDE -- S1 High --> B_S1[This cycle<br/>release blocker]
     B_DECIDE -- S2 Medium --> B_S2[Within 2 cycles]
     B_DECIDE -- S3 Low --> B_S3[Backlog]
@@ -307,67 +304,59 @@ flowchart TD
 
     style B_SOURCE fill:#1B3A5C,color:#fff
     style B_OUT fill:#1B3A5C,color:#fff
-    style B72 fill:#1F8B8B,color:#fff
-    style B73 fill:#B91C1C,color:#fff
-    style B75 fill:#B91C1C,color:#fff
+    style B72 fill:#B91C1C,color:#fff
+    style B74 fill:#B91C1C,color:#fff
 ```
 
 ---
 
 ## Step 8: Bug Fix Loop
 
-Entry point is a triaged bug in Linear (with Seer RCA and stack trace attached). Sub-stages 8.1 → 8.8 fetch the bug like any Phase 3 task, pull fresh Sentry context via MCP, **reproduce locally with a failing test first**, fix the code (using Seer's proposal if validated, else the debugging prompt), keep the regression test in the same PR, route through Phase 3 Step 4 review, auto-close the Linear issue and resolve the Sentry issue on merge, and post a brief post-mortem for S0/S1. The strict rule enforced at PR review: regression test ships in the same diff as the fix.
+Entry point is a triaged bug in Linear with severity, reproduction steps, and whatever evidence the reporter attached. Sub-stages 8.1 → 8.7 fetch the bug like any Phase 3 task, **reproduce locally with a failing test first**, fix the code with the debugging prompt, keep the regression test in the same PR, route through Phase 3 Step 4 review, auto-close the Linear issue on merge, verify in staging, and post a brief post-mortem for S0/S1. The strict rule enforced at PR review: regression test ships in the same diff as the fix.
 
 ```mermaid
 flowchart TD
-    BF_IN([From Step 7: Triaged bug in Linear<br/>+ Seer RCA + stack trace + severity]) --> BF1
+    BF_IN([From Step 7: Triaged bug in Linear<br/>+ severity + reproduction steps<br/>+ attached evidence]) --> BF1
 
     BF1[8.1 linear-next-task on the bug<br/>same prompt as Phase 3 Step 2<br/>update_issue In Progress + assignee=me<br/>git checkout branchName<br/>🔌 Claude Code + Linear MCP] --> BF2
-    BF2[8.2 sentry-context-pull<br/>fetch latest event + stack trace<br/>+ affected-user list + breadcrumbs<br/>+ release version that introduced it<br/>🔌 Claude Code + Sentry MCP] --> BF3
 
-    BF3[8.3 bug-reproduction<br/>Claude proposes a failing test<br/>that captures the bug<br/>WRITE THIS TEST FIRST<br/>🤖 Claude Code] --> BF4
+    BF2[8.2 bug-reproduction<br/>Claude proposes a failing test<br/>that captures the bug<br/>WRITE THIS TEST FIRST<br/>will not reproduce - back to the reporter<br/>🤖 Claude Code] --> BF3
 
-    BF4{Seer RCA validated<br/>at Step 7.5?}
-    BF4 -- Yes --> BF4A[8.4a Apply Seer's fix<br/>👤 developer + 🤖 Claude Code]
-    BF4 -- No --> BF4B[8.4b debugging prompt<br/>read code paths, trace data flow,<br/>propose targeted fix<br/>🤖 Claude Code]
-    BF4A --> BF5
-    BF4B --> BF5
+    BF3[8.3 debugging prompt<br/>read code paths, trace data flow,<br/>propose targeted fix + state blast radius<br/>🤖 Claude Code] --> BF4
 
-    BF5[8.5 Add regression test<br/>the failing test from 8.3 now passes - keep it<br/>SAME DIFF as the fix - reviewers reject otherwise<br/>👤 developer] --> BF6
-    BF6[8.6 Open PR through Phase 3 Step 4<br/>title - ENG-XXX Fix bug summary<br/>body - Closes ENG-XXX + brief post-mortem<br/>🤖 Claude Code pr-description] --> BF_AUTO1
+    BF4[8.4 Add regression test<br/>the failing test from 8.2 now passes - keep it<br/>SAME DIFF as the fix - reviewers reject otherwise<br/>👤 developer] --> BF5
+    BF5[8.5 Open PR through Phase 3 Step 4<br/>title - ENG-XXX Fix bug summary<br/>body - Closes ENG-XXX + brief post-mortem<br/>🤖 Claude Code pr-description] --> BF_AUTO1
 
     BF_AUTO1[Linear auto - In Review<br/>🔁 Linear ↔ git auto] --> BF_REVIEW[Phase 3 Step 4 review gate<br/>CI + CodeRabbit + human]
     BF_REVIEW --> BF_AUTO2[On merge - Linear auto - Done<br/>🔁]
-    BF_AUTO2 --> BF7
+    BF_AUTO2 --> BF6
 
-    BF7[8.7 Sentry issue resolved<br/>update_issue resolved in version release<br/>QA verifies in staging,<br/>posts Verified comment on Linear issue<br/>🔌 Claude Code + Sentry MCP + 👤 QA] --> BF8
+    BF6[8.6 QA verifies in staging<br/>posts Verified in staging comment<br/>on the Linear issue - the close-out record<br/>👤 QA] --> BF7
 
-    BF8{Severity S0 or S1?}
-    BF8 -- Yes --> BF8A[8.8 post-mortem comment on Linear<br/>root cause one paragraph,<br/>why tests missed it,<br/>regression + monitoring to add,<br/>prevention owner<br/>🤖 Claude Code post-mortem prompt + 👤]
-    BF8A --> BF_OUT
-    BF8 -- No --> BF_OUT([To next bug or back to Step 7<br/>or to Gate 3 RC validation])
+    BF7{Severity S0 or S1?}
+    BF7 -- Yes --> BF7A[8.7 post-mortem comment on Linear<br/>root cause one paragraph,<br/>why tests missed it,<br/>regression + monitoring to add,<br/>prevention owner<br/>🤖 Claude Code post-mortem prompt + 👤]
+    BF7A --> BF_OUT
+    BF7 -- No --> BF_OUT([To next bug or back to Step 7<br/>or to Gate 3 RC validation])
 
     style BF_IN fill:#1B3A5C,color:#fff
     style BF_OUT fill:#1B3A5C,color:#fff
     style BF1 fill:#3D6B9F,color:#fff
-    style BF2 fill:#3D6B9F,color:#fff
-    style BF7 fill:#3D6B9F,color:#fff
     style BF_AUTO1 fill:#2E8B57,color:#fff
     style BF_AUTO2 fill:#2E8B57,color:#fff
-    style BF5 fill:#B91C1C,color:#fff
-    style BF8A fill:#B91C1C,color:#fff
+    style BF4 fill:#B91C1C,color:#fff
+    style BF7A fill:#B91C1C,color:#fff
 ```
 
 ---
 
 ## Daily QA Workflow
 
-The daily loop runs in parallel with development. Production-error intake is event-driven via Sentry; manual testing and CI failures feed the same triage queue.
+The daily loop runs in parallel with development. Manual testing, CI failures, and user reports all feed the same Linear triage queue — nothing arrives on its own, so the morning sweep is what makes intake reliable.
 
 ```mermaid
 flowchart TD
     QA_M([Morning]) --> QA_M1[Check CI status<br/>any test failures overnight?<br/>👤]
-    QA_M1 --> QA_M2[Open Sentry — any new prod errors?<br/>cross-check Bug Triage view in Linear<br/>👤]
+    QA_M1 --> QA_M2[Sweep inbound reports<br/>support and user reports filed into Linear Triage<br/>anything raised in chat gets an issue<br/>👤]
     QA_M2 --> QA_M3[Clear the Bug Triage saved view<br/>validate severity + assignee for each<br/>👤 QA Lead]
     QA_M3 --> QA_PER([Per Story - parallel with dev])
 
@@ -400,9 +389,9 @@ The flow has four explicit human gates so that no AI-triaged bug or AI-generated
 1. **Gate 1 — Test Plan approved.** QA Lead + Tech Lead sign off in the Linear Document. Required before any test code is written. See [QUALITY-GATES.md → Gate 1](./QUALITY-GATES.md#gate-1-test-plan-approved).
 2. **Gate 2 — Per-PR + per-cycle test coverage.** New code has unit tests; coverage ≥ 80%; integration tests for new endpoints; E2E tests for new critical flows; flakiness < 2%. Enforced continuously through Phase 3 Step 4. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-per-sprint--test-coverage).
 3. **Gate 3 — Release candidate validation.** All test types green, load tests meet NFRs, 0 S0 / 0 S1 open, regression suite green, flake < 2%. Tech Lead + QA Lead approve. See [QUALITY-GATES.md → Gate 3](./QUALITY-GATES.md#gate-3-release-candidate-testing).
-4. **Gate 4 — Phase Handoff.** All artefacts present and Linear-linked, end-to-end Sentry-Linear pipeline verified on a real bug this cycle, post-mortems filed for every S0/S1. See [QUALITY-GATES.md → Gate 4](./QUALITY-GATES.md#gate-4-phase-handoff).
+4. **Gate 4 — Phase Handoff.** All artefacts present and Linear-linked, coverage report published as a CI artefact, post-mortems filed for every S0/S1. See [QUALITY-GATES.md → Gate 4](./QUALITY-GATES.md#gate-4-phase-handoff).
 
-The Sentry Agent for Linear and Linear's git integration handle all auto-transitions; humans validate, prioritise, and review — they do not transcribe.
+Linear's git integration handles the auto-transitions; humans validate, prioritise, and review — they do not transcribe.
 
 ---
 

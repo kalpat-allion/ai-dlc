@@ -24,7 +24,7 @@ Runs continuously during Development phase sprints.
 
 ### Every PR
 - [ ] New code has corresponding unit tests
-- [ ] Test coverage ≥ 80% on new code (SonarQube enforced)
+- [ ] Test coverage ≥ 80% on new code, enforced by the CI coverage step
 - [ ] All AC for the story have test coverage
 - [ ] No test is a "fake pass" (AI-generated tests with always-true assertions)
 
@@ -75,7 +75,7 @@ Before handing off to Security & Compliance phase.
 
 - [ ] Test plan (final version) committed to `/docs/test-plan.md`
 - [ ] Test suites committed for all test types
-- [ ] Coverage report accessible (SonarQube dashboard + CI artefact)
+- [ ] Coverage report published as a CI artefact
 - [ ] Load test results archived with timestamped reports
 - [ ] Known issues log exists (or Linear saved view)
 - [ ] Regression test baseline committed
@@ -103,7 +103,7 @@ Before handing off to Security & Compliance phase.
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Unit test coverage (new code) | ≥ 80% | SonarQube per PR |
+| Unit test coverage (new code) | ≥ 80% | CI coverage step per PR |
 | Integration test coverage (endpoints) | ≥ 60% happy path + error | Manual audit per sprint |
 | E2E test coverage (critical journeys) | 100% | Test plan mapping |
 | Flakiness rate | < 2% | CI run history |
@@ -111,3 +111,5 @@ Before handing off to Security & Compliance phase.
 | Time from bug report to fix | Median < 48h for S0/S1 | Linear analytics |
 | Load test: p95 latency | Per NFR target | k6 output per release |
 | AI test generation time saved | Track per sprint | Developer self-report |
+
+> **Re-baseline defect escape rate.** Production bugs are now discovered only when a person reports one, so the numerator counts reports rather than errors. Re-baseline the metric from the first full cycle under this process and never compare it against numbers collected under automated error tracking — a drop means fewer reports, not necessarily fewer bugs.

@@ -26,8 +26,8 @@
 - [ ] Linting passes
 - [ ] Type checking passes (TypeScript strict)
 - [ ] All unit tests pass
-- [ ] Coverage ≥ 80% for new code
-- [ ] SonarQube quality gate passes (0 Critical, 0 High vulnerabilities)
+- [ ] Coverage ≥ 80% for new code (test-runner threshold fails the build below it)
+- [ ] SAST scan passes: 0 Critical / 0 High
 - [ ] Build succeeds
 - [ ] No secrets in code
 
@@ -57,7 +57,7 @@ Applies to whichever reviewer(s) the project configured at [Step 4.3](./PROCESS.
 ### Code
 - [ ] All MVP stories implemented and merged
 - [ ] Overall test coverage ≥ 80%
-- [ ] 0 Critical/High SonarQube issues on main
+- [ ] 0 Critical/High SAST findings on main
 - [ ] All TODO/FIXME resolved or tracked
 
 ### Integration
@@ -105,6 +105,6 @@ Applies to whichever reviewer(s) the project configured at [Step 4.3](./PROCESS.
 | PR cycle time | < 24 hours |
 | Defect escape rate | < 5% of stories |
 | Test coverage (new code) | ≥ 80% |
-| SonarQube Crit/High on main | 0 |
+| SAST Crit/High on main | 0 |
 | AI estimation accuracy | ±30% of actual |
 | Doc coverage | 100% public APIs |

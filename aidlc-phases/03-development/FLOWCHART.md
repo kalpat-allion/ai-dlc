@@ -18,7 +18,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 | Symbol | Meaning |
 |--------|---------|
-| 🤖 | AI/tool-driven action (Claude Code, CodeRabbit, Claude PR review bot, SonarQube, Linear Agent) |
+| 🤖 | AI/tool-driven action (Claude Code, CodeRabbit, Claude PR review bot, CodeQL, Linear Agent) |
 | 🔌 | Claude Code calling the **Linear MCP server** (read or write) |
 | 🔁 | Auto-transition driven by Linear's git integration (PR open / merge) |
 | 👤 | Human-led action |
@@ -221,7 +221,7 @@ flowchart TD
 
 ## Step 4: Code Review
 
-Entry point is the feature branch with passing local tests. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, SonarQube, coverage), receive **automated AI review**, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done.
+Entry point is the feature branch with passing local tests. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, CodeQL SAST, coverage threshold), receive **automated AI review**, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done.
 
 At 4.3 the diagram shows **two peer options, not a sequence** — a project configures CodeRabbit (hosted, vendor-tuned, flat cost, near-zero upkeep), the [Claude PR review bot](./PR-REVIEW-BOT.md) (self-hosted in CI, driven by a checklist committed in the repo, per-run cost, checklist upkeep), or both. Neither is a fallback for the other; the dashed edges mean "if configured". The selection rule lives in [PROCESS.md → Step 4.3](./PROCESS.md#step-4-code-review). Whichever runs, it is advisory and non-blocking: it never approves a PR and is never a required status check, so a provider outage cannot freeze the merge queue. **Gate 2: PR Merge** is per-PR — on No, fix and re-run; on Yes, the PR merges and Linear auto-closes the issue. See [QUALITY-GATES.md → Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).
 
@@ -238,7 +238,7 @@ flowchart TD
     R1[4.1 Open PR<br/>title contains the Linear identifier ENG-XXX<br/>body contains Closes ENG-XXX<br/>+ approach summary + AI-generated sections<br/>🤖 Claude Code pr-description] --> R_AUTO1
     R_AUTO1[Linear auto-transitions issue to In Review<br/>git integration matches branchName + Closes<br/>🔁 Linear ↔ git auto] --> R2
 
-    R2[4.2 CI pipeline<br/>lint - type check - unit tests - integration tests<br/>SonarQube SAST + coverage gate equal or greater than 80 percent<br/>🤖 CI] --> R_CI
+    R2[4.2 CI pipeline<br/>lint - type check - unit tests - integration tests<br/>CodeQL SAST + test-runner coverage threshold<br/>equal or greater than 80 percent<br/>🤖 CI] --> R_CI
 
     R_CI{CI green?}
     R_CI -- No --> R_FIX[Fix locally + push<br/>👤 developer]
@@ -281,13 +281,13 @@ flowchart TD
 
 ## Step 5: Refactoring
 
-Entry point is identified tech-debt: SonarQube findings or Claude Code's structural-improvement scan. Sub-stages 5.1 → 5.4 file `tech-debt`-labelled Linear issues, scope the change explicitly (what changes, what does not), execute via Claude Code (large-scale or localised), and verify behaviour preservation through existing tests. The strict rule is enforced at PR review: refactor PRs may not introduce features. There is no dedicated gate at the end of Step 5 — refactor PRs go through Step 4 like any PR.
+Entry point is identified tech-debt: linter / type-checker warnings or Claude Code's structural-improvement scan. Sub-stages 5.1 → 5.4 file `tech-debt`-labelled Linear issues, scope the change explicitly (what changes, what does not), execute via Claude Code (large-scale or localised), and verify behaviour preservation through existing tests. The strict rule is enforced at PR review: refactor PRs may not introduce features. There is no dedicated gate at the end of Step 5 — refactor PRs go through Step 4 like any PR.
 
 ```mermaid
 flowchart TD
-    REF_IN([Trigger: SonarQube findings<br/>or refactor-candidates scan<br/>or scheduled tech-debt cycle]) --> REF1
+    REF_IN([Trigger: linter and type-checker warnings<br/>or refactor-candidates scan<br/>or scheduled tech-debt cycle]) --> REF1
 
-    REF1[5.1 File Linear issues with tech-debt label<br/>SonarQube hotspots + structural scan output<br/>each accepted target becomes an issue<br/>🤖 Claude Code + 🔌 Linear MCP] --> REF2
+    REF1[5.1 File Linear issues with tech-debt label<br/>structural scan output + linter warnings<br/>each accepted target becomes an issue<br/>🤖 Claude Code + 🔌 Linear MCP] --> REF2
     REF2[5.2 Scope explicitly in the issue<br/>what changes vs what stays the same<br/>behaviour-preserving operation only<br/>if behaviour changes - split into a feature<br/>👤 developer] --> REF3
 
     REF3{Scale}
@@ -374,7 +374,7 @@ The flow has three explicit human gates so that no AI-generated code reaches mai
 
 1. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment).** Tech Lead opens the Linear Cycle with stories that have AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. AI estimates inform; team velocity commits.
 2. **[Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).** Per PR — CI green, Critical/High findings from every configured AI reviewer resolved or dismissed with a reason, ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations), Linear identifier in title and `Closes` body match the diff.
-3. **[Gate 3: Phase Completion](./QUALITY-GATES.md#gate-3-phase-completion).** Coverage ≥ 80% on new code, 0 Critical/High SonarQube on main, all stories Done, retrospective filed with AI-estimate variance recorded.
+3. **[Gate 3: Phase Completion](./QUALITY-GATES.md#gate-3-phase-completion).** Coverage ≥ 80% on new code, 0 Critical/High SAST findings on main, all stories Done, retrospective filed with AI-estimate variance recorded.
 
 Linear's git integration handles state changes between Gate 2 and Gate 3 automatically — In Review on PR open, Done on merge — so developers never manually transition issues during normal flow.
 

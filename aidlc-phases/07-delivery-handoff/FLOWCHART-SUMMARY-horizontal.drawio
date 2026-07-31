@@ -49,11 +49,11 @@
           <mxGeometry x="655" y="275" width="240" height="125" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S5" value="&lt;b&gt;Step 5: Credential &amp;amp; Access&lt;/b&gt;&lt;br&gt;&lt;br&gt;1Password CLI inventory. Role transfer preferred. Recipient verifies + rotates.&lt;br&gt;&lt;br&gt;· 1Password CLI · Pulumi ESC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S5" value="&lt;b&gt;Step 5: Credential &amp;amp; Access&lt;/b&gt;&lt;br&gt;&lt;br&gt;1Password CLI inventory. Role transfer preferred. Recipient verifies + rotates.&lt;br&gt;&lt;br&gt;· 1Password CLI · secret manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="385" y="275" width="240" height="125" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S6" value="&lt;b&gt;Step 6: Infrastructure Handoff&lt;/b&gt;&lt;br&gt;&lt;br&gt;IaC repo + state migration. Recipient wires MCP roster + reproducibility demo.&lt;br&gt;&lt;br&gt;· Pulumi · GitHub · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S6" value="&lt;b&gt;Step 6: Infrastructure Handoff&lt;/b&gt;&lt;br&gt;&lt;br&gt;IaC repo + state-backend transfer. Recipient wires MCP roster + reproducibility demo.&lt;br&gt;&lt;br&gt;· Terraform / OpenTofu · GitHub · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="115" y="275" width="240" height="125" as="geometry"/>
         </mxCell>
 
@@ -73,7 +73,7 @@
           <mxGeometry x="115" y="446" width="240" height="125" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S8" value="&lt;b&gt;Step 8: Post-Handoff Support&lt;/b&gt;&lt;br&gt;&lt;br&gt;30-day support. Seer triages inherited errors. Weekly paired Claude Code session.&lt;br&gt;&lt;br&gt;· Sentry Seer · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S8" value="&lt;b&gt;Step 8: Post-Handoff Support&lt;/b&gt;&lt;br&gt;&lt;br&gt;30-day support. Defects land in Linear and run the agentic loop. Weekly paired Claude Code session.&lt;br&gt;&lt;br&gt;· Linear MCP · Claude Code" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="385" y="446" width="240" height="125" as="geometry"/>
         </mxCell>
 

@@ -34,7 +34,7 @@ This directory holds the **system-prompt templates** for the Phase 3 specialist 
    - `{{REALTIME_STACK}}` — real-time / streaming stack, e.g., `Pusher`, `Socket.IO`, `Server-Sent Events`, or `none` (software-architect)
    - `{{ASYNC_JOB_STACK}}` — async-job / worker stack, e.g., `BullMQ`, `Celery`, `Sidekiq`, or `none` (software-architect)
    - `{{AUTH_STACK}}` — auth stack, e.g., `Auth0`, `Clerk`, `bespoke JWT + Passport` (software-architect)
-   - `{{OBSERVABILITY_STACK}}` — metrics / traces / logs stack, e.g., `Datadog`, `OpenTelemetry + Grafana`, `Sentry + CloudWatch` (software-architect)
+   - `{{OBSERVABILITY_STACK}}` — metrics / traces / logs stack, e.g., `Datadog`, `OpenTelemetry + Grafana`, `CloudWatch` (software-architect)
    - `{{SECRETS_MECHANISM}}` — how secrets reach the runtime, e.g., `AWS Secrets Manager`, `Doppler`, `.env via 1Password CLI` (software-architect)
 3. Adjust the `model:` frontmatter if the team's default differs (Sonnet for high-throughput coding and Linear MCP work, Opus for review/refactor/design).
 4. Commit `.claude/agents/<role>.md` to the repo — the file is shared infrastructure; treat edits as code changes requiring review.
