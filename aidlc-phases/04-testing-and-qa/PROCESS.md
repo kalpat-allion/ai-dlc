@@ -2,13 +2,13 @@
 
 ## Overview
 
-This document defines the AI-assisted workflow for the Testing & QA phase, using the consolidated AI-DLC tool stack. Linear is the spine — every test plan, test gap, bug, and regression is tracked as a Linear artefact, and Claude Code / Sentry agents drive the lifecycle through MCP. The Sentry Agent for Linear closes the loop from production error to triaged bug to fix PR without humans copy-pasting stack traces.
+This document defines the AI-assisted workflow for the Testing & QA phase, using the consolidated AI-DLC tool stack. Linear is the spine — every test plan, test gap, bug, and regression is tracked as a Linear artefact, and Claude Code drives the lifecycle through MCP. Bugs enter from QA testing, failing tests on main, and human reports; the QA Lead triages them in one Linear queue and the fix loop runs as a normal Phase 3 task.
 
 **Phase Duration:** Runs in parallel with Development (continuous) + a dedicated hardening cycle before each release
 **Phase Owner:** QA Lead / Senior Developer
-**Tools Used:** Vitest / Jest / pytest / JUnit 5 (unit), Supertest + Testcontainers (integration), **Playwright** (E2E), **k6** (load), Claude Code (test generation, debugging), CodeRabbit + SonarQube (already in Phase 3 stack), **Linear** (project management spine, integrated via MCP), **Sentry** (production error tracking, integrated via MCP and the Sentry Agent for Linear), BrowserStack App Automate (mobile, optional)
+**Tools Used:** Vitest / Jest / pytest / JUnit 5 (unit), Supertest + Testcontainers (integration), **Playwright** (E2E), **k6** (load), Claude Code (test generation, debugging), CodeRabbit (already in Phase 3 stack), **Linear** (project management spine, integrated via MCP), BrowserStack App Automate (mobile, optional)
 
-> **Tool Philosophy:** Testing is the cheapest phase of the AI-DLC. Frameworks are free OSS. AI test generation is already paid for in the Development stack (Claude Code). Bug triage uses tools the team already runs (Linear, Sentry, CodeRabbit). **Linear and Sentry are wired together** through the Sentry Agent for Linear — production errors become triaged Linear issues with Seer root-cause analysis attached, with no human shovelling. The QA Lead's job is calibration and prioritisation, not transcription.
+> **Tool Philosophy:** Testing is the cheapest phase of the AI-DLC. Frameworks are free OSS. AI test generation is already paid for in the Development stack (Claude Code). Bug tracking uses tools the team already runs (Linear, CodeRabbit). **Linear is the single bug ledger** — QA-discovered bugs, failing tests on main, and user reports all land in one Triage queue where Triage Intelligence collapses duplicates and proposes labels. The QA Lead's job is calibration and prioritisation, not transcription.
 
 ---
 
@@ -26,48 +26,33 @@ This document defines the AI-assisted workflow for the Testing & QA phase, using
 | **Test Generation** | Claude Code | AI-generated tests (already in Phase 3 stack) | Already paid |
 | **Test Review** | CodeRabbit | AI review of test code alongside production code | Already in Phase 3 stack |
 | **Bug Tracking + AI Triage** | **Linear** + **Triage Intelligence** | Issue tracker + duplicate detection + label/priority suggestions | $10/user/mo Business+ |
-| **Error Tracking + RCA** | **Sentry** + **Seer** + **Sentry Agent for Linear** | Production error tracking, AI root-cause analysis, auto-creates Linear issues | From $26/mo |
-| **Code Quality in CI** | SonarQube Community | Static analysis + coverage gates | Free OSS |
+| **Coverage Enforcement in CI** | Test runner native thresholds (`coverage.thresholds`, `--cov-fail-under`) | Fails the CI job below 80% on new code | Free OSS |
 
 ---
 
 ## Process Steps
 
-### Step 0: One-Time Setup — Linear MCP + Sentry MCP + Sentry Agent for Linear
+### Step 0: One-Time Setup — Linear MCP Carry-Over
 
 > Visual: [Step 0 flowchart](./FLOWCHART.md#step-0-one-time-setup)
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Linear workspace (already connected from Phase 1 — see [`01-requirement-gathering/PROCESS.md` Step 0](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)), Sentry organisation admin, access to Claude Code tool-permission settings |
-| **Tools** | **Linear MCP** (`https://mcp.linear.app/mcp`), **Sentry MCP** (`https://mcp.sentry.dev/mcp`), **Sentry Agent for Linear** (in-app, no MCP — it is a Linear Agent) |
-| **Output** | Claude Code can read & write Linear issues + Sentry issues; Sentry can auto-file bug issues into Linear with Seer RCA pre-attached |
-| **Human** | Workspace admin authorises the MCP servers; QA Lead configures Sentry Agent triage rules; each user authorises once per project via OAuth |
+| **Input** | Linear workspace (already connected from Phase 1 — see [`01-requirement-gathering/PROCESS.md` Step 0](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)), access to Claude Code tool-permission settings |
+| **Tools** | **Linear MCP** (`https://mcp.linear.app/mcp`, already added at project scope in Phase 1) |
+| **Output** | Claude Code can read & write Linear issues and drive a bug to *Resolved* / *Done*; the `Bug Triage` saved view is live and Triage Intelligence is on |
+| **Human** | Tech Lead widens the Linear tool-permission scopes; QA Lead creates the Phase 4 labels and saved views |
 
-Phase 4 builds on the Phase 1 Linear MCP setup but adds **two new pieces**: the Sentry MCP server (so Claude Code can query Sentry directly during debugging) and the Sentry Agent for Linear (so production errors auto-flow into Linear's Triage with root-cause analysis attached).
+Phase 4 adds **no new MCP server**. The Linear MCP connection from Phase 1 (with Phase 3's widened scopes) is the only integration this phase needs — bugs are filed by people, not by an automated error feed. Step 0 is a scope widening and a workspace configuration, not an install.
 
-#### Path A — Sentry MCP for Claude Code
+#### Confirm the Linear MCP carry-over
 
-1. **Add the Sentry MCP server** at user scope:
+1. **Verify the connection:** `claude mcp list` should already show `linear: connected`. If it does not, re-run the Phase 1 setup at project scope:
    ```bash
-   claude mcp add --transport http --scope project sentry https://mcp.sentry.dev/mcp
+   claude mcp add --transport http --scope project linear https://mcp.linear.app/mcp
    ```
-2. **Authenticate:** open Claude Code (`claude`) → `/mcp` → select **sentry** → approve OAuth in the browser.
-3. **Verify:** `claude mcp list` should show `sentry: connected`. In a session: `Via Sentry MCP, find the top 5 unresolved issues in project <slug> in the last 24h, with stack traces.` Claude should return real Sentry data with affected-user counts.
-4. **Tool scopes:** Sentry MCP exposes `find_issues`, `get_issue`, `get_event`, `seer_status`, `seer_run`, `update_issue` (resolve, ignore, assign), and project-level reads. Phase 4 needs **read + Seer + update** — no need to wrap the REST API.
-5. **Revoke when done:** `claude mcp remove sentry`, revoke OAuth in Sentry under **Settings → Integrations → Authorised Apps**.
-
-#### Path B — Sentry Agent for Linear (in-app, no CLI)
-
-The Sentry Agent for Linear is a **Linear Agent** (April 2026 onwards) — same primitive as Linear's own AI agents. It is assignable, mentionable, and authenticated via OAuth between Linear and Sentry. Once enabled, production errors flowing through Sentry triage rules can land in Linear automatically with Seer's root-cause analysis pre-attached.
-
-1. **Linear admin:** **Settings → Integrations → Sentry → Connect**. Approve the OAuth scopes.
-2. **Sentry admin:** in the Sentry organisation that mirrors the Linear workspace, **Settings → Integrations → Linear**. Map Sentry projects to Linear teams (one-to-one is cleanest — `sentry:web` → `linear:Web` team).
-3. **Configure triage rules in Sentry** (Sentry → Alerts → Issue Alerts):
-   - Trigger: **A new issue is seen** (or **An issue affects N+ users**, depending on signal-to-noise tolerance).
-   - Action: **Create a Linear issue via the Sentry Agent**, in the mapped team's **Triage** state, label `source:sentry` + `severity:auto` + `bug`.
-4. **Enable Seer auto-run on the agent.** In Linear → Settings → Integrations → Sentry → **Auto-run Seer RCA on issue creation**: ON. **Auto-create PR**: OFF (we want the human gate at Phase 4 Step 7). **Auto-update status**: ON (so the agent can mark the Linear issue *In Review* when Seer finishes).
-5. **Smoke test:** in a non-production project, throw a deliberate error. Within ~60 seconds a Linear issue should appear in Triage with: stack trace, affected users, environment, release version, **Seer RCA** as a comment, and severity proposal. The QA Lead reviews this in Step 7.
+2. **Authenticate:** open Claude Code (`claude`) → `/mcp` → select **linear** → approve OAuth in the browser.
+3. **Verify:** in a session, `Via Linear MCP, list the open issues labelled bug in team <team>, with state, severity label, and assignee.` Claude should return real Linear data.
 
 #### Tool-permission policy (Claude Code settings)
 
@@ -76,18 +61,23 @@ For **Linear** in Claude Code's tool-permission settings, Phase 4 keeps the Phas
 - `update_issue` with state transitions to `Resolved` / `Done` (so Claude Code can close bugs after the fix lands)
 - `create_issue` with `parentId` + label `regression-test` (for regression-test stories filed when a bug is fixed — see Step 8)
 
-For **Sentry**, enable: `find_issues`, `get_issue`, `get_event`, `seer_status`, `seer_run`. Keep `delete_event` and bulk operations **disabled**.
+#### Workspace configuration
+
+1. **Create the Phase 4 labels** — see [Linear Workspace Setup](#linear-workspace-setup-phase-4-additions) below. The `source:*` labels are what make the intake auditable when nothing files bugs automatically.
+2. **Create the `Bug Triage` saved view** (`state = Triage`). This is the QA Lead's daily queue and the entry point for Step 7.
+3. **Confirm Triage Intelligence is on** for the team (Linear → Settings → Triage). Duplicate detection and label/priority suggestions run on every bug regardless of who filed it.
 
 #### Verification checklist
 
-- [ ] `claude mcp list` shows both `linear: connected` and `sentry: connected`
-- [ ] Sentry → Settings → Integrations → Linear shows Connected with project↔team mapping
-- [ ] Linear → Settings → Integrations → Sentry: Auto-run Seer ON, Auto-PR OFF, Auto-status ON
-- [ ] Smoke test: deliberate error in staging produced a Linear Triage issue with Seer RCA attached
-- [ ] Audit logging on in both Linear and Sentry
-- [ ] Claude Code tool-permission settings reviewed for Linear + Sentry — see Risks & Guardrails
+- [ ] `claude mcp list` shows `linear: connected`
+- [ ] Linear MCP smoke test returns real bug issues for the team
+- [ ] Claude Code tool-permission settings widened for `Resolved` / `Done` transitions and `regression-test` sub-issue creation — see Risks & Guardrails
+- [ ] Phase 4 labels created (`bug`, `source:qa`, `source:user`, `severity:S0`–`severity:S3`, `regression-test`, `coverage-gap`, `flaky-test`)
+- [ ] `Bug Triage` saved view (`state = Triage`) created and visible to the QA Lead
+- [ ] Triage Intelligence enabled on the team
+- [ ] Audit logging on in Linear
 
-> **Permission inheritance:** Claude inherits the connecting user's Linear and Sentry permissions. The Sentry Agent for Linear inherits the OAuth scopes the workspace admin approved at integration time — review them; do not approve "all" scopes by default.
+> **Permission inheritance:** Claude inherits the connecting user's Linear permissions. Widen the Phase 4 scopes deliberately — a `Done` transition Claude can make is a `Done` transition Claude can make on the wrong issue.
 
 ---
 
@@ -139,7 +129,7 @@ For **Sentry**, enable: `find_issues`, `get_issue`, `get_event`, `seer_status`, 
 
 **2.3 — Review the AI tests line by line.** Common AI test failure modes: assertions that always pass (`expect(result).toBeDefined()` when result is always defined), testing implementation instead of behaviour (snapshotting internals), missing edge cases (empty arrays, nulls, concurrency), unrealistic test data (`"foo"`, `"test123"`). Reject and rewrite — a test that always passes is worse than no test.
 
-**2.4 — CI enforcement.** SonarQube enforces coverage ≥ 80% on **new** code per PR. Drop in coverage on existing code is permitted but logged; concentrated drop > 5% triggers a `tech-debt` ticket.
+**2.4 — CI enforcement.** The test runner's own coverage threshold (`coverage.thresholds` in Vitest/Jest, `--cov-fail-under` in pytest, the JaCoCo check rule in JUnit projects) fails the CI job below 80% on **new** code per PR. Drop in coverage on existing code is permitted but logged; concentrated drop > 5% triggers a `tech-debt` ticket. The coverage report is published as a CI artefact — there is no hosted dashboard to check.
 
 **2.5 — Sprint-end coverage audit.** Each sprint close, the QA Lead runs the [`test-coverage-gap-analysis`](./PROMPTS.md#test-coverage-gap-analysis) prompt against the changed modules. Gaps become Linear issues labelled `phase:qa` + `coverage-gap`, scheduled for the next cycle.
 
@@ -253,37 +243,36 @@ For **Sentry**, enable: `find_issues`, `get_issue`, `get_event`, `seer_status`, 
 
 ---
 
-### Step 7: Bug Intake & Triage — Sentry → Linear via the Sentry Agent
+### Step 7: Bug Intake & Triage — Linear as the Single Bug Ledger
 
 > Visual: [Step 7 flowchart](./FLOWCHART.md#step-7-bug-intake--triage)
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Bugs from manual QA, automated test failures, **production errors flowing in via Sentry**, user reports |
-| **Tool** | **Linear** (tracker) + **Triage Intelligence** (duplicate detection, label/priority suggestions) + **Sentry** (production error tracking) + **Sentry Agent for Linear** (auto-creates Linear issues with Seer RCA) + **Claude Code** (Sentry MCP queries during investigation) |
-| **Output** | Triaged bug backlog with severity, owner, fix plan; every bug carries Seer RCA or Claude RCA; duplicates collapsed |
+| **Input** | Bugs from manual and exploratory QA, failing tests on main, user and support reports |
+| **Tool** | **Linear** (tracker) + **Triage Intelligence** (duplicate detection, label/priority suggestions) + **Claude Code** (Linear MCP during investigation) |
+| **Output** | Triaged bug backlog with severity, owner, fix plan; every bug carries a reproduction or the evidence that stands in for one; duplicates collapsed |
 | **Human** | QA Lead validates severity and assignment, decides fix priority, verifies fixes |
 
-The bug pipeline is the most-automated workflow in Phase 4. The Sentry Agent for Linear handles steps **1–4** below without human input; the QA Lead enters at step 5 to validate.
+Every bug enters through one queue: the Linear `Bug Triage` saved view. Nothing files bugs automatically — a production bug is a bug someone reported — so the reporter's write-up is the entire evidence base. Bug quality is therefore a QA discipline, not a tooling outcome.
 
 **Workflow:**
 
-**7.1 — Production error fires in Sentry.** Sentry's existing alert rules detect a new issue (or one crossing affected-user threshold).
+**7.1 — File the bug in Linear Triage.** Whoever finds it files it in the team's **Triage** state with label `bug` plus a source label: `source:qa` for anything QA found (manual, exploratory, or a test that failed on main or in the nightly run) and `source:user` for a user, customer, or support report. There is no other intake channel — a bug reported in chat and never filed does not exist.
 
-**7.2 — Sentry Agent files a Linear issue.** The triage rule configured in Step 0.B.3 routes the alert to the Sentry Agent for Linear. The agent calls Linear's `create_issue` API to file a new issue in the mapped team's **Triage** state, with: title from Sentry's issue summary, description containing stack trace + affected users + environment + release version, labels `source:sentry` + `bug` + auto-severity.
+**7.2 — Evidence goes in the issue body at filing time.** Use the Bug Report Template as the issue description. A bug that reaches triage carries: expected vs. actual behaviour, deterministic reproduction steps, environment and release version, and whatever stack trace, log excerpt, screenshot, or HAR the reporter has. **The reporter is the only person who was there** — evidence not captured at filing time is gone.
 
-**7.3 — Seer RCA runs.** Because **auto-run Seer** is enabled (Step 0.B.4), the Sentry Agent kicks off Seer root-cause analysis immediately. Within a few minutes Seer posts a comment on the Linear issue: probable root cause, the line of code suspected, the fix proposal. The Linear issue moves from *Triage* to *In Review*.
+**7.3 — Triage Intelligence checks for duplicates.** Linear's Triage Intelligence runs semantic similarity against existing issues. If a strong match appears, it surfaces a "merge as related" suggestion on the issue. The QA Lead either accepts (and the duplicate is closed pointing at the original) or rejects.
 
-**7.4 — Triage Intelligence checks for duplicates.** Linear's Triage Intelligence runs semantic similarity against existing issues. If a strong match appears, it surfaces a "merge as related" suggestion on the issue. The QA Lead either accepts (and the duplicate is closed pointing at the original) or rejects.
-
-**7.5 — QA Lead reviews and validates** (the human gate). Open the Linear `Bug Triage` saved view (filter: `state = Triage OR (label = source:sentry AND state = In Review)`). For each issue:
-   - **Validate severity.** Sentry's auto-severity is a starting point — adjust against the [bug severity scale](#bug-severity-scale) below using business impact, not just affected-user count.
-   - **Validate Seer's RCA.** If correct, accept; if wrong, run the [`debugging`](./PROMPTS.md#debugging-bug-investigation) prompt in Claude Code (which uses Sentry MCP to fetch fresh stack traces and Linear MCP to comment back).
+**7.4 — QA Lead reviews and validates** (the human gate). Open the Linear `Bug Triage` saved view (filter: `state = Triage`). For each issue:
+   - **Assign severity from scratch** against the [bug severity scale](#bug-severity-scale) below, on business impact. Nothing pre-assigns one; the QA Lead's call is the only one.
+   - **Check the evidence is actionable.** No reproduction steps and no stack trace or log → bounce the issue back to the reporter rather than assigning it. An unreproducible bug handed to a developer is a week of guessing.
+   - **Accept or reject the duplicate suggestion** from 7.3.
    - **Assign.** Auto-assignee suggestions from Linear are usually right — confirm or override.
-   - **Label.** Add `phase:qa`, `severity:S0/S1/S2/S3`. Remove `severity:auto`.
-   - **Set fix urgency.** S0 → fix immediately; S1 → this cycle; S2 → next cycle; S3 → backlog.
+   - **Label.** Add `phase:qa`, `severity:S0/S1/S2/S3`.
+   - **Set fix urgency.** S0 → fix immediately; S1 → this cycle; S2 → next cycle; S3 → backlog. An S0 also needs a human escalation to the on-call channel — nothing pages anyone off the back of a Linear label.
 
-**7.6 — Manual bugs (non-Sentry).** QA-discovered or user-reported bugs are filed in Linear directly with label `source:qa` or `source:user`. Linear's Triage Intelligence still runs duplicate detection and label suggestions on these. Otherwise the same triage flow applies from 7.5.
+**7.5 — Structure the contested calls with the triage prompt.** Where severity is arguable — partial degradation, a workaround that technically exists but nobody would find, a small report count on a revenue path — run the [`bug-triage`](./PROMPTS.md#bug-triage--severity-assignment) prompt to structure the impact assessment. The QA Lead still owns the decision.
 
 #### Bug severity scale
 
@@ -294,14 +283,14 @@ The bug pipeline is the most-automated workflow in Phase 4. The Sentry Agent for
 
 ---
 
-### Step 8: Bug Fix Loop — Claude Code + Sentry MCP + Linear MCP
+### Step 8: Bug Fix Loop — Claude Code + Linear MCP
 
 > Visual: [Step 8 flowchart](./FLOWCHART.md#step-8-bug-fix-loop)
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | Triaged bug in Linear (with Seer RCA and stack trace attached) |
-| **Tool** | **Claude Code** with both Linear MCP and Sentry MCP enabled |
+| **Input** | Triaged bug in Linear (severity, reproduction steps, and whatever evidence the reporter attached) |
+| **Tool** | **Claude Code** with Linear MCP enabled |
 | **Output** | Fix PR through Phase 3 Step 4 review gate, regression test added, Linear issue auto-closed on merge |
 | **Human** | Developer reviews the fix and the regression test before opening the PR; QA verifies in staging after merge |
 
@@ -309,22 +298,19 @@ The bug pipeline is the most-automated workflow in Phase 4. The Sentry Agent for
 
 **8.1 — Pick up the bug as a Phase 3 task.** Run the same [`linear-next-task`](../03-development/PROMPTS.md#linear-next-task) prompt the developer uses for stories — bugs are issues, the workflow is the same. Claude Code transitions the issue to *In Progress*, self-assigns, checks out the Linear `branchName`.
 
-**8.2 — Pull the Sentry context via MCP.** Run the [`sentry-context-pull`](./PROMPTS.md#sentry-context-pull) prompt. Claude Code uses Sentry MCP to fetch: the latest event for this issue, the stack trace, the affected-user list, the release version that introduced it, breadcrumbs leading to the error. This is fresh data — Seer's RCA on the Linear issue may be from hours ago.
+**8.2 — Reproduce locally.** Use the [`bug-reproduction`](./PROMPTS.md#bug-reproduction) prompt with the reproduction steps and any stack trace or log excerpt on the Linear issue. Claude proposes a failing test that captures the bug — **write this test first**. A bug that cannot be reproduced is a bug that will recur. If it will not reproduce, go back to the reporter before writing any fix.
 
-**8.3 — Reproduce locally.** Use the [`bug-reproduction`](./PROMPTS.md#bug-reproduction) prompt with the stack trace and reproduction steps. Claude proposes a failing test that captures the bug — **write this test first**. A bug that cannot be reproduced is a bug that will recur.
+**8.3 — Fix.** Run the [`debugging`](./PROMPTS.md#debugging-bug-investigation) prompt. Claude reads the relevant code paths, traces data flow, proposes a targeted fix and states its blast radius.
 
-**8.4 — Fix.** Apply Seer's proposed fix (if it was correct in step 7.5) or run the [`debugging`](./PROMPTS.md#debugging-bug-investigation) prompt. Claude reads the relevant code paths, traces data flow, proposes a targeted fix.
+**8.4 — Add the regression test.** The failing test from 8.2 now passes — keep it. **Every bug fix PR includes the regression test in the same diff.** Tests added later drift; tests in the same commit as the fix do not.
 
-**8.5 — Add the regression test.** The failing test from 8.3 now passes — keep it. **Every bug fix PR includes the regression test in the same diff.** Tests added later drift; tests in the same commit as the fix do not.
+**8.5 — Open the PR through the Phase 3 review gate.** Title: `[ENG-XXX] Fix <bug summary>`. Body: `Closes ENG-XXX` plus a short post-mortem (root cause, fix, regression test, prevention idea). Phase 3 Step 4 governs the review.
 
-**8.6 — Open the PR through the Phase 3 review gate.** Title: `[ENG-XXX] Fix <bug summary>`. Body: `Closes ENG-XXX` plus a short post-mortem (root cause, fix, regression test, prevention idea). Phase 3 Step 4 governs the review.
-
-**8.7 — On merge:**
+**8.6 — On merge:**
    - Linear auto-transitions the bug issue to **Done** via the git integration.
-   - Claude Code (or the Sentry Agent — admin choice) calls Sentry's `update_issue` to mark the Sentry issue as **Resolved in version `<release>`**.
-   - QA verifies in staging and adds a comment on the Linear issue: `Verified in staging by <user> on <date>`.
+   - QA verifies in staging and adds a comment on the Linear issue: `Verified in staging by <user> on <date>`. This comment is the close-out record — without an error tracker there is no other confirmation the fix reached users.
 
-**8.8 — Post-mortem for S0/S1.** Every S0 and S1 bug closes with a brief post-mortem comment on the Linear issue: root cause (one paragraph), why tests missed it, what we will add (regression test + monitoring), owner of the prevention work. Run the [`post-mortem`](./PROMPTS.md#post-mortem) prompt to seed the draft.
+**8.7 — Post-mortem for S0/S1.** Every S0 and S1 bug closes with a brief post-mortem comment on the Linear issue: root cause (one paragraph), why tests missed it, what we will add (regression test + monitoring), owner of the prevention work. Run the [`post-mortem`](./PROMPTS.md#post-mortem) prompt to seed the draft.
 
 ---
 
@@ -336,17 +322,17 @@ When Testing & QA is complete (all gates passed), the following artefacts hand o
 |----------|--------|----------|
 | Test Plan (final) | Linear Document attached to the Linear Project | **Linear Project → Documents** |
 | Test Suites (unit / integration / E2E / load / mobile) | Code | Test directories in repo |
-| Coverage Report | HTML + JSON | CI artefacts + SonarQube dashboard |
+| Coverage Report | HTML + JSON | CI artefacts |
 | Load Test Results | k6 reports | Archived in CI artefacts; summary in Linear comment on the cycle |
 | Known Issues Log | Linear saved view (`label = bug AND state != Done`) | Linear |
 | Regression Test Baseline | Code (test files committed alongside fixes) | Repo |
-| Sentry Resolved Issues Log | Sentry view | Sentry organisation |
+| Resolved Bugs Log | Linear saved view (`label = bug AND state = Done` in this cycle) | Linear |
 | Post-mortems (S0/S1) | Linear comments on the originating bug issues | Linear |
 
 **Handoff Checklist:**
 - [ ] Test plan v1 (or latest) marked **Approved** as a Linear Document
 - [ ] All test types implemented per the test plan (unit, integration, E2E, load, mobile if applicable)
-- [ ] Unit test coverage ≥ 80% on new code (SonarQube verified)
+- [ ] Unit test coverage ≥ 80% on new code, enforced by the CI coverage step
 - [ ] Integration tests cover all API endpoints (happy path + error case); 100% on auth/payments/PII paths
 - [ ] E2E tests cover all critical user journeys; flakiness rate < 2%
 - [ ] Load test results meet NFR targets from Phase 1
@@ -355,7 +341,6 @@ When Testing & QA is complete (all gates passed), the following artefacts hand o
 - [ ] All S2 bugs triaged with documented fix plan
 - [ ] Every S0/S1 fix has a regression test in the same PR
 - [ ] Every S0/S1 has a post-mortem comment on the Linear issue
-- [ ] Sentry-Linear integration verified end-to-end on a real bug in this cycle
 - [ ] Saved view `phase:qa AND state != Done` reviewed and triaged
 
 ---
@@ -369,18 +354,16 @@ Phase 1 and 3 setup carries over (Initiative → Project → Milestone → Issue
 | Label | Meaning |
 |-------|---------|
 | `bug` | Bug — anything Phase 4 owns the lifecycle for |
-| `source:sentry` | Filed automatically by the Sentry Agent for Linear |
-| `source:qa` | Filed by QA from manual or exploratory testing |
+| `source:qa` | Filed by QA from manual or exploratory testing, or from a test that failed on main |
 | `source:user` | Filed from a user/customer report |
-| `severity:S0`, `severity:S1`, `severity:S2`, `severity:S3` | Triaged severity (after step 7.5) |
-| `severity:auto` | Sentry's auto-severity, before human triage |
+| `severity:S0`, `severity:S1`, `severity:S2`, `severity:S3` | Triaged severity (after step 7.4) |
 | `regression-test` | Sub-issue tracking the regression test for a specific bug |
 | `coverage-gap` | Filed by the sprint-end coverage audit (Step 2.5) |
 | `flaky-test` | Test quarantined as flaky pending fix (Step 4.4) |
 
 **Saved views the QA Lead should configure:**
 
-1. **Bug Triage** — `state = Triage OR (label = source:sentry AND state = In Review)` (the daily triage queue)
+1. **Bug Triage** — `state = Triage` (the daily triage queue)
 2. **Open S0/S1** — `label IN (severity:S0, severity:S1) AND state != Done` (release blockers)
 3. **Open Bugs (all)** — `label = bug AND state != Done`
 4. **Phase 4 Active** — `label = phase:qa AND state != Done`
@@ -407,18 +390,17 @@ Phase 1 and 3 setup carries over (Initiative → Project → Milestone → Issue
    ▼  GATE 2: Per-cycle test coverage gates pass
    │
 [Step 7] Bug intake (continuous)
-   ├─ Sentry → Sentry Agent for Linear → Linear Triage with Seer RCA attached
-   ├─ Manual QA / user reports → Linear directly with label source:qa or source:user
+   ├─ QA testing + failing tests on main → Linear Triage with label source:qa
+   ├─ User and support reports → Linear Triage with label source:user
    ├─ Triage Intelligence flags duplicates and proposes labels/priority
-   └─ QA Lead validates severity, assignee, label (the human gate)
+   └─ QA Lead assigns severity, assignee, label (the human gate)
    │
-[Step 8] Bug fix loop (Claude Code + Linear MCP + Sentry MCP)
+[Step 8] Bug fix loop (Claude Code + Linear MCP)
    ├─ linear-next-task → fetch bug → In Progress → branchName checkout
-   ├─ sentry-context-pull → fresh stack trace + breadcrumbs
    ├─ Reproduce with a failing test
    ├─ Fix; the failing test now passes (regression test, kept in the diff)
    ├─ PR through Phase 3 Step 4 review gate
-   └─ On merge: Linear auto-Done; Sentry marked Resolved; QA verifies in staging
+   └─ On merge: Linear auto-Done; QA verifies in staging
    │
    ▼  GATE 3: Release candidate validation
    ├─ All test types green
@@ -431,7 +413,7 @@ Phase 1 and 3 setup carries over (Initiative → Project → Milestone → Issue
 [Phase 5: Security & Compliance]
 ```
 
-Four explicit gates ensure that **no AI-triaged bug or AI-generated test reaches main without human validation**, every bug fix carries a regression test in the same diff, and every production error has an audit trail from Sentry → Linear → fix PR → resolved release.
+Four explicit gates ensure that **no AI-triaged bug or AI-generated test reaches main without human validation**, every bug fix carries a regression test in the same diff, and every bug has an audit trail from the Linear issue → fix PR → verified in staging.
 
 ---
 
@@ -441,13 +423,11 @@ Four explicit gates ensure that **no AI-triaged bug or AI-generated test reaches
 |------|------------|
 | **AI tests that always pass** — Claude generates `expect(result).toBeDefined()` style assertions that look like tests but assert nothing | Step 2.3 mandates line-by-line review. CodeRabbit flags trivially-true assertions in 80%+ of cases. Sprint-end audit (Step 2.5) re-checks via the coverage-gap prompt. |
 | **AI tests that mock the database in integration tests** — most common AI mistake on integration tests | Step 3.2 — reject these tests at PR review. Testcontainers must be running for the integration suite; the test must hit a real DB. |
-| **Sentry alert spam → Linear flooded with auto-issues** — too-broad triage rules drown Triage Intelligence | Step 0.B.3 starts with the conservative trigger ("affects N+ users" not "any new issue"). Triage Intelligence collapses duplicates, but volume past ~30/day overwhelms the QA Lead. Re-tune triggers monthly. |
-| **Seer RCA hallucination** — Seer proposes a fix for the wrong line of code | Step 7.5 — QA validates the RCA, not just the severity. If wrong, the developer runs the debugging prompt with Sentry MCP to investigate live, then fixes. Track Seer accuracy per project; if < 60% accept rate over a month, disable auto-run and use Seer on-demand only. |
-| **Regression tests committed in a follow-up PR (and forgotten)** — the bug recurs | Step 8.5 / 8.6 — the regression test ships in the same diff as the fix. Reviewers reject fix PRs without the regression test. |
+| **Production bugs are found only when someone reports them** — there is no automated error feed, so a silent failure can run for days before anyone files it | Step 7.1 makes Linear the single intake channel and Step 7.4 a daily human gate, so nothing reported is lost. The gap is *detection*, not tracking: re-baseline defect escape rate (see [QUALITY-GATES.md → Metrics to Track](./QUALITY-GATES.md#metrics-to-track)) — a falling number may mean fewer reports, not fewer bugs. |
+| **Regression tests committed in a follow-up PR (and forgotten)** — the bug recurs | Step 8.4 / 8.5 — the regression test ships in the same diff as the fix. Reviewers reject fix PRs without the regression test. |
 | **Flaky E2E tests merged with `.skip` and a TODO** — flake decay | Step 4.4 — quarantine via a tracking issue (`flaky-test` label), never `.skip` without that issue. The flake quarantine cannot exceed two cycles before fix-or-delete. |
-| **Production-bug PRs auto-closing the wrong Linear issue** — wrong identifier in the title | Phase 3 Step 4.5's sanity check carries over. Bugs especially: Seer's auto-filed Linear issue and the developer's PR must reference the same identifier. The `[ENG-XXX]` title rule is non-negotiable. |
-| **Sentry MCP scope overreach** — `delete_event` or bulk `update_issue` enabled and accidentally fires on the whole project | Step 0 admin policy keeps `delete_event` and bulk operations disabled. Off-board by revoking OAuth in Sentry. |
-| **Linear comment spam on bug issues** — Sentry Agent + Seer + Claude all comment, the actual triage thread drowns | Convention: Seer posts one RCA comment; the developer posts one fix comment on PR open; QA posts one verification comment. Do not narrate progress on bug issues — the PR is the narrative. |
+| **Production-bug PRs auto-closing the wrong Linear issue** — wrong identifier in the title | Phase 3 Step 4.5's sanity check carries over. Bugs especially: the triaged Linear issue and the developer's PR must reference the same identifier. The `[ENG-XXX]` title rule is non-negotiable. |
+| **Linear comment spam on bug issues** — the triage thread drowns in progress narration | Convention: the QA Lead posts one triage comment; the developer posts one fix comment on PR open; QA posts one verification comment. Do not narrate progress on bug issues — the PR is the narrative. |
 | **Load tests pass against an under-provisioned staging environment** — green tests, red production | Step 6.3 — staging must be performance-matched to production for load tests, not the standard staging. Provision and tear down for the run. |
 
 ---
@@ -469,9 +449,6 @@ Four explicit gates ensure that **no AI-triaged bug or AI-generated test reaches
 - [Linear Agent MCP support — Changelog (April 2026)](https://linear.app/changelog/2026-04-23-linear-agent-mcp-support)
 - [Linear Triage Intelligence](https://linear.app/docs/triage-intelligence) — duplicate detection, label and priority suggestions
 - [Linear Triage docs](https://linear.app/docs/triage)
-- [Sentry MCP server](https://docs.sentry.io/ai/mcp/) — `https://mcp.sentry.dev/mcp`, OAuth, tools
-- [Sentry Agent for Linear](https://docs.sentry.io/integrations/issue-tracking/sentry-linear-agent/) — assign to Sentry, auto Seer, triage rules
-- [Sentry MCP cookbook — automate triage with Claude Code + Sentry](https://sentry.io/cookbook/performance-bot-sentry-claude/)
 - [Playwright (test framework)](https://playwright.dev/) — auto-waiting, role locators, Trace Viewer
 - [k6 (load testing)](https://k6.io/) — JS/TS-based load testing
 - [Testcontainers](https://testcontainers.com/) — real dependencies in tests

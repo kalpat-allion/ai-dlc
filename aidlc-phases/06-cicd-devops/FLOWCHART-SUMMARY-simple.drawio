@@ -25,27 +25,27 @@
           <mxGeometry x="75" y="140" width="260" height="120" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S0" value="&lt;b&gt;Step 0: One-Time Setup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Wire Pulumi MCP, Claude Code Action, ESC, and observability MCPs.&lt;br&gt;&lt;br&gt;· Pulumi MCP · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S0" value="&lt;b&gt;Setup&lt;/b&gt;&lt;br&gt;PROCESS Step 0&lt;br&gt;&lt;br&gt;Wire the Claude Code Action, agentic workflows, observability MCP, and the Phase 6 helpers.&lt;br&gt;&lt;br&gt;· Claude Code Action · subagents + skills" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5C2E8A;fontColor=#FFFFFF;strokeColor=#3A1C58;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="365" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S1" value="&lt;b&gt;Step 1: Foundation&lt;/b&gt;&lt;br&gt;&lt;br&gt;Tech-stack ADRs + Pulumi IaC + cost-on-PR.&lt;br&gt;CrossGuard policy gate.&lt;br&gt;&lt;br&gt;· Pulumi · CrossGuard · Pulumi Insights" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S1" value="&lt;b&gt;Foundation&lt;/b&gt;&lt;br&gt;PROCESS Steps 1–3&lt;br&gt;&lt;br&gt;Tech-stack ADRs + Terraform IaC + cost-on-PR.&lt;br&gt;terraform plan reviewed on every IaC PR.&lt;br&gt;&lt;br&gt;· Terraform / OpenTofu · OIDC · Infracost" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="655" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S2" value="&lt;b&gt;Step 2: CI/CD Pipeline&lt;/b&gt;&lt;br&gt;&lt;br&gt;GitHub Actions + Claude Code Action auto-review.&lt;br&gt;Copilot Agentic Workflows for hygiene.&lt;br&gt;&lt;br&gt;· GitHub Actions · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S2" value="&lt;b&gt;CI/CD Pipeline&lt;/b&gt;&lt;br&gt;PROCESS Step 4&lt;br&gt;&lt;br&gt;GitHub Actions + Claude Code Action auto-review.&lt;br&gt;Copilot Agentic Workflows for hygiene.&lt;br&gt;&lt;br&gt;· GitHub Actions · Claude Code Action" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="945" y="125" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S3" value="&lt;b&gt;Step 3: Containerization&lt;/b&gt;&lt;br&gt;&lt;br&gt;Docker Gordon + Claude Dockerfiles.&lt;br&gt;Trivy + Docker Scout scans.&lt;br&gt;&lt;br&gt;· Docker Gordon · Trivy · Docker Scout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S3" value="&lt;b&gt;Containerization&lt;/b&gt;&lt;br&gt;PROCESS Step 5&lt;br&gt;&lt;br&gt;Docker Gordon + Claude Dockerfiles.&lt;br&gt;Digest-pinned, non-root, HEALTHCHECK.&lt;br&gt;&lt;br&gt;· Docker Gordon · Claude Code · K8sGPT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="945" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S4" value="&lt;b&gt;Step 4: Observability&lt;/b&gt;&lt;br&gt;&lt;br&gt;OpenTelemetry + Datadog/Bits or Grafana/Sift.&lt;br&gt;Sentry + Seer for errors.&lt;br&gt;&lt;br&gt;· OpenTelemetry · Datadog / Grafana · Sentry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S4" value="&lt;b&gt;Observability&lt;/b&gt;&lt;br&gt;PROCESS Step 6&lt;br&gt;&lt;br&gt;OpenTelemetry + Datadog/Bits or Grafana/Sift.&lt;br&gt;Dashboards, SLOs, runbooks per alert.&lt;br&gt;&lt;br&gt;· OpenTelemetry · Datadog / Grafana" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="655" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 
-        <mxCell id="S5" value="&lt;b&gt;Step 5: Deployment&lt;/b&gt;&lt;br&gt;&lt;br&gt;Auto-deploy to staging. Manual prod gate.&lt;br&gt;AI-watched 30-min window + rollback.&lt;br&gt;&lt;br&gt;· Pulumi Deployments · Bits AI / Sift" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="S5" value="&lt;b&gt;Deployment&lt;/b&gt;&lt;br&gt;PROCESS Step 7&lt;br&gt;&lt;br&gt;Auto-apply to staging. Manual prod gate.&lt;br&gt;AI-watched 30-min window + rollback.&lt;br&gt;&lt;br&gt;· GitHub Actions · Bits AI / Sift" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3D6B9F;fontColor=#FFFFFF;strokeColor=#26466A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="365" y="420" width="260" height="150" as="geometry"/>
         </mxCell>
 

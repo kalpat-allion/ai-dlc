@@ -105,7 +105,9 @@ During and immediately after the handoff meeting(s). Each sub-section pairs a **
 
 **Execution**
 - [ ] IaC repository transferred to recipient
-- [ ] Terraform state migrated successfully
+- [ ] Terraform state migrated successfully and `terraform plan` reports **no changes** against the new backend
+- [ ] Pre-migration `terraform state pull` backup taken and stored in the shared vault (contains secrets — treat as a credential)
+- [ ] Recipient's state backend has versioning, encryption and locking configured before migration (the Phase 6 Gate 1 bar)
 - [ ] Reproducibility demonstrated (create a new dev environment live)
 - [ ] Cloud account access granted
 

@@ -1,6 +1,6 @@
 # Phase 6: CI/CD & DevOps — Prompt Templates
 
-> **All prompts are for Claude Code, GitHub Copilot, or Pulumi Neo / Copilot.** Pulumi (CLI), Docker, GitHub Actions, Pulumi Deployments, and observability backends run natively — the AI generates the configs and triages the runs.
+> **All prompts are for Claude Code or GitHub Copilot.** Terraform / OpenTofu (CLI), Docker, GitHub Actions, Infracost, and observability backends run natively — the AI generates the configs and triages the runs. Several of these prompts are also wrapped by the Phase 6 subagents and skills ([`subagent-prompts/`](./subagent-prompts/), [`skill-prompts/`](./skill-prompts/)); this file remains the source of truth for the prompt text itself.
 
 The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) steps. Anchors below are referenced from PROCESS.md; keep the heading slugs stable.
 
@@ -8,10 +8,10 @@ The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) st
 
 ## AGENTS.md Authoring
 
-> Used in [PROCESS.md → Step 0.7](./PROCESS.md#07--author-an-agentsmd-at-the-repo-root). One-time, run from Claude Code at the repo root before any IaC or pipeline generation.
+> Used in [PROCESS.md → Step 0.5](./PROCESS.md#05--author-an-agentsmd-at-the-repo-root). One-time, run from Claude Code at the repo root before any IaC or pipeline generation.
 
 ```
-You are a platform-engineering lead authoring the canonical `AGENTS.md` for this repository. AGENTS.md is the project context file every AI coding agent (Pulumi Neo, Claude Code, Copilot agent) reads as ground truth — be precise, terse, and project-specific. Do not pad with generic best-practice prose.
+You are a platform-engineering lead authoring the canonical `AGENTS.md` for this repository. AGENTS.md is the project context file every AI coding agent (Claude Code and its subagents, Copilot agent) reads as ground truth — be precise, terse, and project-specific. Do not pad with generic best-practice prose.
 
 ## Inputs
 - **Project name and description:** [name + 1-line description]
@@ -33,10 +33,10 @@ One paragraph: what the project is, who owns it, the canonical Linear / Jira pro
 The naming pattern (with one worked example), the stack-per-environment list, and how to derive resource names from the pattern.
 
 ### Mandatory tags
-Table of tag key → allowed values → enforcement (CrossGuard policy pack name).
+Table of tag key → allowed values → where the value comes from (a Terraform variable, the secret manager, or a literal). Note that the mandatory tag set is load-bearing, not cosmetic: cloud-native inventory is the only cross-environment resource-search capability in this stack, and an untagged resource is invisible to it.
 
 ### Forbidden patterns
-Bulleted list of forbidden resource types and configurations, each with a 1-line "why" and the CrossGuard rule that blocks it.
+Bulleted list of forbidden resource types and configurations, each with a 1-line "why". These are agent-facing conventions read out of `AGENTS.md` and checked by the human reviewing `terraform plan` — state that plainly rather than implying an automated gate blocks them.
 
 ### Region restrictions
 Allowed regions, with a 1-line rationale tied to compliance or latency.
@@ -45,10 +45,10 @@ Allowed regions, with a 1-line rationale tied to compliance or latency.
 Which frameworks apply; which controls are infra-relevant (encryption, audit logging, data residency); link to the ADR or compliance doc.
 
 ### Production-deploy approval
-The approval rule in plain language; reference the GitHub Environment / Pulumi Cloud policy that enforces it.
+The approval rule in plain language; reference the GitHub Environment and the IAM trust policy that enforce it — no human principal holds an apply-capable credential for staging or prod.
 
 ### How to use this file
-One paragraph telling AI agents (Pulumi Neo, Claude Code): "Read this file before any change; if a conflict exists between this file and your generated output, this file wins; if this file does not cover a case, ask the human."
+One paragraph telling AI agents (Claude Code and its subagents, Copilot agent): "Read this file before any change; if a conflict exists between this file and your generated output, this file wins; if this file does not cover a case, ask the human."
 
 ### Pointers
 Links to: ADRs, infra runbook, deployment runbook, Phase 6 PROCESS.md.
@@ -84,7 +84,7 @@ Compare AWS, GCP, Azure, Cloudflare, Vercel (and Fly.io / Render / Railway for s
 1. **Feature fit** — Native services that match requirements
 2. **Estimated cost at launch and 12 months** — Monthly spend with realistic usage; state the unit assumptions you used (RPS, GB stored, GB egress)
 3. **Team readiness** — Learning curve given current expertise
-4. **Ecosystem maturity** — Integrations, community, AI-tool support (Pulumi providers, Claude Code MCP, Docker compatibility)
+4. **Ecosystem maturity** — Integrations, community, AI-tool support (Terraform / OpenTofu provider coverage, Claude Code MCP, Docker compatibility)
 5. **Compliance certifications** — Match against our requirements
 6. **Lock-in risk** — How portable is the architecture if we want to move?
 7. **Simplicity** — For this project size, is it overkill?
@@ -167,36 +167,6 @@ Top 3 drivers: CloudFront egress, NAT Gateway, Fargate compute. NAT Gateway is t
 
 ---
 
-## Pulumi Cost Delta
-
-> Used in [PROCESS.md → Step 2.2](./PROCESS.md#step-2-cost-analysis--finops). Pulumi-on-PR cost-comment replacement for Infracost — Infracost does not yet support Pulumi natively. Runs as a Claude Code GitHub Action step on every IaC PR.
-
-```
-You are running as a Claude Code GitHub Action on a PR that modifies Pulumi IaC. Your output becomes a single PR comment that the reviewer relies on to approve or block the change.
-
-## Inputs
-- **Pulumi preview JSON output:** [`pulumi preview --json` output for the target stack]
-- **Pulumi Insights resource catalogue:** [paste output of `pulumi insights search` for the org or fetch via the Pulumi MCP server's `resource-search` tool]
-- **Cloud-provider price list:** [reference cloud-provider pricing API or static price snapshot in the repo]
-
-## Tasks
-1. Parse the Pulumi preview JSON: identify resources to create, replace, update, and delete.
-2. For each create / replace, look up the unit cost from the price list.
-3. For each update with cost-relevant property changes (instance type, storage size, IOPS, throughput), compute the cost delta.
-4. Aggregate: total monthly $ delta = (created + replaced) - (deleted) + (updated deltas).
-5. Flag anomalies: cost-impacting resources with no clear justification in the linked Linear issue, oversized instances vs the Phase-1 NFR target, missing tags from AGENTS.md.
-6. Post a single PR comment with:
-   - Total monthly delta in USD
-   - Top 5 cost-driving changes (resource → delta)
-   - Anomalies and questions for the reviewer
-
-Format the comment as Markdown. Sign off as `*(via Claude Code + Pulumi Insights)*`.
-
-If the price list does not cover a resource type that appears in the preview, list that resource under `Unpriced changes` with the resource address and ask the reviewer for an override price — do not guess.
-```
-
----
-
 ## Cost Optimisation
 
 > Used in [PROCESS.md → Step 2.3](./PROCESS.md#step-2-cost-analysis--finops).
@@ -207,7 +177,7 @@ You are a FinOps engineer reviewing a running infrastructure for savings. Recomm
 Identify cost optimisation opportunities in our infrastructure.
 
 ## Current Infrastructure
-[Paste Pulumi stack list + the top 50 resources by spend from cloud billing API or `pulumi insights search`]
+[Paste the environment list + the top 50 resources by spend from the cloud billing API, cloud-native inventory (AWS Resource Explorer / Config, Azure Resource Graph, GCP Cloud Asset Inventory), or `terraform state list`]
 
 ## Current Monthly Spend
 [From cloud billing]
@@ -240,19 +210,19 @@ For each opportunity:
 - **Risk** (does this affect reliability/performance?)
 - **Dependency** (what must be done first?)
 
-Prioritise by savings/effort ratio. Output as a Pulumi-friendly Markdown list — each opportunity should be implementable as a Pulumi PR.
+Prioritise by savings/effort ratio. Output as a Markdown list where each opportunity is implementable as a single Terraform PR — name the module or resource address it would touch.
 ```
 
 ---
 
-## Pulumi IaC Generation
+## Terraform IaC Generation
 
-> Used in [PROCESS.md → Step 3.2](./PROCESS.md#step-3-infrastructure-provisioning-iac-with-pulumi-ai). Run from Claude Code with the Pulumi MCP server connected.
+> Used in [PROCESS.md → Step 3.2](./PROCESS.md#step-3-infrastructure-provisioning-iac-with-terraform). The direct-invocation fallback when the `terraform-iac-engineer` subagent is not installed. Run from Claude Code with the CLI available in the shell — **there is no IaC MCP server in this stack.**
 
 ```
-You are a senior platform engineer authoring production-grade Pulumi IaC. Treat AGENTS.md as binding — every resource you generate must comply with its naming, tagging, and forbidden-resource rules.
+You are a senior platform engineer authoring production-grade Terraform. Treat AGENTS.md as binding — every resource you generate must comply with its naming, tagging, and forbidden-resource rules.
 
-Generate a Pulumi project in [TypeScript / Python / Go / .NET / Java].
+Generate a Terraform configuration using [terraform / tofu].
 
 ## Cloud Provider & Region
 [AWS / GCP / Azure / Cloudflare + region]
@@ -263,6 +233,9 @@ Generate a Pulumi project in [TypeScript / Python / Go / .NET / Java].
 ## Resources Needed
 [Bullet list — VPC, subnets, security groups, databases, services, queues, secrets, observability — with specific NFR-driven requirements]
 
+## Secret manager
+[AWS Secrets Manager / Azure Key Vault / GCP Secret Manager / HashiCorp Vault / Doppler / 1Password — required, so secret references are concrete rather than aspirational]
+
 ## Project Conventions (from AGENTS.md)
 - **Naming:** `<project>-<env>-<resource>` or [project-specific]
 - **Mandatory tags:** Project, Environment, Owner, CostCenter
@@ -270,65 +243,75 @@ Generate a Pulumi project in [TypeScript / Python / Go / .NET / Java].
 - **Region restrictions:** [allowed regions]
 
 ## Output Requirements
-1. **Component-resource structure** — `/components/vpc`, `/components/database`, `/components/service` (one component per reusable pattern)
-2. **One stack per environment** — `dev`, `staging`, `prod`; environment-specific config in `Pulumi.<stack>.yaml`
-3. **Pulumi ESC integration** — link `acme/<env>-ci` env via `pulumi config env add`; reference secrets via `pulumi.Config().requireSecret(...)`
-4. **Tests** — generate Jest / pytest / Go test for each component
-5. **Outputs** — important values exposed as stack outputs (URLs, ARNs, endpoints)
-6. **Provider versions pinned** — `package.json` / `requirements.txt` / `go.mod` / `Pulumi.yaml`
-7. **CrossGuard policy pack** — `/policy-packs/<project>` with required-tags, encryption-at-rest, no-public-S3, region-allowlist
+1. **Module structure** — `modules/vpc/`, `modules/database/`, `modules/service/`, each with `main.tf` / `variables.tf` / `outputs.tf` (one module per reusable pattern)
+2. **One root module per environment** — `envs/dev`, `envs/staging`, `envs/prod`; thin root modules holding the backend block, module calls, and `terraform.tfvars`
+3. **Secret references** — every secret read through a secret-manager **data source** (`aws_secretsmanager_secret_version`, `vault_generic_secret`, `azurerm_key_vault_secret`). No literals, no variable defaults, no values in `.tfvars`
+4. **Tests** — a `.tftest.hcl` per module using **`command = plan` run blocks with `mock_provider` only**. At minimum: one asserting the mandatory tag set is present, one asserting no public exposure
+5. **Outputs** — important values declared as outputs (URLs, ARNs, endpoints) for other modules and the pipeline
+6. **Provider versions pinned** — `required_providers` with `~>` constraints and `required_version` set; commit the dependency lock file
+7. **AGENTS.md conventions applied in code** — mandatory tags on every taggable resource, encryption-at-rest enabled, no public buckets, region taken from a variable checked against the allowed list
 
-## Pulumi best practices
-- Use `ComponentResource` for reusable patterns; never copy-paste resources between stacks
-- Validate inputs with TypeScript types / Python type hints / Go structs
-- Avoid `Output<T>` lifting except where data flow requires it
+## Preconditions you assume rather than create
+The remote state backend, its versioning and encryption, the state lock, the split read/write IAM roles, and the CI OIDC trust policy **already exist** — they are a separate bring-up. Do not author a backend block's contents, do not create the state bucket, and refuse if no backend is configured rather than inventing one.
+
+## Terraform best practices
+- Compose modules; never copy resources between environments
+- `for_each` over `count` for named resources, so adding an item does not renumber and destroy its neighbours; never a computed value in `count`
+- `validation` blocks on any variable with a bounded valid range
+- Derived names in `locals`, defined once
 - Comment non-obvious decisions inline
 
-Run `pulumi preview` via the MCP server after generation to verify the stack resolves. If preview fails, fix and re-preview before reporting completion. Do not claim the stack is generated without an actual successful preview — paste the preview summary in your final response.
+Run `[terraform / tofu] fmt -check`, `validate`, `test`, then `plan` after generation. If any fails, fix and re-run before reporting completion. **Do not claim the configuration is generated without an actual clean plan — paste the plan summary in your final response.**
 
-If `Architecture` or `AGENTS.md` content is not provided, ask before generating — fabricated conventions will violate org policy and waste a Neo / human review cycle.
+State plainly what the tests do and do not prove: plan-time assertions check the resource graph Terraform computed, not the infrastructure that would result. **Never write a run block with `command = apply`** — it provisions real infrastructure, and no managed runner exists in this stack to refuse it.
+
+If `Architecture` or `AGENTS.md` content is not provided, ask before generating — fabricated conventions will violate org policy and waste a human review cycle.
 ```
 
 ---
 
 ## Infra Runbook
 
-> Used in [PROCESS.md → Step 3.8](./PROCESS.md#step-3-infrastructure-provisioning-iac-with-pulumi-ai).
+> Used in [PROCESS.md → Step 3.7](./PROCESS.md#step-3-infrastructure-provisioning-iac-with-terraform).
 
 ```
-You are an SRE writing the canonical infrastructure runbook for this Pulumi project. The audience is the on-call engineer at 2am — every command must be copy-pasteable, every step must say what success looks like.
+You are an SRE writing the canonical infrastructure runbook for this Terraform project. The audience is the on-call engineer at 2am — every command must be copy-pasteable, every step must say what success looks like.
 
-Generate `/docs/infrastructure.md` for this Pulumi project.
+Generate `/docs/infrastructure.md` for this project.
 
 ## Inputs
-- **Stack list:** [output of `pulumi stack ls`]
+- **Environment list and directory layout:** [e.g. `envs/dev`, `envs/staging`, `envs/prod`]
+- **CLI:** [terraform / tofu]
+- **State backend:** [S3 + DynamoDB lock / Azure Blob + lease / GCS — bucket and lock names]
+- **Secret manager:** [AWS Secrets Manager / Azure Key Vault / GCP Secret Manager / Vault / Doppler / 1Password]
 - **AGENTS.md content**
-- **ESC environments**
-- **CrossGuard policy packs**
 
 ## Output sections (Markdown)
 
 ### Provision from Scratch
-Numbered steps for: clone repo → install Pulumi + language toolchain → authenticate to cloud and Pulumi Cloud → `pulumi stack init <env>` → `pulumi config env add` → `pulumi up` for each environment in order. Include exact commands and expected duration.
+Numbered steps for: clone repo → install the CLI and cloud SDK → authenticate to the cloud → `init` in the target environment directory → `plan` → `apply`, for each environment in dependency order. Include exact commands and expected duration. Note that a first-time apply requires the CI role — a laptop cannot apply to staging or prod by design.
 
 ### Make Infrastructure Changes
-PR flow: branch → modify Pulumi code → `pulumi preview` locally → push → PR → Claude Code Action review + cost-delta + CrossGuard → human approval → merge → Pulumi Deployments runs `pulumi up` against the target stack.
+PR flow: branch → modify HCL → `fmt` / `validate` / `test` / `plan` locally → push → PR → CI posts the plan output and the Infracost delta comment → AI review → human approval → merge → CI applies the **saved plan** under the OIDC role.
 
 ### Recover from Corrupted State
-Pulumi Cloud state recovery: `pulumi stack export` from last good revision → review diff → `pulumi stack import` → verify with `pulumi refresh --diff`.
+Restore the prior object version from the versioned state bucket → download and inspect the diff → restore it as current → verify with a `plan` that reports **no changes**. State this precondition plainly: **bucket versioning must already be on** — there is no vendor-side revision history to fall back on, so if versioning was never enabled there is nothing to recover to.
+
+### Clear a Stuck Lock
+`force-unlock <lock-id>` — but **only after confirming in the CI run list that no apply is actually in flight.** Forcing a live lock corrupts state. Record who unlocked, when, and why.
 
 ### Handle Drift
-Drift detection (Pulumi Deployments scheduled run) reports drift on prod → page on-call → SRE decides: import drift to code, refresh state, or `pulumi up` to remediate. Auto-remediation only on dev / ephemeral stacks.
+The scheduled `plan -detailed-exitcode` workflow reports drift (exit code 2) → page on-call for production → SRE decides: import the drift to code, accept it, or apply to remediate. Auto-remediation only on dev / ephemeral environments. Note that nothing schedules this for you — if the workflow is disabled or its credential expires, drift detection stops silently.
 
-### Rotate ESC Secrets
-Pulumi ESC rotation flow: `pulumi env set <env> <key> --secret <new-value>` → ESC versions and immutably stores → CI picks up next run. Document upstream-store rotation for Vault / AWS Secrets Manager / Azure Key Vault.
+### Rotate Secrets
+Rotation happens in the upstream store, then the next plan/apply resolves the new version. Document the exact rotation surface for the project's secret manager, and name the owner and cadence for each secret — **these are static, long-lived credentials and nothing expires them automatically.**
 
 ### Disaster Recovery
 Cross-region failover plan; RTO and RPO targets; backup-restore procedures; the quarterly DR drill date.
 
 Write in second person ("you"). Include exact commands. Reference AGENTS.md for conventions.
 
-If the stack list, ESC environments, or AGENTS.md content is not provided, ask before drafting — runbook fabrication leads to commands that fail when an engineer follows them under pressure.
+If the environment list, state backend details, or AGENTS.md content is not provided, ask before drafting — runbook fabrication leads to commands that fail when an engineer follows them under pressure.
 ```
 
 ---
@@ -338,20 +321,20 @@ If the stack list, ESC environments, or AGENTS.md content is not provided, ask b
 > Used in [PROCESS.md → Step 4.1](./PROCESS.md#step-4-cicd-pipeline-setup).
 
 ```
-You are a CI/CD engineer generating a pipeline tailored to the project's actual stack. Include only the stages that apply — do not pad the workflow with stages that are not justified by the inputs (e.g., no Pulumi preview if the project has no IaC, no K8s steps if the deployment target is serverless).
+You are a CI/CD engineer generating a pipeline tailored to the project's actual stack. Include only the stages that apply — do not pad the workflow with stages that are not justified by the inputs (e.g., no `terraform plan` stage if the project has no IaC, no K8s steps if the deployment target is serverless).
 
 ## Platform
 [GitHub Actions / GitLab CI]
 
 ## Project Context
 - **Language / framework:** [stack]
-- **IaC:** [Pulumi <language> / Terraform / OpenTofu / none]
+- **IaC:** [terraform / tofu / none]
 - **Test framework:** [from Phase 4]
-- **Security tools:** [list active tools from Phase 5 — typically SonarQube + Semgrep + Trivy + ggshield; add CrossGuard only if Pulumi]
+- **Security tools:** [list active tools from Phase 5 — typically CodeQL SAST + Dependabot + ggshield + Claude Code `/security-review`]
 - **Container registry:** [ECR / GHCR / Docker Hub / GAR / ACR / none if no containers]
 - **Deployment target:** [ECS Fargate / Cloud Run / App Runner / K8s / Vercel / Fly.io / etc.]
 - **Environments:** [dev / staging / prod — list only those that exist]
-- **IaC runner (if applicable):** [Pulumi Deployments / self-hosted GitHub Actions runner]
+- **IaC apply runner:** GitHub Actions with cloud OIDC, behind a GitHub Environment approval — there is no managed apply runner in this stack
 
 ## Pipeline Requirements
 - **Branch strategy:** [trunk-based / git-flow]
@@ -363,9 +346,9 @@ Generate workflow YAML covering the applicable subset of these stages, in this o
 1. **Lint & format** — Fast feedback (< 2 min)
 2. **Build** — Compile + container image (skip image step if no containers)
 3. **Unit + integration tests** with coverage gate
-4. **Security scans** — match to the security tools listed above; CrossGuard only when IaC is Pulumi
-5. **IaC preview** — `pulumi/actions@v6` for Pulumi, `infracost diff` + `terraform plan` for HCL, or omit if no IaC
-6. **Cost delta comment** — Claude Code Action `pulumi-cost-delta` for Pulumi, `infracost comment` for HCL
+4. **Security scans** — match to the security tools listed above; do not add a scanner that was not listed
+5. **IaC plan** — `hashicorp/setup-terraform@v3` (or `opentofu/setup-opentofu@v1`) + cloud OIDC auth, then `plan -out=tfplan` with the output posted to the PR; omit if no IaC. The apply job later consumes this **saved plan** — never re-plan inside apply
+6. **Cost delta comment** — `infracost diff` + `infracost/actions/comment`; one cost comment per PR, never two
 7. **Deploy to staging** — IaC apply or platform deploy on merge to main
 8. **E2E tests against staging** — from Phase 4
 9. **Load test on RC** — only on tagged release candidate
@@ -374,7 +357,7 @@ Generate workflow YAML covering the applicable subset of these stages, in this o
 
 Include in every variant:
 - **OIDC for cloud auth** — never long-lived keys
-- **Secrets:** Pulumi ESC via `pulumi/esc-action@v1` if Pulumi is in use; otherwise platform-encrypted secrets with environment scoping
+- **Secrets:** cloud authentication via OIDC (no stored credential); everything else from the project's secret manager at run time, or platform-encrypted secrets scoped to a GitHub Environment
 - **Caching** — `actions/cache` for deps, BuildKit cache mounts for Docker (when containers exist)
 - **Parallel jobs** where dependencies allow
 - **Required status checks** for branch protection
@@ -391,6 +374,8 @@ Output the complete YAML file ready to commit, with comments on any stage where 
 ## Claude Code Action — PR Review Workflow
 
 > Used in [PROCESS.md → Step 4.2](./PROCESS.md#step-4-cicd-pipeline-setup). Commit at `.github/workflows/claude.yml`.
+>
+> **The `cicd-pipeline-bringup` skill uses only the fix-mode half of this prompt.** The auto-review-on-PR-open block below is a **bootstrap, not the production reviewer** — no size gate, no re-review idempotency, no fail-open handling. Use the whole prompt when the project has deliberately chosen the Claude bot as its reviewer *and* accepts the bootstrap; otherwise take fix-mode only and build the reviewer from [PR-REVIEW-BOT.md](../03-development/PR-REVIEW-BOT.md).
 
 ```
 You are a DevOps engineer wiring the official Anthropic Claude Code Action into this repo. Pin the version, scope permissions to the minimum, and gate against bot-driven API spend.
@@ -519,14 +504,14 @@ Generate a multi-stage Dockerfile with:
 Include comments explaining non-obvious decisions.
 Output Dockerfile + .dockerignore, ready to commit.
 
-If `Language / runtime` or `Start command` is missing, ask before generating — base image and entrypoint depend on them. Do not state a CVE count or scan result for the produced image — only Trivy / Docker Scout running in CI can do that.
+If `Language / runtime` or `Start command` is missing, ask before generating — base image and entrypoint depend on them. Do not state a CVE count or scan result for the produced image — no image scanner runs in this stack, so any such claim would be fabricated.
 ```
 
 ---
 
 ## Kubernetes Manifests Generation
 
-> Used in [PROCESS.md → Step 5.5](./PROCESS.md#step-5-containerization). Skip if not running on K8s.
+> Used in [PROCESS.md → Step 5.4](./PROCESS.md#step-5-containerization). Skip if not running on K8s.
 
 ```
 You are a Kubernetes platform engineer producing manifests for a single service. Follow the supplied resource limits and replica counts exactly — do not invent capacity that was not specified.
@@ -547,14 +532,14 @@ Generate Kubernetes manifests for this service.
 - **Namespace:** [per-env or single]
 - **Ingress controller:** [nginx / traefik / cloud-native]
 - **Service mesh:** [none / Istio / Linkerd]
-- **Secrets management:** External Secrets Operator pulling from Pulumi ESC
+- **Secrets management:** External Secrets Operator pulling from the project's secret manager
 
 Generate:
 1. **Deployment** — resource requests / limits, liveness / readiness / startup probes, graceful shutdown
 2. **Service** — ClusterIP or LoadBalancer
 3. **Ingress** — TLS termination, proper routing, AGENTS.md tag annotations
 4. **ConfigMap** — non-sensitive config
-5. **ExternalSecret** — pulls from Pulumi ESC via External Secrets Operator
+5. **ExternalSecret** — pulls from the project's secret manager via External Secrets Operator
 6. **HorizontalPodAutoscaler** — CPU / memory / custom metric scaling
 7. **PodDisruptionBudget** — for production resilience
 8. **NetworkPolicy** — restrict traffic to necessary paths
@@ -637,7 +622,7 @@ For each NFR, generate:
 1. **SLO definition** — SLI metric, target, rolling window (28d typical)
 2. **Burn-rate alerts** — fast burn (2% budget in 1h → page) and slow burn (10% in 6h → ticket)
 3. **Alert routing** — PagerDuty / Opsgenie / incident.io integration
-4. **Runbook reference** — `/docs/runbooks/<alert-name>.md`
+4. **Runbook reference** — `/docs/runbooks/alerts/<alert-name>.md`
 
 Output formats:
 - Datadog: SLO + Monitor JSON
@@ -652,7 +637,7 @@ If `NFRs from Phase 1` is missing or contains no measurable target (latency / av
 
 ## Runbook Generation from Alert
 
-> Used in [PROCESS.md → Step 6.6](./PROCESS.md#step-6-observability--logging-monitoring-alerting).
+> Used in [PROCESS.md → Step 6.5](./PROCESS.md#step-6-observability--logging-monitoring-alerting).
 
 ```
 You are an SRE drafting a starter runbook for a single alert. The output is a draft for human review — do not invent dashboard URLs, log queries, or remediation commands that you cannot ground in the supplied system context. Mark unverified items as `<TO VERIFY: ...>`.
@@ -707,7 +692,7 @@ For each likely root cause:
 - Where to log learnings (`/docs/post-mortems/`)
 - Bits AI SRE / Sift retro: was the AI hypothesis correct? track variance over time
 
-Output as Markdown ready to commit at `/docs/runbooks/<alert-name>.md`.
+Output as Markdown ready to commit at `/docs/runbooks/alerts/<alert-name>.md`, where `<alert-name>` is the alert's name as configured in the observability backend, lowercased and kebab-cased.
 ```
 
 ---
@@ -722,19 +707,18 @@ Run a pre-prod-deploy self-review against this release candidate.
 ## Inputs
 - **Release tag:** [v1.2.3]
 - **Diff vs last prod release:** [git diff or PR list]
-- **Pulumi preview against prod stack:** [paste output]
+- **`terraform plan` against the production root module:** [paste output]
 - **Linear issues closed in this RC:** [list]
 - **Open SLO burn budgets:** [Datadog / Grafana export]
 
 Checks:
 1. **High-risk changes flagged** — auth, schema migrations, IAM, networking. Require dedicated review note for each.
-2. **Pulumi preview is reviewed line-by-line** — flag any resource replacement (vs update), any DELETE, any IAM change.
-3. **CrossGuard policy results clean** — zero violations, zero advisory warnings without resolution comment.
-4. **Cost delta within tolerance** — ± 10% of expected baseline.
-5. **Open incidents** — none on related services in past 24h.
-6. **Rollback drill freshness** — last drill was within 90 days.
-7. **Deploy window** — not Friday afternoon, not during a known traffic peak.
-8. **Feature-flag posture** — risky changes behind flags, not deployed open by default.
+2. **The plan is reviewed line-by-line** — flag every `-/+` or `+/-` (replacement), every `destroy`, and every IAM or network change. A replacement on a stateful resource is a data-loss event, not a diff.
+3. **Cost delta within tolerance** — ± 10% of expected baseline.
+4. **Open incidents** — none on related services in past 24h.
+5. **Rollback drill freshness** — last drill was within 90 days.
+6. **Deploy window** — not Friday afternoon, not during a known traffic peak.
+7. **Feature-flag posture** — risky changes behind flags, not deployed open by default.
 
 Output a Markdown report: pass / fail per check, with severity. If any fail at High or Critical, recommend halting the deploy.
 ```

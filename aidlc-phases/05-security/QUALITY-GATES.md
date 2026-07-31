@@ -15,19 +15,18 @@ Before a release candidate is built.
 - [ ] Every P0 finding has a Linear issue with an owner and a fix-before-launch SLA
 - [ ] P1 findings ticketed with 30-day SLA; P2 with 90-day SLA
 
-### Baseline scanning live (Step 0)
-- [ ] SonarQube CE security profile in CI; security gate set to 0 Critical / 0 High
-- [ ] Semgrep OSS in CI with OWASP Top 10 + language-specific rules
+### Baseline controls live (Step 0)
+- [ ] **GitHub code scanning (CodeQL) enabled** on every repo in scope; `.github/workflows/codeql.yml` committed
+- [ ] CodeQL runs on every PR **and nightly** on the default branch; gate set to 0 Critical / 0 High and the job fails the build
+- [ ] CodeQL is the configured scanner: the `security-extended` suite for every language present in the repo, plus the project's own queries in `.github/codeql/`
+- [ ] CodeQL SARIF archived as a CI artefact (Step 7 evidence compilation reads from it)
 - [ ] **Claude Code `/security-review` GitHub Action committed** at `.github/workflows/claude-security-review.yml`; smoke-test passing
-- [ ] **Semgrep MCP server connected** for every developer (`claude mcp list` shows `semgrep: connected`)
-- [ ] **Trivy MCP server connected** (`trivy mcp` plugin installed; Claude Code MCP listed)
-- [ ] Dependabot or Renovate active on every repo; `.github/dependabot.yml` configured for patch-level auto-merge
-- [ ] Trivy in container build pipeline; fails on Critical CVEs
-- [ ] Checkov on every IaC PR
-- [ ] GitGuardian active org-wide; ggshield pre-commit hook on every developer machine; **ggshield AI hook configured** for Claude Code / Copilot
+- [ ] **Copilot Autofix enabled** for the languages in scope
+- [ ] Dependabot active on every repo; `.github/dependabot.yml` configured for patch-level auto-merge
+- [ ] GitGuardian active org-wide; ggshield pre-commit hook on every developer machine; **ggshield AI hook configured** for Claude Code
 - [ ] One-time GitGuardian historical scan complete; any leaks routed through Step 5 incident response
 - [ ] Security Champion designated on the team
-- [ ] AGENTS.md security-conventions section committed
+- [ ] AGENTS.md security-conventions section committed, including the Step 4 required-controls list and the Step 6.4 MCP allow-list
 
 **Pass:** All items checked. Threat model and baseline scanning live.
 
@@ -38,12 +37,12 @@ Before a release candidate is built.
 Runs on every pull request. Blocks merge if failed.
 
 ### Automated
-- [ ] SonarQube security quality gate passes (0 Critical, 0 High)
-- [ ] Semgrep PR-diff scan: no Critical / High new findings
+- [ ] SAST scan passes on the branch: 0 Critical / 0 High
+- [ ] CodeQL PR-diff analysis: no Critical / High new findings
 - [ ] **`/security-review` GitHub Action passes** with no Critical / High comments unresolved
-- [ ] **Copilot Autofix or Snyk DeepCode** patch suggestions reviewed for any auto-fixable findings
+- [ ] **Copilot Autofix** patch suggestions reviewed for any auto-fixable findings
 - [ ] No secrets detected by ggshield, GitGuardian, or the ggshield AI hook
-- [ ] Custom Semgrep rules in `.semgrep/rules/` pass against the diff (project-specific patterns)
+- [ ] Custom CodeQL queries in `.github/codeql/` pass against the diff (project-specific patterns)
 
 ### Human
 - [ ] Security-sensitive PRs (auth, crypto, data handling, AI features) reviewed by Security Champion
@@ -52,48 +51,36 @@ Runs on every pull request. Blocks merge if failed.
 
 **Pass:** All items green. Merge allowed.
 
-**Escalation:** Any Critical finding believed to be a false positive requires Security Champion approval before dismissal. Pattern of repeating false positives → file a Semgrep custom rule (Step 2.3) or tune the SonarQube rule.
+**Escalation:** Any Critical finding believed to be a false positive requires Security Champion approval before dismissal. A pattern of repeating false positives is fixed at the query, not by habitually dismissing: tighten the triggering custom CodeQL query (Step 2.3) with a narrower predicate or an explicit exclusion, re-run both fixtures to prove it still fires on the anti-example, and commit the change to `.github/codeql/`.
 
 ---
 
-## Gate 3: SCA Dependency Hygiene
+## Gate 3: Dependency Hygiene
 
 Per release.
 
-### Code dependencies
-- [ ] 0 Critical CVEs in production dependencies
+- [ ] 0 Critical CVEs in production dependencies (Dependabot alerts view, filtered to open)
 - [ ] High CVEs: documented Tech Lead risk acceptance
-- [ ] Reachability-aware triage (Endor Labs / Snyk Open Source / `reachability-triage` prompt) applied for High / Critical lists > 5 items
-- [ ] Major version bumps in this release have an `dependency-upgrade-impact` analysis attached
-
-### Container & registry
-- [ ] All container base images pinned by digest (no floating tags)
-- [ ] Trivy: 0 Critical CVEs at registry push
-- [ ] Docker Scout AI-suggested base-image upgrades reviewed (and merged or explicitly declined)
-
-### SBOM (when compliance requires)
-- [ ] OWASP Dependency-Check SBOM generated in CycloneDX or SPDX format
-- [ ] SBOM attached to the release artefacts
+- [ ] Dependabot active with patch-level CVE auto-merge; no open security alert older than the monthly review
+- [ ] Package-manager-native audit (`npm audit` / `pip-audit` / `cargo audit`) runs in CI and is clean at the configured severity floor
+- [ ] [`reachability-triage`](./PROMPTS.md#reachability-triage) applied to the open Dependabot High / Critical list whenever it exceeds 5 items; the ranked output is attached to the release and drives merge order — Critical / High still upgrade even when classified Not reachable, unless the Tech Lead documented an exception
+- [ ] Major version bumps in this release have a [`dependency-upgrade-impact`](./PROMPTS.md#dependency-upgrade-impact) analysis attached
+- [ ] All container base images pinned by digest, no floating tags (confirmed by the reviewer in the Step 4 container review)
 
 **Pass:** All items checked. Dependency hygiene gates the release.
 
 ---
 
-## Gate 4: Container & IaC Compliance
+## Gate 4: Container & IaC Review
 
 Before any deploy.
 
-- [ ] Trivy clean on every shipped image (0 Critical CVEs)
-- [ ] Checkov passes on all IaC (CIS / NIST profile per project)
-- [ ] OPA / Conftest tests pass in CI for every `/policy-packs/` rule
-- [ ] **OPA Gatekeeper deployed** with the project's policies (if Kubernetes is in scope)
-- [ ] **Every AI-generated policy** spent at least 7 days in `enforcementAction: dryrun` with zero false positives before flipping to `deny`
-- [ ] Required-tags / encryption-at-rest / no-public-S3 / IAM-least-privilege / region-allowlist policies enforced
-- [ ] Phase 6 CrossGuard packs (if Pulumi) reference the same Rego sources via the `pulumi-policy-opa` bridge — author once, enforce both at IaC-time and at runtime
-- [ ] Dockerfile / K8s manifests reviewed against AGENTS.md security conventions
-- [ ] Trivy MCP smoke-test passes (IDE-time scan triggers on `package.json` / `requirements.txt` / `Dockerfile` changes)
+> **This gate is verified by human review. No scanner, policy engine, or admission controller enforces it.** Both items below are confirmed by a named reviewer in the PR. If nobody signed off, the gate has not passed — a green pipeline says nothing about this surface.
 
-**Pass:** All items checked. Container and IaC posture safe for deploy.
+- [ ] Dockerfile / K8s manifests reviewed against AGENTS.md security conventions by a named reviewer (non-root user, no secrets in build args or layers, minimal installed surface, security context and resource limits set)
+- [ ] Required-controls list confirmed for every IaC change in the release — **required tags**, **encryption at rest**, **no public storage**, **IAM least privilege**, **region allow-list**, **instance-size caps**, **no root containers**, **resource limits**, **network policies** — each one either satisfied or explicitly excepted with a written reason in the PR
+
+**Pass:** Both items checked, with the reviewer named. Container and IaC posture reviewed for deploy.
 
 ---
 
@@ -104,9 +91,9 @@ Continuous.
 ### Prevention layers
 - [ ] ggshield pre-commit hook on every developer machine
 - [ ] GitGuardian platform scan active; alerts route to Security Champion + on-call
-- [ ] **ggshield AI hook** active for Claude Code / GitHub Copilot — pre-prompt + pre-tool-use + post-tool-use intercept points all live
-- [ ] Bitwarden / 1Password (or equivalent) is the team's default; no secrets in Slack / email / paste buffers
-- [ ] Runtime secrets via Pulumi ESC (Phase 6) or platform-native (AWS Secrets Manager / Azure Key Vault / GCP Secret Manager)
+- [ ] **ggshield AI hook** active for Claude Code — pre-prompt + pre-tool-use + post-tool-use intercept points all live
+- [ ] A managed secret manager is the team's default for personal and shared secrets; no secrets in Slack / email / paste buffers
+- [ ] Runtime secrets come from a managed secret store (Phase 6 platform default or cloud-native equivalent)
 
 ### Incident response
 - [ ] 0 open GitGuardian incidents at this gate's evaluation
@@ -139,11 +126,10 @@ Applies when AI is in the product. Skip otherwise.
 - [ ] Audit logging of every tool call (user, server, tool, args summary) — forensic replay possible
 
 ### MCP enforcement
-- [ ] **MCP server allow-list** committed to AGENTS.md and `/policy-packs/mcp/allow-list.yaml`
+- [ ] **MCP server allow-list** committed to AGENTS.md and pinned by the project-scoped `.mcp.json` in the repo
 - [ ] Per-server scope policy documented (read / write / state-changing)
 - [ ] Off-boarding revokes OAuth grants per provider; verified
-- [ ] Cycode AI Governance + AIBOM (if in scope) — three-layer governance configured (see / govern / enforce)
-- [ ] AI Inventory across the 6 Cycode categories (code assistants, models, infrastructure, MCP servers, AI secrets, AI packages) — current
+- [ ] AI inventory current at `/docs/security/ai-inventory.md` across the six categories: AI code assistants, AI models, AI infrastructure, MCP servers, AI secrets, AI packages
 
 **Pass:** All items checked, or formally marked "AI not in product".
 
@@ -154,13 +140,13 @@ Applies when AI is in the product. Skip otherwise.
 Only applicable if the project has formal compliance requirements.
 
 - [ ] Compliance checklist generated for every applicable framework (GDPR / HIPAA / SOC 2 / PCI-DSS / ISO 27001 / ISO 27701 / ISO/IEC 42001 / NIST AI RMF / CCPA / FedRAMP)
-- [ ] All technical controls implemented and verified by automated tools (Trivy / Checkov / OPA / SonarQube / Semgrep / `/security-review`)
+- [ ] Every technical control classified **automated** or **manual**: automated controls name the verifying tool (CodeQL / `/security-review` / Dependabot / GitGuardian) and the evidence artefact; manual controls — including all container and IaC controls — carry a dated attestation naming the person who performed the check
 - [ ] All operational controls documented in the security runbook
 - [ ] Evidence dossier compiled for the audit period at `/docs/compliance/evidence/<period>/`
 - [ ] Audit-ready document generated via [`evidence-compilation`](./PROMPTS.md#evidence-compilation)
 - [ ] Legal review completed (for regulatory compliance)
-- [ ] If certifying: **Vanta Agents** or **Drata MCP** dashboard at 100% control coverage; agent-collected evidence reviewed for hourly-test freshness
 - [ ] If AI is in the product and compliance scope includes AI: NIST AI RMF + ISO/IEC 42001 crosswalk applied; 8–12 month combined implementation plan documented
+- [ ] Threat-model P0 mitigations verified **in code** by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) (Step 1.5) — the per-mitigation table with `file:line` evidence is archived with the release; **0 not landed**, or each remaining item carries a dated Tech Lead deferral
 - [ ] [`pre-release-self-review`](./PROMPTS.md#pre-release-self-review) passes for the release candidate
 - [ ] Security posture report ([`security-posture-report`](./PROMPTS.md#security-posture-report)) for the quarter shared with leadership
 
@@ -173,13 +159,13 @@ Only applicable if the project has formal compliance requirements.
 Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: Delivery & Handoff**.
 
 - [ ] All Gate 1–5 items complete; Gate 6 if AI is in product; Gate 7 if certifying
-- [ ] Threat model archived; P0 mitigations landed
+- [ ] Threat model archived; P0 mitigations verified landed in code by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) — `file:line` per mitigation, **0 not landed**
 - [ ] Security posture report current
 - [ ] Compliance artefacts archived (if applicable)
 - [ ] Known security issues log updated (open vs closed)
 - [ ] Secrets rotation log reviewed; no open incidents
 - [ ] Security runbook exists at `/docs/security/runbook.md`
-- [ ] AGENTS.md security conventions current and referenced by Claude Code, Copilot, Pulumi Neo
+- [ ] AGENTS.md security conventions current and referenced by Claude Code
 
 ---
 
@@ -187,19 +173,18 @@ Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: De
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Time to remediate Critical findings | < 24h from detection | Linear / SonarQube / `/security-review` timestamps |
-| Time to remediate High findings | < 7 days | Linear / SonarQube timestamps |
-| Dependency Critical CVE remediation time | < 7 days | Dependabot / Snyk timestamps |
+| Time to remediate Critical findings | < 24h from detection | Linear / `/security-review` timestamps |
+| Time to remediate High findings | < 7 days | Linear timestamps |
+| Dependency Critical CVE remediation time | < 7 days | Dependabot alert open→close timestamps |
 | Mean time to rotate a leaked production secret | < 1 hour | GitGuardian incident timestamps |
-| Signal-to-noise ratio per tool | > 30% actionable (target 50% with reachability) | Sample 20 findings/month per tool |
+| Signal-to-noise ratio per detector | > 30% actionable | Sample 20 findings/month per detector |
 | Pre-commit secret block rate | Track baseline | ggshield logs |
 | **AI-hook block rate** (pre-prompt + pre-tool + post-tool) | Track baseline; investigate any sudden spike | ggshield AI hook logs |
 | **`/security-review` accept rate** (suggested fix accepted) | > 60% | GitHub PR-comment reactions / merge statistics |
-| **Copilot Autofix / Snyk DeepCode accept rate** | > 60% | GitHub / Snyk dashboards |
-| **Reachability-triage noise reduction** | 70–97% (per Endor Labs / Snyk benchmarks) | Compare raw CVE count vs reachable count |
+| **Copilot Autofix accept rate** | > 60% | GitHub code-scanning dashboard |
+| **Container & IaC review coverage** | 100% of PRs touching Dockerfiles / manifests / IaC | PR review records; count of written exceptions |
 | **Prompt-injection attempts blocked** (model-layer + app-layer) | > 95% (Anthropic Opus 4.5 baseline 1.4% ASR) | Anthropic safety telemetry + app audit log |
-| False-positive rate (per tool) | Trend downward | Sample + tag findings |
-| Vanta / Drata control coverage (if certifying) | 100% | Vanta / Drata dashboard |
+| False-positive rate (per detector) | Trend downward | Sample + tag findings |
 | AI-suggested-vs-actual root-cause variance | Track quarterly | Retros |
 
 ---
@@ -210,13 +195,13 @@ Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: De
 |----------|-----------|
 | **PRs with AI-generated code get extra scrutiny per `code-review-checklist.md`** | AI code has 1.7× more issues per PR than human code |
 | **`/security-review` runs diff-aware on every PR** | Lower false-positive rate than full-repo scanning; covers injection / authn-z / secrets / sensitive-logs |
-| **ggshield AI hook covers Claude Code / Copilot** | Catches secrets at pre-prompt, pre-tool-use, post-tool-use; AI commits leak at ~2× baseline (~3.2%) |
-| **Semgrep + Snyk rules include OWASP LLM Top 10 coverage** | Automatic checks for prompt injection, insecure output handling |
-| **AI-generated OPA / Rego policies must spend 7 days in `dryrun`** | Prevent a single-line policy locking the cluster (Red Hat 2026 dynamic-generator pattern) |
+| **ggshield AI hook covers Claude Code** | Catches secrets at pre-prompt, pre-tool-use, post-tool-use; AI commits leak at ~2× baseline (~3.2%) |
+| **Every custom CodeQL query ships with two fixtures** | A query that never fires manufactures confidence; the anti-example proves it fires, the allowed-example proves it is not noise |
+| **Threat-model mitigations are verified in code, never asserted** | A checkbox nobody can falsify is not a control; [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) must cite implementing code per P0 item — a comment, a test name, or a closed ticket is explicitly not evidence |
 | **AI-generated security fixes require a regression test** | Mutation testing in Phase 4 catches some tautological fixes; an explicit regression test catches more |
 | **MCP allow-list enforced** | 24,008 secrets found in MCP config files in 2025 (GitGuardian) — allow-listing is the primary control; ggshield is the runtime safety net |
 | **Anthropic prompt-injection defences are baseline, not enough alone** | Adaptive attacks still > 85% successful; defence at every level required for agentic systems |
-| **Audit log every AI-driven security action** | `/security-review` posting comments, agent rotating secrets, Vanta agent collecting evidence — forensic trail when AI acts unexpectedly |
+| **Audit log every AI-driven security action** | `/security-review` posting comments, an agent rotating a secret, Claude drafting a control narrative — forensic trail when AI acts unexpectedly |
 | **Track AI-suggested-vs-actual-root-cause variance** | Confidence calibration improves over cycles; under-performing sources get demoted |
 | **Off-boarding revokes per-provider OAuth** | MCP scopes inherit from the connecting human; off-boarding is unchanged when this discipline holds |
 
@@ -227,6 +212,6 @@ Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: De
 | Risk Level | Example | Action | Owner |
 |-----------|---------|--------|-------|
 | **Critical** | Secret leaked to public repo; active exploit in dependency; prompt-injection attack succeeds in production | Immediate rotation / hotfix; all-hands; incident channel | Security Champion → Tech Lead |
-| **High** | SQL injection in user-facing endpoint; agent goal hijack discovered in lab; AI-generated OPA policy locks production | Fix within 24h; block release; rollback if already deployed | Security Champion |
-| **Medium** | Outdated dependency with known CVE; AI-generated code missed input validation; Vanta agent evidence stale | Fix within sprint; for compliance staleness, re-collect within 7 days | Developer owning the code / Security Champion |
-| **Low** | Code smell in non-critical path; advisory-level Semgrep finding; cosmetic Checkov warning | Backlog | Developer |
+| **High** | SQL injection in user-facing endpoint; agent goal hijack discovered in lab; a required control shipped unreviewed to production | Fix within 24h; block release; rollback if already deployed | Security Champion |
+| **Medium** | Outdated dependency with known CVE; AI-generated code missed input validation; compliance evidence stale | Fix within sprint; for compliance staleness, re-collect within 7 days | Developer owning the code / Security Champion |
+| **Low** | Code smell in non-critical path; advisory-level `/security-review` finding; low-severity IaC review note | Backlog | Developer |

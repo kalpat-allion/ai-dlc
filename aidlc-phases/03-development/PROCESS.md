@@ -6,9 +6,9 @@ This document defines the AI-assisted workflow for the Development phase, using 
 
 **Phase Duration:** Sprint-based (typically 2–8 weeks for MVP)
 **Phase Owner:** Tech Lead / Engineering Manager
-**Tools Used:** **Claude Code** (AI coding agent — terminal + IDE extension), **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** (`anthropics/claude-code-action` in CI), configured per project, **SonarQube** (static analysis), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
+**Tools Used:** **Claude Code** (AI coding agent — terminal + IDE extension), **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** (`anthropics/claude-code-action` in CI), configured per project, **CodeQL** (SAST in CI), **Linear** (project management spine, integrated via MCP), **GitHub / GitLab / Bitbucket** (source control)
 
-> **Tool Philosophy:** Claude Code is the AI coding agent for all development — scaffolding, multi-file editing, complex refactors, debugging, long-running autonomous tasks, and **all** Linear MCP work — driven from the terminal or its IDE extension, with role-scoped specialist subagents for focused work. **Automated AI review on every PR is mandatory; the reviewer is a per-project choice** between CodeRabbit (hosted, zero-upkeep, vendor-tuned) and the Claude PR review bot (self-hosted in CI, driven by a checklist committed in the repo) — peers, not a primary and a fallback, and a project may run either or both. SonarQube enforces static-analysis gates in CI. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. One tool per job — and where a project deliberately runs both reviewers, the overlap is cheap next to the blind spots each one closes for the other.
+> **Tool Philosophy:** Claude Code is the AI coding agent for all development — scaffolding, multi-file editing, complex refactors, debugging, long-running autonomous tasks, and **all** Linear MCP work — driven from the terminal or its IDE extension, with role-scoped specialist subagents for focused work. **Automated AI review on every PR is mandatory; the reviewer is a per-project choice** between CodeRabbit (hosted, zero-upkeep, vendor-tuned) and the Claude PR review bot (self-hosted in CI, driven by a checklist committed in the repo) — peers, not a primary and a fallback, and a project may run either or both. **CodeQL** enforces the static-analysis gate in CI, and the test runner's own coverage threshold enforces the coverage floor — no hosted dashboard, both are CI artefacts. **Linear is where every story starts and every PR is closed**: Claude Code reads the next issue from Linear, moves it to *In Progress*, checks out the Linear-suggested branch, opens the PR with `Closes ENG-123` so Linear's git integration auto-transitions on merge, and posts progress as comments on the issue. One tool per job — and where a project deliberately runs both reviewers, the overlap is cheap next to the blind spots each one closes for the other.
 
 > **Inline completion is optional.** Claude Code is a request-response agent, not a ghost-text autocompleter. Teams that want inline as-you-type completion can add **Supermaven standalone** (free tier or ~$10/mo Pro) or their IDE's native completion alongside Claude Code — optional, and it changes none of the decision rules, gates, or quality bars below.
 
@@ -518,7 +518,7 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 | Incremental coding, small edits | **Claude Code** directly | Quick targeted edits without spinning up a specialist |
 | Complex multi-file refactoring or feature | **Claude Code** | Reads entire codebase, runs tests, iterates autonomously |
 | Debugging across modules | **Claude Code** | Traces data flows, checks logs, proposes and verifies fixes |
-| MCP integration (Linear, Figma, GitHub, Sentry, etc.) | **Claude Code** | Deepest MCP support — built by the team that created MCP |
+| MCP integration (Linear, Figma, GitHub, Datadog, etc.) | **Claude Code** | Deepest MCP support — built by the team that created MCP |
 | Autonomous story implementation | **Claude Code** (background agent or [Linear Agent](#linear-agent-optional-autonomous-pickup) — see below) | For well-scoped stories with clear AC, assign and review output |
 | Cross-layer story splittable into parallel slices, multiple sibling stories in flight, or adversarial review/debug | **Multi-agent** — see [Multi-agent development patterns](#multi-agent-development-patterns) | Subagents (in-process), Agent Teams (peer messaging, experimental), git worktrees, or Conductor — picks the right surface for the parallelism shape |
 | Quick question about the codebase | **Claude Code** | Ask in the terminal or IDE extension |
@@ -660,7 +660,7 @@ The new directory is a fully checked-out copy on its own branch. Multiple worktr
 
 **Constraints.** macOS only (Apple Silicon and Intel) as of mid-2026 — verify before committing the team. The PR opening flow is Conductor's, not `linear-task-agent`'s, so teams adopting Conductor must make sure the PR title still includes `[ENG-XXX]` and the body still includes `Closes ENG-XXX` (configurable in Conductor's PR template) — otherwise Linear's git integration will not auto-transition. Treat Conductor's PR template as code-reviewed infrastructure, same as `.claude/agents/linear-task-agent.md`.
 
-**What it does not change.** Step 4 (Code Review) is identical — every Conductor PR runs through the configured AI reviewer(s), SonarQube, and human review like any other PR. Conductor accelerates *opening* PRs; it does not bypass *merging* gates.
+**What it does not change.** Step 4 (Code Review) is identical — every Conductor PR runs through the configured AI reviewer(s), the CI gates, and human review like any other PR. Conductor accelerates *opening* PRs; it does not bypass *merging* gates.
 
 ##### Choosing the right pattern
 
@@ -721,15 +721,15 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 | Attribute | Detail |
 |-----------|--------|
 | **Input** | Feature branch with passing local tests, linked Linear issue |
-| **Tool** | **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** ([PR-REVIEW-BOT.md](./PR-REVIEW-BOT.md)), configured per project at Step 4.3 — + **SonarQube** (SAST + coverage gate) + **GitHub/GitLab/Bitbucket** + **Linear MCP** for status |
-| **Output** | Merged PR, Linear issue auto-transitioned to **Done** by the git integration, SonarQube clean on main |
+| **Tool** | **AI PR review** — **CodeRabbit** and/or the **Claude PR review bot** ([PR-REVIEW-BOT.md](./PR-REVIEW-BOT.md)), configured per project at Step 4.3 — + **CI gates** (CodeQL SAST + the test runner's coverage threshold) + **GitHub/GitLab/Bitbucket** + **Linear MCP** for status |
+| **Output** | Merged PR, Linear issue auto-transitioned to **Done** by the git integration, SAST clean on main |
 | **Human** | Architecture alignment, business-logic validation, final approval |
 
 **Workflow:**
 
 **4.1 — Open the PR with the right title and description.** Before opening, rebase the feature branch onto the latest main; if conflicts arise, invoke [`conflict-resolver`](#conflict-resolver) to work through them — never `--abort` without an explicit reason, since reflexive aborts have lost already-done resolution work in past incidents. Then run the [`pr-description`](./PROMPTS.md#pr-description) prompt. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
 
-**4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → SonarQube SAST → coverage gate (≥ 80% on new code). A failure here blocks AI and human review until fixed.
+**4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → **CodeQL SAST** → **coverage gate**. Coverage is enforced by the test runner's own threshold config (`coverage.thresholds` in Vitest, `coverageThreshold` in Jest, `--cov-fail-under` in pytest) set to **80%** — the test command fails the build below it, and the coverage report is published as a CI artefact rather than pushed to a hosted dashboard. A failure at any step blocks AI and human review until fixed.
 
 **4.3 — The configured AI reviewer(s) run automatically.** Every PR gets at least one automated AI review, re-running on every push. **Which reviewer is a per-project configuration decision** — made once when the repo is set up, recorded in the tech-stack ADR, and wired in [Phase 6 → Step 4.2](../06-cicd-devops/PROCESS.md#step-4-cicd-pipeline-setup). The AI-DLC supports two, as peers:
 
@@ -781,14 +781,14 @@ Whichever is configured, the same rules apply:
 
 | Attribute | Detail |
 |-----------|--------|
-| **Input** | SonarQube findings, tech-debt backlog (Linear issues labelled `tech-debt`) |
+| **Input** | Linter / type-checker warnings, `refactor-candidates` scan output, tech-debt backlog (Linear issues labelled `tech-debt`) |
 | **Tool** | **Claude Code** (large-scale multi-file and localised refactors; `refactor-specialist` for `tech-debt`-tracked work) |
 | **Output** | Refactored code with maintained test coverage, no behaviour change |
 | **Human** | Scope validation, behaviour verification |
 
 **Workflow:**
 
-**5.1 — Identify and ticket targets.** SonarQube flags code smells; Claude Code's [`refactor-candidates`](./PROMPTS.md#refactor-candidates) prompt scans for structural improvements (long methods, god classes, repeated patterns). Each accepted target becomes a Linear issue with the `tech-debt` label — refactoring is tracked work, not a back-pocket activity.
+**5.1 — Identify and ticket targets.** Claude Code's [`refactor-candidates`](./PROMPTS.md#refactor-candidates) prompt scans for structural improvements (long methods, god classes, repeated patterns); linter and type-checker warnings feed the same scan as additional input. Each accepted target becomes a Linear issue with the `tech-debt` label — refactoring is tracked work, not a back-pocket activity.
 
 **5.2 — Scope explicitly.** In the Linear issue, write what changes and what stays the same. Refactoring is a behaviour-preserving operation; if behaviour changes, it is a feature, not a refactor — split it.
 
@@ -852,7 +852,7 @@ Coding (Claude Code):
 
 Review:
   4.1  Open PR with [ENG-XXX] title + Closes ENG-XXX → Linear auto-moves to In Review
-  4.2  CI: lint + types + tests + SonarQube + coverage
+  4.2  CI: lint + types + tests + CodeQL SAST + coverage threshold
   4.3  AI review: configured reviewer(s) — CodeRabbit and/or Claude PR review bot
   4.4  Human review (≥ 1 approval, 2 for high-blast-radius)
   4.5  Merge to main
@@ -876,7 +876,8 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 | Integration test stubs | Test files | `/tests/integration/` |
 | API documentation | Auto-generated from OpenAPI | Published docs site or `/docs/api/` |
 | Module READMEs | Markdown | Co-located in each module directory |
-| SonarQube report | Dashboard + CI artefact | SonarQube server |
+| SAST scan report | CodeQL SARIF | CI artefact storage |
+| Coverage report | Test-runner output (lcov / HTML) | CI artefact storage |
 | Developer setup guide | Markdown | `/docs/setup.md` or repo README |
 | Environment config docs | Markdown | `/docs/configuration.md` |
 | Linear cycle report | Linear Cycle view | Linear (`phase:dev` saved view) |
@@ -884,8 +885,8 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 **Handoff Checklist:**
 - [ ] All MVP stories merged to main with passing CI
 - [ ] Every story closed in Linear with the auto-transition (no manual closes — drift signal)
-- [ ] Test coverage ≥ 80% on new code (SonarQube verified)
-- [ ] 0 Critical / 0 High SonarQube issues on main
+- [ ] Test coverage ≥ 80% on new code (test-runner threshold enforced in CI)
+- [ ] 0 Critical / 0 High SAST findings on main
 - [ ] API docs published and matching implementation
 - [ ] Developer setup guide tested by someone other than the author
 - [ ] All environment variables documented
@@ -917,7 +918,7 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 [Step 4.1] Open PR with [ENG-XXX] title + Closes ENG-XXX
               ↳ if rebase conflicts → conflict-resolver
            → Linear auto-transitions to In Review
-[Step 4.2] CI: lint + types + tests + SonarQube + coverage
+[Step 4.2] CI: lint + types + tests + CodeQL SAST + coverage threshold
 [Step 4.3] AI review: configured reviewer(s) — CodeRabbit and/or Claude bot
 [Step 4.4] Human review
    │
@@ -929,7 +930,7 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
    │
    ▼  Repeat for every issue in the cycle
    │
-   ▼  GATE 3: PHASE COMPLETION — coverage ≥ 80%, 0 Critical/High SonarQube,
+   ▼  GATE 3: PHASE COMPLETION — coverage ≥ 80%, 0 Critical/High SAST findings,
               all stories Done, retro filed
    │
 [Phase 4: Testing & QA]
@@ -986,5 +987,5 @@ Three explicit gates ensure that **no code reaches main without CI + AI review +
 - [Linear's git integration (auto-link, auto-transition)](https://linear.app/docs/github) — branch-name auto-link, `Closes` keyword
 - [CodeRabbit Pro](https://www.coderabbit.ai/) — AI PR review
 - [`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action) — the GitHub Action behind the Claude PR review bot (pin an exact version)
-- [SonarQube Community](https://www.sonarsource.com/products/sonarqube/) — SAST and coverage gate
+- [CodeQL](https://codeql.github.com/) — SAST queries and CI scanning via GitHub Advanced Security; the Phase 5 SAST baseline
 - [Phase 3 Tools Evaluation](../../docs/tools-evaluation/3.Development_Phase_Tools.md)

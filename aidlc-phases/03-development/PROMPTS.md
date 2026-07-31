@@ -510,7 +510,7 @@ Scan a module for refactor candidates. Read-only — identify and prioritise can
 ## Scope
 [Path or paths to scan]
 
-## SonarQube findings (optional)
+## Linter / SAST findings (optional)
 [Paste relevant findings]
 
 Per candidate, output:
@@ -553,5 +553,5 @@ Sections, in order:
 
 Terse. Ban filler. Omit empty sections. Refuse to invent dashboards, log queries, or alert names not in the inputs — a fabricated runbook is worse than no runbook at 3am.
 
-Output as Markdown ready to commit to `docs/runbooks/<service>.md`. SRE reviews before merging.
+Output as Markdown ready to commit to `docs/runbooks/services/<service>.md`. SRE reviews before merging.
 ```

@@ -6,9 +6,7 @@ This flowchart visualises the [Phase 5 PROCESS](./PROCESS.md). The phase flow is
 
 | Abbreviation | Meaning |
 |--------------|---------|
-| AIBOM | AI Bill of Materials |
 | ASR | Attack Success Rate (prompt-injection benchmark) |
-| AURI | Application Usage Reachability Index (Endor Labs) |
 | BFG | BFG Repo-Cleaner (git history rewriter) |
 | CIS | Center for Internet Security |
 | CVE | Common Vulnerabilities and Exposures |
@@ -21,12 +19,10 @@ This flowchart visualises the [Phase 5 PROCESS](./PROCESS.md). The phase flow is
 | MCP | Model Context Protocol |
 | NIST | National Institute of Standards and Technology |
 | NIST AI RMF | NIST AI Risk Management Framework |
-| OPA | Open Policy Agent |
 | OSS | Open Source Software |
 | OWASP | Open Worldwide Application Security Project |
 | PR | Pull Request |
 | RCA | Root Cause Analysis |
-| Rego | OPA's policy-definition language |
 | SAST | Static Application Security Testing |
 | SCA | Software Composition Analysis |
 | SOC 2 | Service Organization Control 2 (audit framework) |
@@ -40,16 +36,12 @@ This flowchart visualises the [Phase 5 PROCESS](./PROCESS.md). The phase flow is
 flowchart TD
     SETUP_START([One-time setup<br/>per project]) --> SR_CMD
 
-    SR_CMD[Install Claude Code /security-review<br/>+ GitHub Action<br/>🤖 anthropics/claude-code-security-review] --> SEMGREP_MCP
-    SEMGREP_MCP[Connect Semgrep MCP<br/>🤖 security_check + write_custom_semgrep_rule] --> TRIVY_MCP
-    TRIVY_MCP[Connect Trivy MCP<br/>🤖 trivy mcp plugin — IDE-time scans] --> GG_AI
-    GG_AI[Install ggshield + AI hook<br/>🤖 pre-prompt + pre-tool + post-tool] --> SCA_AUTH
-    SCA_AUTH[Wire SCA: Dependabot/Renovate<br/>+ Snyk CLI<br/>🤖 auto-PRs for CVE fixes] --> OPA_LOCAL
-    OPA_LOCAL[Install OPA + Conftest locally<br/>👤 starter Rego in /policy-packs/] --> COMPLIANCE_MCP
-    COMPLIANCE_MCP{Formal certification<br/>required?}
-    COMPLIANCE_MCP -- Yes --> VANTA[Connect Vanta Agents<br/>or Drata MCP<br/>🤖 agent-driven evidence] --> AGENTS_MD
-    COMPLIANCE_MCP -- No --> AGENTS_MD
-    AGENTS_MD[Add security conventions<br/>to AGENTS.md<br/>👤 forbidden APIs, auth rules,<br/>AI-code escalation path] --> SETUP_DONE
+    SR_CMD[Install Claude Code /security-review<br/>+ GitHub Action<br/>🤖 anthropics/claude-code-security-review] --> CODEQL_SETUP
+    CODEQL_SETUP[Enable code scanning: CodeQL<br/>🤖 per-PR diff + scheduled full repo<br/>👤 commit .github/workflows/codeql.yml] --> AUTOFIX_ON
+    AUTOFIX_ON[Turn on Copilot Autofix<br/>🤖 patch suggestions on CodeQL findings] --> GG_AI
+    GG_AI[Install ggshield + AI hook<br/>🤖 pre-prompt + pre-tool + post-tool] --> DEPENDABOT
+    DEPENDABOT[Wire dependency scanning: Dependabot<br/>🤖 auto-PRs for CVE fixes] --> AGENTS_MD
+    AGENTS_MD[Add security conventions<br/>to AGENTS.md<br/>👤 forbidden APIs, auth rules,<br/>required-controls list, MCP allow-list] --> SETUP_DONE
     SETUP_DONE([Setup complete<br/>verification checklist passes])
 
     style SETUP_START fill:#1B3A5C,color:#fff
@@ -68,8 +60,8 @@ flowchart TD
 
     S1[Step 1: Threat Modelling]
     S2[Step 2: SAST]
-    S3[Step 3: SCA]
-    S4[Step 4: Container & IaC]
+    S3[Step 3: Dependency Review]
+    S4[Step 4: Container & IaC Review]
     S5["Step 5: Secrets — Layered"]
     S6["Step 6: AI / Agent Security (when AI in product)"]
     S7[Step 7: Compliance]
@@ -82,11 +74,11 @@ flowchart TD
     GATE2 -- No --> S2
     GATE2 -- Yes --> S3
 
-    S3 --> GATE3{Gate 3:<br/>SCA<br/>Hygiene}
+    S3 --> GATE3{Gate 3:<br/>Dependency<br/>Hygiene}
     GATE3 -- No --> S3
     GATE3 -- Yes --> S4
 
-    S4 --> GATE4{Gate 4:<br/>Container<br/>+ IaC}
+    S4 --> GATE4{Gate 4:<br/>Container<br/>+ IaC Review}
     GATE4 -- No --> S4
     GATE4 -- Yes --> S5
 
@@ -114,8 +106,8 @@ flowchart TD
 
     click S1 "#step-1-threat-modelling--detail"
     click S2 "#step-2-sast--detail"
-    click S3 "#step-3-sca--detail"
-    click S4 "#step-4-container--iac--detail"
+    click S3 "#step-3-dependency-review--detail"
+    click S4 "#step-4-container--iac-review--detail"
     click S5 "#step-5-secrets--layered--detail"
     click S6 "#step-6-ai--agent-security--detail"
     click S7 "#step-7-compliance--detail"
@@ -144,10 +136,11 @@ flowchart TD
         AI_THREAT{AI in the<br/>product?}
         AI_THREAT -- Yes --> OWASP_AGENT[OWASP LLM Top 10<br/>+ OWASP Agentic Top 10 2026<br/>🤖 ai-agent-threat-review] --> P0_TICKET
         AI_THREAT -- No --> P0_TICKET
-        P0_TICKET[P0 mitigations → Linear<br/>👤 Security Champion]
+        P0_TICKET[P0 mitigations → Linear<br/>👤 Security Champion] --> MITIG_VERIFY
+        MITIG_VERIFY["Verify P0 mitigations landed in code<br/>🤖 threat-model-mitigation-verification<br/>👤 per release candidate — file:line or Not landed"]
     end
 
-    P0_TICKET --> GATE1{Gate 1:<br/>Threat Model<br/>+ Baseline}
+    MITIG_VERIFY --> GATE1{Gate 1:<br/>Threat Model<br/>+ Baseline}
     GATE1 -- No --> THREAT
     GATE1 -- Yes --> NEXT([Proceed to Step 2: SAST])
 
@@ -165,11 +158,11 @@ flowchart TD
     ENTRY([From Gate 1]) --> SAST
 
     subgraph SAST_STEP["Step 2: SAST"]
-        SAST[SonarQube + Semgrep on every PR<br/>🤖 security profile + OWASP rules] --> SR
+        SAST[CodeQL per-PR diff + scheduled full repo<br/>🤖 security-extended + project queries] --> SR
         SR["/security-review GitHub Action<br/>🤖 diff-aware injection / authn-z / secrets"] --> CUSTOM
-        CUSTOM[Custom Semgrep rules via MCP<br/>🤖 semgrep-custom-rule-generation] --> AUTOFIX
+        CUSTOM[Custom CodeQL queries<br/>🤖 codeql-custom-query-generation<br/>👤 two fixtures before merge] --> AUTOFIX
         AUTOFIX{Auto-fix<br/>available?}
-        AUTOFIX -- Yes --> COPILOT_FIX[Copilot Autofix or<br/>Snyk DeepCode patch<br/>🤖 80% accuracy, up to 5 suggestions]
+        AUTOFIX -- Yes --> COPILOT_FIX[Copilot Autofix patch<br/>🤖 suggested on the CodeQL finding]
         AUTOFIX -- No --> CLAUDE_FIX[Claude Code security-fix-generation<br/>🤖 patch + regression test]
         COPILOT_FIX --> SAST_GATE
         CLAUDE_FIX --> SAST_GATE
@@ -178,7 +171,7 @@ flowchart TD
 
     SAST_GATE --> GATE2{Gate 2:<br/>SAST<br/>Quality Gate}
     GATE2 -- No --> SAST
-    GATE2 -- Yes --> NEXT([Proceed to Step 3: SCA])
+    GATE2 -- Yes --> NEXT([Proceed to Step 3: Dependency Review])
 
     style ENTRY fill:#1B3A5C,color:#fff
     style NEXT fill:#1B3A5C,color:#fff
@@ -187,51 +180,45 @@ flowchart TD
 
 ---
 
-## Step 3: SCA — Detail
+## Step 3: Dependency Review — Detail
 
 ```mermaid
 flowchart TD
-    ENTRY([From Gate 2]) --> SCA
+    ENTRY([From Gate 2]) --> DEPS
 
-    subgraph SCA_STEP["Step 3: SCA"]
-        SCA[Dependabot/Renovate<br/>🤖 auto-PRs for CVEs] --> TRIVY_DEP
-        TRIVY_DEP[Trivy fs + image scans<br/>🤖 fail on Critical CVE] --> REACH
-        REACH{Reachability<br/>tool available?}
-        REACH -- "Endor Labs/Snyk" --> ENDOR[Endor Labs AURI / Snyk OSS<br/>🤖 95–97% noise cut]
-        REACH -- No --> CLAUDE_REACH[reachability-triage prompt<br/>🤖 ranked Definitely/Probably/Not]
-        ENDOR --> DEP_AUDIT
-        CLAUDE_REACH --> DEP_AUDIT
+    subgraph DEP_STEP["Step 3: Dependency Review"]
+        DEPS[Dependabot alerts + security updates<br/>🤖 auto-PRs, patch-level auto-merge] --> NATIVE_AUDIT
+        NATIVE_AUDIT[Package-manager-native audit in CI<br/>🤖 npm audit / pip-audit / cargo audit] --> REACH
+        REACH["Reachability triage on open Dependabot alerts<br/>🤖 reachability-triage once High / Critical passes 5 items<br/>👤 Critical / High upgrade regardless"] --> UPGRADE
+        UPGRADE[Major bumps: dependency-upgrade-impact<br/>🤖 breaking changes + rollback plan] --> DEP_AUDIT
         DEP_AUDIT[Monthly + per-release audit<br/>👤 0 Critical CVE in prod deps]
     end
 
-    DEP_AUDIT --> GATE3{Gate 3:<br/>SCA<br/>Hygiene}
-    GATE3 -- No --> SCA
-    GATE3 -- Yes --> NEXT([Proceed to Step 4: Container & IaC])
+    DEP_AUDIT --> GATE3{Gate 3:<br/>Dependency<br/>Hygiene}
+    GATE3 -- No --> DEPS
+    GATE3 -- Yes --> NEXT([Proceed to Step 4: Container & IaC Review])
 
     style ENTRY fill:#1B3A5C,color:#fff
     style NEXT fill:#1B3A5C,color:#fff
-    style SCA_STEP fill:#e8f4e8,stroke:#2E8B57
+    style DEP_STEP fill:#e8f4e8,stroke:#2E8B57
 ```
 
 ---
 
-## Step 4: Container & IaC — Detail
+## Step 4: Container & IaC Review — Detail
 
 ```mermaid
 flowchart TD
-    ENTRY([From Gate 3]) --> CONTAINER
+    ENTRY([From Gate 3]) --> IMG
 
-    subgraph CONTAINER_STEP["Step 4: Container & IaC"]
-        CONTAINER[Trivy + Docker Scout<br/>🤖 0 Critical CVE at registry] --> CHECKOV
-        CHECKOV[Checkov on every IaC PR<br/>🤖 CIS / NIST profile] --> OPA_GEN
-        OPA_GEN[OPA policy generation<br/>🤖 opa-policy-generation prompt] --> DRYRUN
-        DRYRUN[7-day dryrun audit<br/>👤 zero FP before deny]
-        DRYRUN --> GATEKEEPER["OPA Gatekeeper deploy<br/>🤖 enforcementAction: deny"]
-        GATEKEEPER --> CROSSGUARD[Cross-link Phase 6 CrossGuard<br/>🤖 pulumi-policy-opa bridge]
+    subgraph CONTAINER_STEP["Step 4: Container & IaC Review"]
+        IMG[Base images digest-pinned<br/>👤 no floating tags] --> CONTROLS
+        CONTROLS[IaC diff vs required-controls list<br/>👤 satisfied or excepted in writing] --> CONV_CHK
+        CONV_CHK[Dockerfile / K8s vs AGENTS.md<br/>👤 named reviewer signs off]
     end
 
-    CROSSGUARD --> GATE4{Gate 4:<br/>Container<br/>+ IaC}
-    GATE4 -- No --> CONTAINER
+    CONV_CHK --> GATE4{Gate 4:<br/>Container<br/>+ IaC Review}
+    GATE4 -- No --> IMG
     GATE4 -- Yes --> NEXT([Proceed to Step 5: Secrets])
 
     style ENTRY fill:#1B3A5C,color:#fff
@@ -283,13 +270,11 @@ flowchart TD
         AI_SEC{AI in<br/>product?}
         AI_SEC -- No --> SKIP_AI[Skip Step 6]
         AI_SEC -- Yes --> AI_REVIEW[ai-agent-threat-review<br/>🤖 OWASP LLM + Agentic 2026]
-        AI_REVIEW --> MCP_POL[MCP enforcement policy<br/>🤖 mcp-enforcement-policy<br/>👤 allow-list signed off]
+        AI_REVIEW --> MCP_POL[MCP enforcement policy<br/>🤖 mcp-enforcement-policy<br/>👤 allow-list in AGENTS.md + .mcp.json]
         MCP_POL --> ANTH[Anthropic Claude Opus 4.7<br/>model-layer prompt-injection defences<br/>🤖 1.4% ASR baseline]
         ANTH --> APP_DEFENCE[App-layer defences<br/>🤖 output validation + rate limit + audit log]
-        APP_DEFENCE --> AIBOM{Cycode<br/>in scope?}
-        AIBOM -- Yes --> CYCODE[Cycode AI Governance + AIBOM<br/>🤖 see / govern / enforce]
-        AIBOM -- No --> AI_DONE[Done]
-        CYCODE --> AI_DONE
+        APP_DEFENCE --> INVENTORY[AI inventory — six categories<br/>👤 assistants, models, infrastructure,<br/>MCP servers, AI secrets, AI packages]
+        INVENTORY --> AI_DONE[Done]
     end
 
     SKIP_AI --> NEXT([Proceed to Step 7 / Handoff])
@@ -314,11 +299,9 @@ flowchart TD
         COMPLIANCE{Formal<br/>compliance<br/>scope?}
         COMPLIANCE -- No --> SKIP_COMP["Skip; checklists optional"]
         COMPLIANCE -- Yes --> CHECKLIST[Generate checklists per framework<br/>🤖 compliance-checklist-generation]
-        CHECKLIST --> EVIDENCE[Compile evidence dossier<br/>🤖 evidence-compilation]
-        EVIDENCE --> CERT{Certifying?}
-        CERT -- Yes --> VANTA_DRATA[Vanta Agents / Drata MCP<br/>🤖 agent-collected evidence]
-        CERT -- No --> SELF_REVIEW
-        VANTA_DRATA --> SELF_REVIEW[pre-release-self-review<br/>🤖 + 👤 release captain]
+        CHECKLIST --> SPLIT[Split controls automated vs manual<br/>👤 name the tool or the attester]
+        SPLIT --> EVIDENCE[Compile evidence dossier<br/>🤖 evidence-compilation]
+        EVIDENCE --> SELF_REVIEW[pre-release-self-review<br/>🤖 + 👤 release captain]
         SELF_REVIEW --> POSTURE[Quarterly security-posture-report<br/>🤖 to leadership]
     end
 
@@ -339,36 +322,33 @@ flowchart TD
 The PROCESS.md links into these sections by anchor — keep the headings stable.
 
 ### Step 1: Threat Modelling
-STRIDE + (if AI is in product) OWASP LLM Top 10 + OWASP Top 10 for Agentic Applications 2026 — outputs `/docs/security/threat-model.md` and P0 Linear tickets. See [PROCESS.md → Step 1](./PROCESS.md#step-1-threat-modelling--security-architecture-review).
+STRIDE + (if AI is in product) OWASP LLM Top 10 + OWASP Top 10 for Agentic Applications 2026 — outputs `/docs/security/threat-model.md` and P0 Linear tickets. Before each release candidate the step closes its own loop: a mitigation-verification pass locates the implementing code for every P0 item and cites `file:line`, or reports it **not landed**. See [PROCESS.md → Step 1](./PROCESS.md#step-1-threat-modelling--security-architecture-review).
 
 ### Step 2: SAST
-SonarQube CE + Semgrep MCP + Claude Code `/security-review` (diff-aware) + GitHub Copilot Autofix; Snyk DeepCode AI as paid auto-fix upgrade; Aikido Infinite as alt all-in-one. See [PROCESS.md → Step 2](./PROCESS.md#step-2-sast--continuous-ai-assisted-static-analysis).
+CodeQL, via GHAS code scanning, is the SAST baseline — per-PR diff analysis **and** a scheduled full-repo scan, plus project-specific custom queries committed under `.github/codeql/` and verified against two fixtures so a high-FP query gets tightened rather than tolerated. Claude Code `/security-review` is the diff-aware semantic layer on top; GitHub Copilot Autofix patches CodeQL findings. See [PROCESS.md → Step 2](./PROCESS.md#step-2-sast--continuous-ai-assisted-static-analysis).
 
-### Step 3: SCA
-Dependabot/Renovate + Trivy + reachability-aware tools (Endor Labs AURI / Snyk Open Source) for 95–97% noise reduction; Pulumi Insights cross-link from Phase 6. See [PROCESS.md → Step 3](./PROCESS.md#step-3-sca--reachability-aware-dependency-audit).
+### Step 3: Dependency Review
+Dependabot owns the SCA capability — alerts, security updates, version updates, patch-level auto-merge — supplemented by package-manager-native audit (`npm audit` / `pip-audit` / `cargo audit`) in CI. Once the open High / Critical list runs long, Claude Code triages it by reachability against the repo's entry points and returns a merge order; the triage is an aid, not a verdict, and Critical / High still upgrade when classified not reachable. Infracost cross-link from Phase 6 for upgrade cost impact. See [PROCESS.md → Step 3](./PROCESS.md#step-3-dependency-review).
 
-### Step 4: Container & IaC
-Trivy MCP + Docker Scout + Checkov + OPA Gatekeeper with AI policy generation (Red Hat 2026 dynamic generator pattern); mandatory dryrun-first. See [PROCESS.md → Step 4](./PROCESS.md#step-4-container--iac-security).
+### Step 4: Container & IaC Review
+Human review only. Base images digest-pinned; Dockerfiles and K8s manifests checked against `AGENTS.md`; IaC diffs walked against the CIS / NIST-aligned required-controls list, each control satisfied or excepted in writing. No scanner, policy engine, or admission controller enforces this surface — a named reviewer does. See [PROCESS.md → Step 4](./PROCESS.md#step-4-container--iac-review).
 
 ### Step 5: Secrets
-ggshield pre-commit + GitGuardian platform + ggshield AI hook (pre-prompt + pre-tool-use + post-tool-use) for Claude Code / Copilot. See [PROCESS.md → Step 5](./PROCESS.md#step-5-secrets--layered-defence-with-ai-hooks).
+ggshield pre-commit + GitGuardian platform + ggshield AI hook (pre-prompt + pre-tool-use + post-tool-use) for Claude Code. See [PROCESS.md → Step 5](./PROCESS.md#step-5-secrets--layered-defence-with-ai-hooks).
 
 ### Step 6: AI Agent Security
-OWASP LLM Top 10 + OWASP Top 10 for Agentic Applications 2026; Anthropic Claude Opus 4.7 model-layer defences; MCP enforcement allow-list; Cycode AI Governance + AIBOM (optional). See [PROCESS.md → Step 6](./PROCESS.md#step-6-ai--agent-specific-security).
+OWASP LLM Top 10 + OWASP Top 10 for Agentic Applications 2026; Anthropic Claude Opus 4.7 model-layer defences; MCP allow-list in `AGENTS.md` pinned by the project-scoped `.mcp.json`; six-category AI inventory at `/docs/security/ai-inventory.md`. See [PROCESS.md → Step 6](./PROCESS.md#step-6-ai--agent-specific-security).
 
 ### Step 7: Compliance
-Claude for checklists + evidence; Trivy/Checkov/OPA for technical controls; Vanta Agents or Drata MCP when certifying SOC 2 / ISO 27001 / HIPAA; NIST AI RMF + ISO/IEC 42001 if AI is in the product. See [PROCESS.md → Step 7](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit).
+Claude for checklists + evidence; CodeQL / Dependabot / GitGuardian / `/security-review` as the automated control evidence, with dated manual attestation for everything they do not cover — including all container and IaC controls — across SOC 2 / ISO 27001 / HIPAA and peers; NIST AI RMF + ISO/IEC 42001 crosswalk if AI is in the product. See [PROCESS.md → Step 7](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit).
 
 ---
 
 ## Key Decision Points
 
 1. **AI in the product?** — Drives whether Steps 1.2 + 6 are mandatory or skipped. If yes, the OWASP LLM Top 10 + OWASP Agentic Top 10 are required; ASI01 Agent Goal Hijacking is the top risk in 2026.
-2. **Reachability tool available?** — Endor Labs AURI / Snyk Open Source give 95–97% noise reduction natively; if not budgeted, the `reachability-triage` Claude Code prompt is the fallback.
-3. **Auto-fix path?** — Copilot Autofix is free with GHAS Code Security and the default; Snyk DeepCode AI / Snyk Agent Fix is the paid upgrade with 80% accuracy and up to 5 suggestions per finding.
-4. **AI-generated OPA policy?** — Must spend at least 7 days in `enforcementAction: dryrun` with zero false positives before flipping to `deny`. Skipping dryrun is how a single-line policy locks every deploy.
-5. **Compliance certification scope?** — Drives whether Vanta Agents / Drata MCP / Secureframe is in scope. For internal projects without certification, Claude-generated checklists + the Phase-5 evidence pipeline are sufficient.
-6. **History scrub on secret leak?** — Only if compliance requires immutable record. **Rotation is the primary mitigation; history scrubbing is cosmetic.**
+2. **Compliance certification scope?** — Drives whether Step 7 runs and how much evidence must be collected. There is no compliance platform in this stack: checklists come from Claude, and every control is either tool-verified with a named tool or manually attested with a named person and a date.
+3. **History scrub on secret leak?** — Only if compliance requires immutable record. **Rotation is the primary mitigation; history scrubbing is cosmetic.**
 
 ---
 
@@ -376,13 +356,16 @@ Claude for checklists + evidence; Trivy/Checkov/OPA for technical controls; Vant
 
 ```
 Developer's day:
-  PR opened → CI runs (SonarQube + Semgrep + /security-review + Trivy + Checkov + ggshield) →
-  Copilot Autofix or Snyk DeepCode posts patch suggestions →
+  PR opened → CI runs (CodeQL diff analysis + /security-review + ggshield) →
+  Copilot Autofix posts patch suggestions on CodeQL findings →
+  Container / IaC changes get a named human reviewer against AGENTS.md →
   Critical/High findings block merge until resolved →
-  Custom Semgrep rule for any project-specific pattern →
+  Custom CodeQL query for any project-specific pattern →
   Human approval; merge
 
 Per release:
+  threat-model-mitigation-verification → every P0 mitigation Landed with a file:line, or deferred with sign-off →
+  reachability-triage on the open Dependabot High / Critical list once it runs long →
   pre-release-self-review prompt before clicking prod-deploy →
   All seven gates green (Gate 6 only if AI in product, Gate 7 only if certifying) →
   Deploy
@@ -390,7 +373,7 @@ Per release:
 Quarterly:
   security-posture-report to leadership →
   Secret rotation drill →
-  Vanta / Drata 100%-coverage check (if certifying) →
+  GitGuardian historical scan re-run; AI inventory reviewed →
   AGENTS.md security conventions reviewed and updated
 
 Incident (secret leak / vuln disclosed):

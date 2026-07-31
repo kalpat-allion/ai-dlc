@@ -1,6 +1,6 @@
 # Phase 5: Security & Compliance — Prompt Templates
 
-> **All prompts are for Claude Code, GitHub Copilot, or Snyk DeepCode.** SonarQube, Semgrep (with the MCP server's built-in rule writer), Trivy (with the MCP plugin), Checkov, OPA / Conftest, GitGuardian + ggshield, and Vanta / Drata run natively — the AI generates the rules, fixes, threat models, and audit narrative.
+> **All prompts are for Claude Code.** The detectors run on their own: **CodeQL** in GitHub code scanning, **Dependabot** on the dependency graph, **GitGuardian + ggshield** on commits and the AI loop, **Copilot Autofix** on CodeQL findings. What the AI adds is everything those tools cannot produce — custom CodeQL queries, real fixes with regression tests, threat models and the verification that their mitigations actually landed, reachability triage over the Dependabot alert list, the MCP enforcement policy, compliance checklists, and the audit narrative. Container and IaC review has no detector at all; the prompts here support the human reviewer rather than replacing them.
 
 The prompts are organised in the same order as the [PROCESS.md](./PROCESS.md) steps. Anchors below are referenced from PROCESS.md; keep the heading slugs stable.
 
@@ -49,6 +49,55 @@ Output as Markdown ready to commit at `/docs/security/threat-model.md`.
 
 ---
 
+## Threat-Model Mitigation Verification
+
+> Used in [PROCESS.md → Step 1.5](./PROCESS.md#step-1-threat-modelling--security-architecture-review). Produces the evidence behind the "P0 mitigations landed" checkbox at [Gate 7](./QUALITY-GATES.md#gate-7-compliance--audit-readiness) and at phase handoff.
+
+```
+You are a security reviewer verifying that specific, already-agreed mitigations exist in the code. You are not hunting for new vulnerabilities and you are not fixing anything — you answer one question per mitigation: did it land, and where.
+
+Verify that these threat-model mitigations landed in code.
+
+## Mitigations to verify
+[Paste the P0 rows (and P1 rows, if in scope) from /docs/security/threat-model.md — for each: issue, affected component, the recommended mitigation, priority]
+
+## Code to check
+- **Diff:** [git diff since the last verified release, or the PR range]
+- **Module paths:** [the directories / files the affected components map to]
+- **Design decisions:** [any ADR or design note that specifies how a mitigation was meant to be implemented]
+
+If the mitigation list contains no P0 items, STOP — there is nothing here to gate on; say so and ask for the P0 list. If you cannot read the diff or the named module paths, STOP and ask for them — do not verify from the threat model alone.
+
+For every mitigation, emit one row:
+
+| # | Mitigation (as written in the threat model) | Affected component | Status | Evidence (`file:line`) | Note |
+|---|---|---|---|---|---|
+
+**Status** is exactly one of:
+- **Landed** — implementing code exists and does what the mitigation specified. Cite the `file:line` of the code that enforces it.
+- **Partial** — something landed, but it differs from what the threat model specified, or it covers only part of the affected surface. Cite the `file:line` **and** state precisely how it differs and what is still exposed.
+- **Not landed** — no implementing code found. Say where you looked.
+
+Evidence rules — do not bend these:
+- Only **implementing code** counts. A comment, a TODO, a docstring, a test name, a Linear issue link, a changelog entry, or a config key nothing reads is **not** evidence — those are Not landed.
+- A test that exercises the mitigation is supporting evidence, never primary. Cite the implementation first, the test second.
+- Never invent a `file:line`. If you cannot cite one, the status is **Not landed**.
+- If a mitigation reads as several separable controls, split it into one row per control rather than averaging them into Partial.
+
+Out of scope — do not do these:
+- Do not hunt for new vulnerabilities; `/security-review` owns that.
+- Do not write, propose, or apply fixes.
+- Do not re-open, re-rate, or re-threat-model any finding. If a mitigation itself looks wrong, note it and leave it to the Security Champion.
+
+End with:
+
+**Verdict:** [PASS — every P0 mitigation Landed / FAIL — N P0 mitigation(s) not landed], followed by the count Not landed and the count Partial.
+
+Output as Markdown at `/docs/security/mitigation-verification-<release>.md`.
+```
+
+---
+
 ## Security Fix Generation
 
 > Used in [PROCESS.md → Step 2.5](./PROCESS.md#step-2-sast--continuous-ai-assisted-static-analysis).
@@ -59,8 +108,8 @@ You are a senior secure-code engineer fixing a real, scanner-confirmed vulnerabi
 Fix this security vulnerability.
 
 ## Finding
-- **Tool:** [SonarQube / Semgrep / /security-review / Snyk / Copilot Autofix / etc.]
-- **Rule ID:** [rule ID]
+- **Tool:** [CodeQL / /security-review / Copilot Autofix / manual review]
+- **Rule / query ID:** [e.g., js/sql-injection, or the custom query path]
 - **Severity:** [Critical / High / Medium / Low]
 - **CWE:** [e.g., CWE-89 SQL Injection]
 - **Description:** [paste tool description]
@@ -78,7 +127,7 @@ Provide:
 2. **Attack scenario** — how an attacker would exploit this
 3. **Fix** — corrected code with explanation of the change
 4. **Regression test** — test that would have caught this (framework: [Vitest / Jest / pytest / JUnit / etc.])
-5. **Related patterns to check** — similar code elsewhere in the codebase that may have the same issue (suggest a Semgrep rule if a pattern is detectable)
+5. **Related patterns to check** — similar code elsewhere in the codebase that may have the same issue (suggest a custom CodeQL query for `.github/codeql/` if the pattern is detectable)
 6. **Defence in depth** — additional controls at other layers (input validation, auth, output encoding, rate limit, etc.)
 
 The fix must:
@@ -91,12 +140,12 @@ The fix must:
 
 ---
 
-## Semgrep Custom Rule Generation
+## CodeQL Custom Query Generation
 
-> Used in [PROCESS.md → Step 2.3](./PROCESS.md#step-2-sast--continuous-ai-assisted-static-analysis). Run from Claude Code with the Semgrep MCP server connected — the server exposes a built-in `write_custom_semgrep_rule` prompt; this template wraps it with project context.
+> Used in [PROCESS.md → Step 2.3](./PROCESS.md#step-2-sast--continuous-ai-assisted-static-analysis). Authored in Claude Code against the repo — no MCP server involved. The output is committed source, reviewed like any other code.
 
 ```
-Write a Semgrep custom rule for this project-specific pattern.
+Write a custom CodeQL query for this project-specific pattern.
 
 ## Pattern to detect
 [Plain-English description — e.g., "every Express route handler must call requireAuth() before any business logic"]
@@ -108,39 +157,51 @@ Write a Semgrep custom rule for this project-specific pattern.
 [Paste a code snippet that follows the rule]
 
 ## Language(s)
-[js / ts / python / java / go / etc.]
+[javascript-typescript / python / java-kotlin / go / csharp / cpp / ruby / rust / swift]
 
 ## Project context
 - **AGENTS.md security conventions:** [paste relevant section]
-- **Existing rule files:** [`.semgrep/rules/*.yaml`]
+- **Existing query pack:** [`.github/codeql/` — paste qlpack.yml and any related query]
+- **Workflow config:** [paste the `queries:` block from .github/workflows/codeql.yml]
 
-Use the Semgrep MCP server's `write_custom_semgrep_rule` prompt to draft the rule. Then:
-1. Run `semgrep_scan_with_custom_rule` against the anti-example — confirm it triggers.
-2. Run it against the allowed-example — confirm it does NOT trigger.
-3. If FP rate looks high on the broader repo, tighten the pattern or add `pattern-not` clauses.
+Produce:
+1. **The query** — `.ql` file with `@name`, `@description`, `@kind problem`, `@problem.severity`, `@id`, and `@tags`. Prefer the standard library's dataflow / taint-tracking classes over ad-hoc AST matching where the pattern is a flow, not a shape.
+2. **Query pack wiring** — the `qlpack.yml` entry and the `.qls` suite line so the workflow actually runs it.
+3. **Two fixtures** — commit both under `.github/codeql/test/`:
+   - the anti-example, which the query MUST flag
+   - the allowed-example, which the query MUST NOT flag
+4. **Verification commands** — the exact `codeql database create` + `codeql query run` (or `codeql test run`) invocations to prove both fixtures behave.
+
+Verification discipline — do not skip:
+- Run the query against the anti-example: confirm it triggers. A query that never fires is worse than no query, because it manufactures confidence.
+- Run it against the allowed-example: confirm it does NOT trigger.
+- If the FP rate looks high across the broader repo, tighten the predicate or add exclusions — do not lower the severity to hide the noise.
 
 Output:
-- Final rule YAML, ready to commit at `.semgrep/rules/<rule-id>.yaml`
-- A one-paragraph note for the PR description explaining the pattern and why it warrants a custom rule
+- Final `.ql` (and any shared `.qll` library), ready to commit under `.github/codeql/`
+- The two fixture files
+- A one-paragraph note for the PR description explaining the pattern and why it warrants a custom query
 ```
 
 ---
 
 ## Reachability Triage
 
-> Used in [PROCESS.md → Step 3.3](./PROCESS.md#step-3-sca--reachability-aware-dependency-audit). Use when Endor Labs / Snyk reachability is unavailable and you need a triage cut on a long CVE list.
+> Used in [PROCESS.md → Step 3.3](./PROCESS.md#step-3-dependency-review).
 
 ```
 Triage these dependency CVEs by reachability.
 
 ## CVE list
-[Paste the CVE list from Trivy / Snyk / Dependabot — package, version, CVE ID, CWE, vulnerable function/symbol]
+[Paste the open Dependabot alerts — for each: package, vulnerable version range, patched version, CVE ID, CWE, severity, and the affected symbol where the advisory names one]
 
 ## Project context
 - **Languages / frameworks:** [stack]
 - **Entry points:** [HTTP routes / CLI entry / scheduled jobs / etc.]
 - **Repo layout:** [paste output of `tree -L 2` or similar]
 - **(Optional) Call graph dump:** [paste tree-sitter or language-server-derived call graph]
+
+If **Entry points** is blank or `[bracketed]`, STOP and ask — reachability is a claim about paths from an entry point, and without them every classification is a guess.
 
 For each CVE, classify:
 1. **Definitely reachable** — our code calls into the vulnerable symbol on a documented entry path
@@ -155,85 +216,16 @@ For Definitely / Probably:
 Caveats:
 - Treat reachability as a triage aid, NOT a definitive answer.
 - Always upgrade Critical / High CVEs even when classified Not reachable, unless Tech Lead documents a specific exception.
+- When the advisory names no affected symbol, classify at package granularity and say so — do not invent a symbol to reason about.
 
 Output as Markdown ranked by Definitely → Probably → Not reachable, with a "what to merge first" recommendation.
 ```
 
 ---
 
-## Container CVE Triage
-
-> Used in [PROCESS.md → Step 3.2 and Step 4.1](./PROCESS.md#step-3-sca--reachability-aware-dependency-audit). Run via Trivy MCP or against a Trivy SARIF export.
-
-```
-Triage these container image CVEs and propose a base-image upgrade plan.
-
-## Image
-- **Image:** [registry/name:tag@digest]
-- **Base image:** [e.g., node:22-alpine3.20]
-- **Built from:** [Dockerfile path]
-
-## Trivy output
-[Paste `trivy image --severity CRITICAL,HIGH --format json` output, or query via Trivy MCP]
-
-## Project context
-- **Runtime requirements:** [language version, glibc/musl, OpenSSL version, native modules]
-- **Smallest possible upgrade vs largest acceptable jump:** [team preference]
-
-If the Trivy output above is empty or untrusted (e.g., scan failed, image not pulled), STOP and ask for a fresh scan — do not invent CVE IDs, severities, or fixed-in versions.
-
-Provide:
-1. **CVE summary** — group by package; for each: severity, fixed-in version, exploit availability
-2. **Smallest base-image upgrade that closes the most CVEs** (digest-pinned)
-3. **Largest reasonable jump** (e.g., minor or LTS bump) and what it buys
-4. **Native-module compatibility risks** for the proposed upgrade
-5. **PR plan** — step-by-step: bump base image digest → rebuild → re-scan → run smoke tests → land
-6. **Residual risk** — any Critical / High CVE that no upgrade closes; flag for compensating control
-
-Output as Markdown suitable for the PR body.
-```
-
----
-
-## OPA Policy Generation
-
-> Used in [PROCESS.md → Step 4.5](./PROCESS.md#step-4-container--iac-security). Mandatory dryrun-first deployment.
-
-```
-Write an OPA Gatekeeper policy from this requirement.
-
-## Requirement
-[Plain-English requirement — e.g., "no Kubernetes Service of type LoadBalancer in the production namespace unless annotated with `approved-by: security-champion`"]
-
-## Cluster context
-- **K8s version:** [e.g., 1.30]
-- **Namespaces in scope:** [list]
-- **Existing policy packs:** [paths under `/policy-packs/`]
-- **AGENTS.md policy conventions:** [paste relevant section]
-
-Generate:
-1. **ConstraintTemplate** — Rego with the validation logic; clear violation messages
-2. **Constraint** — instance with `enforcementAction: dryrun` (mandatory first state)
-3. **Test fixtures** — at least one `pass` and one `fail` Kubernetes manifest as `*.yaml` test data
-4. **Gator / Conftest test commands** — exact commands to run the fixtures locally
-5. **Promotion plan** — what to look for in the Gatekeeper audit log over a 7-day dryrun window before flipping to `enforcementAction: deny`
-
-Apply the Red Hat 2026 dynamic-policy-generator pattern:
-- Reference 30+ K8s best practices (Pod Security Standards, NetworkPolicy, resource limits, runAsNonRoot) where relevant
-- Output context-aware Rego, not generic boilerplate
-
-Output:
-- `/policy-packs/<name>/template.yaml` (ConstraintTemplate)
-- `/policy-packs/<name>/constraint.yaml` (Constraint with `dryrun`)
-- `/policy-packs/<name>/test/{pass,fail}.yaml`
-- A README.md with the Conftest commands and the promotion plan
-```
-
----
-
 ## Dependency Upgrade Impact
 
-> Used in [PROCESS.md → Step 3.4](./PROCESS.md#step-3-sca--reachability-aware-dependency-audit).
+> Used in [PROCESS.md → Step 3.4](./PROCESS.md#step-3-dependency-review).
 
 ```
 Analyse the impact of this dependency upgrade.
@@ -305,7 +297,7 @@ Provide an incident response plan:
 
 ### Remediation (first 24 hours)
 7. **Git history scrubbing steps** (`git filter-repo` / BFG) — only if compliance requires; rotation is the real mitigation
-8. **Process changes** to prevent recurrence (where in Steps 0.4 / 5.1–5.3 should the next leak have been caught?)
+8. **Process changes** to prevent recurrence (where in Steps 0.3 / 5.1–5.3 should the next leak have been caught?)
 9. **Documentation updates** (post-mortem template)
 
 ### Long-term (first week)
@@ -393,7 +385,7 @@ Use this shape for every finding. Avoid generic "implement input validation" rec
 Draft an MCP enforcement policy for this project.
 
 ## Inventory (current)
-- **MCP servers in use:** [list — Linear, GitHub, Pulumi, Datadog, Sentry, Semgrep, Trivy, Vanta, Drata, custom internal, etc.]
+- **MCP servers in use:** [list — Linear, GitHub, Figma, custom internal, etc.]
 - **For each: MCP scope (project / user), tool scope (read / write / state-changing), auth (OAuth / token), connecting clients (Claude Code)]
 
 ## Project / agent intended capabilities
@@ -402,17 +394,19 @@ Draft an MCP enforcement policy for this project.
 ## AGENTS.md security conventions
 [Paste relevant section]
 
+## Committed MCP config
+[Paste the repo's project-scoped .mcp.json]
+
 Produce:
 1. **Allow-list** — MCP servers approved for connection, per environment (dev / staging / prod)
 2. **Per-server scope policy** — for each server: which operations are allowed (e.g., Linear `update_issue` allowed; `delete_issue` denied workspace-wide)
 3. **Off-boarding procedure** — how OAuth grants are revoked when developers leave; verification step
 4. **Audit log requirement** — what must be logged per tool call (timestamp, user, server, tool, args summary)
-5. **Detection rules** — Semgrep / `ggshield` / Cycode rules that catch MCP config drift (e.g., a new committed `.mcp.json` server entry not in the allow-list)
-6. **Cycode AI Governance hooks** (if Cycode is in scope) — three-layer governance config: see / govern / enforce
+5. **Drift detection** — how a new or widened server entry gets caught: `.mcp.json` is committed, so every change is a reviewable diff; require the allow-list section of `AGENTS.md` to be updated in the same PR, and have the `ggshield` AI hook scan the config for credentials. Name who reviews that diff.
 
 Cite the GitGuardian 2026 finding: 24,008 unique secrets found in MCP config files in 2025; the ggshield AI hook is the runtime safety net but allow-listing is the primary control.
 
-Output as Markdown for `/docs/security/mcp-enforcement.md` plus YAML allow-list for `/policy-packs/mcp/allow-list.yaml`.
+Output as Markdown for `/docs/security/mcp-enforcement.md`, plus the exact `AGENTS.md` allow-list section and the reviewed `.mcp.json` server set to commit.
 ```
 
 ---
@@ -444,8 +438,10 @@ For each control, provide:
 - **Control name:** [e.g., "Encryption at rest"]
 - **Regulatory reference:** [e.g., "GDPR Art. 32(1)(a)"]
 - **Implementation check:** how to verify it's in place (specific code / config to inspect)
-- **Evidence artefact:** what to collect for audit (Trivy report, CI log, config file, etc.)
-- **Verifying tool:** [SonarQube / Semgrep / Trivy / Checkov / OPA / `/security-review` / manual review]
+- **Evidence artefact:** what to collect for audit (CodeQL SARIF, Dependabot alert export, GitGuardian incident log, CI log, config file, dated reviewer attestation, etc.)
+- **Verifying tool:** [CodeQL / `/security-review` / Dependabot / ggshield / GitGuardian / manual]
+
+Only name a tool as the verifier if that tool actually checks that control. Container and IaC controls have no scanner in this stack — mark them `manual` and name the reviewer role. An unverifiable "automated" claim fails on the first audit test.
 
 ### Operational Controls
 - Access-control policies
@@ -483,16 +479,15 @@ Compile audit evidence for this compliance framework.
 [Start date] to [End date]
 
 ## Available artefacts
-- **SonarQube reports:** [path / URL]
-- **Semgrep / `/security-review` PR comments:** [link / export]
-- **Trivy scan history:** [path / URL]
-- **Checkov reports:** [path / URL]
-- **OPA / Gatekeeper audit log:** [path / URL]
-- **Dependabot / Snyk / Endor Labs dependency reports:** [path]
+- **CodeQL SARIF (per-PR + scheduled full-repo):** [path / URL to the archived CI artefacts]
+- **GitHub code-scanning alert history:** [export / link]
+- **`/security-review` PR comments:** [link / export]
+- **Dependabot alert export (open + closed in period):** [path]
+- **Container & IaC review records** (PR threads with the required-controls confirmation): [links]
 - **GitGuardian incident log:** [path]
 - **CI/CD pipeline logs:** [where]
 - **Access-control audit logs:** [where]
-- **Vanta / Drata dashboard export:** [if applicable]
+- **Manual-control attestations** (named attester + date per control): [path]
 
 ## Control checklist
 [Paste compliance checklist from `compliance-checklist-generation`]
@@ -501,8 +496,9 @@ Generate an audit-ready document that:
 1. Maps each control to specific evidence artefacts (with timestamps / versions)
 2. Highlights any control with **insufficient evidence** (gap for remediation)
 3. Summarises control effectiveness over the audit period
-4. Provides auditor-friendly explanations of automated controls (how the tool verifies the control)
-5. Calls out any **AI-driven evidence** (e.g., Vanta Compliance Agent auto-collected, Drata MCP-scheduled tests) and the human review applied
+4. Provides auditor-friendly explanations of automated controls (name the tool and the specific query / alert class that verifies the control)
+5. Separates **tool-verified** controls from **attested** controls, and for every attested control names the person, the date, and what they inspected
+6. Calls out any **AI-drafted evidence** (control narratives, `/security-review` findings summaries) and the human review applied before it entered the dossier
 
 Output structured Markdown suitable for sharing with external auditors at `/docs/compliance/evidence/<period>/<framework>.md`.
 ```
@@ -511,7 +507,7 @@ Output structured Markdown suitable for sharing with external auditors at `/docs
 
 ## Security Posture Report
 
-> Used in [PROCESS.md → Step 7.7](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit). Quarterly cadence.
+> Used in [PROCESS.md → Step 7.6](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit). Quarterly cadence.
 
 ```
 Generate a security posture report.
@@ -520,13 +516,11 @@ Generate a security posture report.
 [e.g., Q1 2026]
 
 ## Data sources
-- **SonarQube findings:** [count by severity]
-- **Semgrep findings:** [count by severity]
+- **CodeQL findings:** [count by severity; per-PR vs scheduled full-repo]
 - **`/security-review` PR comments:** [count by severity, accept rate]
-- **Copilot Autofix / Snyk DeepCode patches accepted:** [count, accept rate]
-- **Dependabot alerts:** [count open + count closed in period]
-- **Trivy container scans:** [count of Critical CVEs remediated]
-- **Checkov / OPA-Gatekeeper denials:** [count + top rules]
+- **Copilot Autofix patches accepted:** [count, accept rate]
+- **Dependabot alerts:** [count open + count closed in period; median time-to-close]
+- **Container & IaC reviews:** [count of PRs reviewed; count of required-control exceptions granted, with approver]
 - **GitGuardian incidents:** [count + rotation MTTR]
 - **AI hook (ggshield) blocks:** [count, distribution across pre-prompt / pre-tool / post-tool]
 - **Penetration tests:** [any conducted?]
@@ -541,9 +535,9 @@ Generate a report covering:
 1. **Executive summary** — overall posture (improving / stable / declining) with key metrics
 2. **Findings trend** — chart of findings by severity over the period; explain notable changes
 3. **Top risks** — top 5 open security issues with impact and remediation status
-4. **Dependency health** — % of deps on latest patch; reachability-triaged CVE exposure
+4. **Dependency health** — % of deps on latest patch; open Critical / High CVE exposure and age
 5. **Secrets hygiene** — leaks detected, rotation MTTR, AI-hook block rate, process improvements
-6. **Container & IaC** — image-scan clean rate; OPA denial count; AI-policy dryrun progress
+6. **Container & IaC** — review coverage and exceptions granted. State plainly that this surface is verified by human review with no automated detector, so the number to watch is review coverage, not a clean-scan rate.
 7. **AI / agent posture** (if AI in product) — prompt-injection block rate, MCP allow-list compliance, AI-suggested-vs-actual root-cause variance
 8. **Compliance status** — status vs each applicable framework
 9. **Next-period focus** — top 3 security priorities
@@ -555,7 +549,7 @@ Output as Markdown suitable for sharing with leadership at `/docs/security/postu
 
 ## Pre-Release Self-Review
 
-> Used in [PROCESS.md → Step 7.6](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit) — run from the release captain's local Claude Code session before clicking the production-deploy approval. Complements the [Phase 6 pre-prod-deploy self-review](../06-cicd-devops/PROMPTS.md#self-review-before-production-deploy).
+> Used in [PROCESS.md → Step 7.5](./PROCESS.md#step-7-compliance--ai-generated-checklists-evidence-and-audit) — run from the release captain's local Claude Code session before clicking the production-deploy approval. Complements the [Phase 6 pre-prod-deploy self-review](../06-cicd-devops/PROMPTS.md#self-review-before-production-deploy).
 
 ```
 Run a pre-release security self-review against this release candidate.
@@ -564,24 +558,21 @@ Run a pre-release security self-review against this release candidate.
 - **Release tag:** [v1.2.3]
 - **Diff vs last prod release:** [git diff or PR list]
 - **Linked Linear issues / threat-model items:** [list]
-- **Open SAST findings on main:** [SonarQube + Semgrep + /security-review export]
-- **Open dependency CVEs (with reachability tag):** [Dependabot / Snyk / Endor Labs export]
-- **Open container CVEs:** [Trivy export]
-- **OPA / Gatekeeper status:** [dryrun vs deny per policy]
+- **P0 mitigation verification table:** [output of `threat-model-mitigation-verification` for this release]
+- **Open SAST findings on main:** [CodeQL alert export + /security-review comments]
+- **Open dependency CVEs:** [Dependabot alert export]
 - **Open GitGuardian incidents:** [list]
 - **AI feature in this release:** [yes / no — if yes, link the AI threat review]
 
 Checks:
-1. **Threat-model alignment** — every P0 mitigation merged or formally deferred with sign-off
+1. **Threat-model alignment** — every P0 mitigation shows **Landed** with `file:line` evidence in the verification table, or is formally deferred with sign-off
 2. **SAST clean** — 0 Critical, 0 High on `main`
-3. **SCA clean** — 0 Critical CVEs in production deps; High CVEs documented
-4. **Container clean** — every shipped image scan has 0 Critical at registry push
-5. **IaC / policy clean** — Checkov + OPA dryrun or deny clean; no AI-generated policy promoted to deny without 7-day audit window
-6. **Secrets clean** — 0 secrets in current code; ggshield AI hook installed on every developer machine; no open GitGuardian incidents
-7. **AI / agent surface** (if applicable) — MCP allow-list current; Anthropic defences enabled at model layer; output validation + rate limits + cost caps in place
-8. **Compliance** — all in-scope checklists complete; evidence dossier current
-9. **Deploy window** — not Friday afternoon, not during a known traffic peak
-10. **Rollback readiness** — last rollback drill within 90 days; runbook current
+3. **Dependency clean** — 0 Critical CVEs in production deps; High CVEs documented with Tech Lead risk acceptance
+4. **Secrets clean** — 0 secrets in current code; ggshield AI hook installed on every developer machine; no open GitGuardian incidents
+5. **AI / agent surface** (if applicable) — MCP allow-list current; Anthropic defences enabled at model layer; output validation + rate limits + cost caps in place
+6. **Compliance** — all in-scope checklists complete; evidence dossier current
+7. **Deploy window** — not Friday afternoon, not during a known traffic peak
+8. **Rollback readiness** — last rollback drill within 90 days; runbook current
 
 Output a Markdown report: pass / fail per check, with severity. If any fail at High or Critical, recommend halting the deploy and escalate to Security Champion + Tech Lead.
 ```
