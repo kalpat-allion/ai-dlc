@@ -18,7 +18,18 @@ The **Wraps** column is this directory's purpose. Because shipped templates must
 
 > **Note — `publish-prd-to-linear` wraps only half of `gap-analysis`.** That prompt has two uses: the **pre-publish self-review** on a local draft (Step 2.3), and the **post-approval sweep** that diffs the published Document against the backlog (Step 4). Only the first is inlined here, as the skill's step 3. The second is a different procedure with a different input, a different output and a different gate, and stays a prompt until `sweep-requirements-gaps` is built.
 
-**`sweep-requirements-gaps` is deliberately not in this directory.** It is Phase 1's fourth conversion candidate and its build condition is that the three skills above have run on a real PRD first — the sweep audits their output, so building it before they have produced any gives it nothing to audit. Its inputs (`gap-analysis` post-publish half, `linear-gap-sweep`) stay as prompts in the meantime.
+**`sweep-requirements-gaps` is deliberately not in this directory.** It is Phase 1's fourth conversion candidate; its inputs (`gap-analysis` post-publish half, `linear-gap-sweep`) stay as prompts in the meantime.
+
+Its job is verification, and every one of its findings reduces to parsing the `**PRD section:** [§X.Y](url#anchor)` line out of real issue descriptions and re-resolving it against a Document that has since been re-versioned. **A sweep that mis-parses that line returns clean — and a clean sweep is the phase-handoff gate's evidence.** Built from a spec rather than against real data, it would manufacture a gate pass, so it waits for data.
+
+**Build it when either of these fires:**
+
+1. A build-evidence note is committed here recording one real sweep against a project these three skills built — counts per category, whether the `**PRD section:**` line parsed without hand-editing, whether any deep-link failed to re-resolve after a Document version bump, and run time.
+2. Any artifact ships that edits an approved PRD Document after publication — that creates orphan anchors with nothing checking them.
+
+**Do not build it if** two recorded sweeps come back with zero Critical/High findings and no anchor failures. The prompt is sufficient at that point.
+
+> The previous condition was "once the three skills have run on a real PRD", which nobody reading this repo can check. A hold condition that cannot be verified is the same defect as a quality-gate checkbox that cannot be falsified.
 
 ## How to instantiate per repo
 

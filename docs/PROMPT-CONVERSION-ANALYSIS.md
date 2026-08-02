@@ -270,7 +270,17 @@ See the [Subagents](#subagents) section.
 
 #### `sweep-requirements-gaps` — P2 · Phase 1 · **held, not built**
 
-> **Deliberately left unbuilt when the other three Phase 1 skills shipped**, on its own stated condition: it audits their output, so building it first gives it nothing to audit. Its scope also narrowed on that build — `publish-prd-to-linear` now owns the *pre-publish* half of `Gap Analysis`, leaving this skill the post-publish half only. That is the split this entry's Do-NOT list already described; it is now enforced by another shipped artifact rather than by a sentence here.
+> **Deliberately left unbuilt when the other three Phase 1 skills shipped**, and its hold condition has been **replaced with a falsifiable one** — the original, *"build it after the Gate 1/2 skills have run on a real PRD"*, cannot be checked by anyone reading the repo, which is the same defect this document spent a whole revision removing from quality gates. Its scope also narrowed on that build: `publish-prd-to-linear` now owns the *pre-publish* half of `Gap Analysis`, leaving this skill the post-publish half only.
+>
+> **Why holding is right rather than merely cheap.** This skill's whole job is verification, and its four classifications all reduce to one operation — parse the `**PRD section:** [§X.Y](url#anchor)` line out of real issue descriptions and re-resolve it against a Document that Gate 3 has since re-versioned. **A sweep that mis-parses that line returns clean, and a clean sweep is Gate 3's evidence.** Building it from the spec re-runs the predicted-vs-read-back anchor experiment — the defect the Phase 1 build found by inlining against real data — in the one artifact where getting it wrong manufactures a gate pass. Same basis as `author-opa-policy` and `Pulumi Cost Delta`.
+>
+> **Release when either fires:**
+> 1. **Evidence trigger.** A build-evidence note is committed recording one real post-handoff sweep against a Project the three skills built, stating: counts per category; whether the `**PRD section:**` line parsed out of real issue descriptions without hand-editing; whether any deep-link failed to re-resolve after a Document version bump; and wall-clock run time. **Falsifiable by `grep`** — the note is in the tree or it is not.
+> 2. **Structural trigger.** Any artifact ships that edits an approved PRD Document after publication. Gate 3's *"every issue's PRD deep-link still resolves"* then has a producer of orphan anchors and no checker, and this is the only proposed artifact that checks it.
+>
+> **Drop condition:** two recorded sweeps returning zero Critical/High findings and no anchor failures. The prompt is then sufficient, and the skill would be a gate-shaped wrapper around a clean result.
+>
+> **The lane does not decay while empty.** All three shipped skills already exclude this territory by phrase, so nothing needs re-deconflicting when it is eventually built. What *is* currently unowned is the utterance "diff the backlog against the PRD" — it routes to no artifact and runs ungated. That was weighed and accepted: its output is a comment, which is recoverable, and its one dangerous escalation — filing issues for the gaps — is now closed from two directions by `push-linear-stories`' refusal case and the `linear-task-agent` (b) edit.
 
 - **Wraps:** Gap Analysis *(post-publish half only)*, Linear Gap Sweep
 - **Path:** `aidlc-phases/01-requirement-gathering/skill-prompts/sweep-requirements-gaps/SKILL.md`
@@ -511,14 +521,33 @@ See the [Subagents](#subagents) section.
 
 Six coordinated edits to already-shipped `subagent-prompts/` templates. Each must land in the **same PR** as the artifact it unblocks, because these files ship into consuming repos.
 
+> **The rule is narrower than it reads, and the repo has already applied it that way twice.** What it forbids is shipping a **pointer to an artifact the consuming repo does not have** — a dangling reference. It does not reach an edit that is a **pure refusal**, which names no artifact, unblocks nothing, and is strictly safer standalone than absent. The `software-architect.md` row was split on exactly this basis in v2.4 (its `pr-reviewer` dangling-slug fix shipped alone while its `solution-architect` exclusion stayed bundled), and the `linear-task-agent.md` row is now split the same way. Stated as a test: **if removing the artifact from the sentence leaves the sentence still true and still useful, the edit can ship alone.**
+
 | Shipped template | Edit | Ships with |
 |---|---|---|
-| `linear-task-agent.md` | pr-open flow gains *"if the pre-PR self-review has not been run, load `open-pull-request` first"*. Its description contains "open the PR for this branch" verbatim, so **without this the subagent wins the route and the entire gate is bypassed**. Boundaries additionally name Documents / Projects / Milestones as out-of-scope **by design**, not by omission. | `open-pull-request` (P0) |
+| `linear-task-agent.md` **(a)** | pr-open flow gains *"if the pre-PR self-review has not been run, load `open-pull-request` first"*. Its description contains "open the PR for this branch" verbatim, so **without this the subagent wins the route and the entire gate is bypassed**. | `open-pull-request` (P0) — **still bundled** |
+| ~~`linear-task-agent.md` **(b)**~~ | ~~Boundaries name Documents / Projects / Milestones as out-of-scope **by design**, not by omission.~~ **LANDED, split from (a).** Shipped as four additive touches — description, request-classification step, operating boundaries, escalation list — plus the reciprocal clause in all three Phase 1 skill descriptions. See [Splitting the `linear-task-agent` row](#splitting-the-linear-task-agent-row). | — (shipped standalone) |
 | `code-reviewer.md` | Do-NOT list gains *"the full pre-PR gate including DoD, rebase and PR open (load `open-pull-request`, which hands the diff review back here as step 1)"*. Its shipped triggers "anything to fix before I PR" / "review my diff before I PR" overlap the skill's "ready to PR" on the same utterance — a second, undetected gate bypass. | `open-pull-request` (P0) |
 | `backend-engineer.md` | Operating boundaries gain the three security-remediation constraints (minimal backward-compatible diff; mandatory regression test failing before and passing after; no tautological symptom-masking fix). **Replaces** the killed `security-fix-engineer`. | — |
 | `software-architect.md` | Mutual *"Do NOT invoke for: system-wide / new-tech / new-service-boundary decisions (use `solution-architect`)"*. **Also fixes a live bug:** its own frontmatter routes *"post-open PR review (use `pr-reviewer`)"* to a slug that exists nowhere in the repo. | `solution-architect` (P1) |
 | `refactor-specialist.md` | Description gains the filer's name: route candidate-identification to the `file-followup-bug` skill (canonised at PROCESS.md L336), not to an unnamed actor. **Replaces** the killed `triage-refactor-candidates`. | — |
+| the three Phase 1 skills | Each Do-NOT list gains the **reciprocal** of the `linear-task-agent` (b) edit: no writes around a story already in flight. Required by `ROUTING.md`'s own rule that a shared write object is fenced in **both** descriptions — before this, the boundary lived in `skill-prompts/README.md`, which never vendors, so it was in **zero** shipped descriptions. | landed with `linear-task-agent` (b) |
 | `threat-modeler` ↔ `architecture-reviewer` | Mutual exclusion between the two **new** subagents. Both `opus`, both read-only, both emit severity-ranked design-time findings, and "what are the security risks in this design" vs "what breaks in this design before we code it" are paraphrases. The synthesis pass ran mutual-exclusion against shipped agents but never *between* its own proposals. | both (P1) |
+
+### Splitting the `linear-task-agent` row
+
+Half (b) shipped standalone rather than waiting for `open-pull-request`, which sits four build-order items away. Three things decided it.
+
+**The gap was live, and it defeated two gate checkboxes rather than one.** The agent's scope-discipline rule fences writes into projects *outside* the developer's named scope; the three Phase 1 skills write into the *same* project, so nothing refused backlog construction. An issue the agent created from a requirements document carries no `phase:requirements` / `ai-generated` / `needs-human-review` labels and no verified deep-link — so it is invisible to **Gate 2's "AI Inbox cleared"** (`QUALITY-GATES.md:56`) *and* **Gate 3's "every issue's PRD deep-link still resolves"** (`:75`). Both pass while the issue sits outside the mechanism they measure. That is the unfalsifiable-checkbox pattern, arrived at from a new direction: not a checkbox nobody verifies, but a checkbox whose *population* can be silently under-filled.
+
+**The enforcement point had to be the vendored file.** Three alternatives were considered and fail for the same structural reason. Sharpening the skills' descriptions does not work — a description is a routing *claim*, not a refusal, and once the subagent is loaded no skill description constrains it. `ROUTING.md` and the directory READMEs do not work either: instantiation copies the `.md` into `.claude/agents/` and leaves the README behind. **The gap is in the file that vendors, so only that file can close it.**
+
+**The load-bearing touch is the classification step, not the boundaries section.** `linear-task-agent` classifies a request into one of eight flows *before* any boundary is consulted; "create the issues for this epic" lands in `file-followup` or `update`, both in-scope, and the boundary is never reached. So `file-followup` is now capped at **one issue arising from the story in flight**, and `update` is stated to **never create**. A boundary written only in the boundaries section is one the classifier has already run past — worth generalising to any subagent whose system prompt opens with a classification step.
+
+Two properties the edit deliberately keeps:
+
+- **Neither side names the other by slug.** A cross-phase slug reference dangles in a repo that installed only one of the two sets. Both sides describe the boundary by **write type**, which also makes it survive a rename.
+- **No placeholder was renamed.** `{{TEAM_PREFIX}}` / `{{LINEAR_TEAM}}` is one of the six pairs in [`PLACEHOLDERS.md`](./PLACEHOLDERS.md), and both live in the files touched here. Converge-on-next-touch means the **next substantive rewrite**, not the next additive line — renaming inside a vendored template breaks every repo that already instantiated it.
 
 ---
 
@@ -718,7 +747,7 @@ No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing coll
 
 ### Phase 4 — P2, conditional
 
-Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` if Step 4 is skipped, `/load-task-context` if tracker hygiene does not supply the deep-links, `api-contract-freeze` if the audit is not genuinely mechanical, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
+Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), `/load-task-context` if tracker hygiene does not supply the deep-links, `api-contract-freeze` if the audit is not genuinely mechanical, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
 
 ---
 

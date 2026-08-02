@@ -33,11 +33,15 @@ The **Provenance** column records which phase ships the template. It is a lookup
 | `publish-prd-to-linear` | Skill | The requirements Document, the Project that carries it, the section-anchor map | Milestones, Issues, marking anything approved | P1 |
 | `scaffold-linear-milestones` | Skill | Milestones — creation, order, target dates | The Project, the Document, Issues | P1 |
 | `push-linear-stories` | Skill | First-time story creation from a requirements document: Triage issues, their AC, labels, deep-links | Milestones, any state move past Triage, clearing `needs-human-review` | P1 |
-| `linear-task-agent` | Subagent | Writes **around a story already in flight**: find, start, progress comment, PR-open, done, follow-up filing, field updates | Backlog construction, sprint planning, code | P3 |
+| `linear-task-agent` | Subagent | Writes **around a story already in flight**: find, start, progress comment, PR-open, done, single follow-up filing, field updates | Requirements Documents, Projects, Milestones, bulk issue creation from a requirements document; sprint planning; code | P3 |
 
 **The tie-break, stated as a write type:** the three skills **construct the backlog**; `linear-task-agent` **operates on a story that already exists in it**. Both write issues, so "does it create an issue?" is not the test. The test is *where the issue comes from* — a requirements document (skills) or a developer working a story who found something (agent).
 
-> **⚠ This boundary is documented here but not yet enforced in `linear-task-agent.md`.** Its scope-discipline rule fences writes to *other* projects; the three skills write into the *same* project, so nothing in the template currently refuses backlog construction. The edit is specified in PROMPT-CONVERSION-ANALYSIS.md → *Extend, don't create*, and until it lands this row describes intent rather than behaviour. **Do not read this table as verification.**
+> **✅ Enforced in both directions, in the shipped templates.** `linear-task-agent` refuses backlog construction in four places — its description, its request-classification step, its operating boundaries and its escalation list — and the three skills each refuse writes around a story in flight. Neither side names the other by slug: a cross-phase slug reference dangles in a repo that installed only one of the two sets, so both sides describe the boundary **by write type**.
+>
+> **What made this necessary rather than tidy:** the agent's scope-discipline rule fences writes to *other* projects, while the skills write into the *same* one — so before this edit nothing refused it. An issue the agent created from a requirements document would carry no `needs-human-review` label and no verified deep-link, making it invisible to **two** gate checkboxes at once: "AI Inbox cleared" and "every issue's PRD deep-link still resolves". Both would pass while the issue sat outside the mechanism they measure.
+>
+> **The load-bearing half is the classification step, not the boundaries section.** The misroute happens when a request is classified as `file-followup` or `update` before any boundary is consulted, so those two classifications now carry their own limits — one issue only, traced to the story in flight; and `update` never creates.
 
 ### Application code
 
