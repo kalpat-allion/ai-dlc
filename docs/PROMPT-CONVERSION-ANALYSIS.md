@@ -13,6 +13,8 @@
 >
 > **Correction — one kill reversed, one gap closed.** Two corrections to the revision above, both in Phase 5. **(1) `Reachability Triage` was deleted in error and is restored.** The kill rested on a false premise: the prompt's own header note read *"use when Endor Labs / Snyk reachability is **unavailable** and you need a triage cut on a long CVE list"* — it was the **no-tool fallback**, not a tool-dependent prompt, and the reachability reasoning it prescribes was always Claude's job. Re-sourced on Dependabot, it comes back, and **`dependency-risk-analyst` is un-killed** wrapping it plus `Dependency Upgrade Impact` (which moves back from kept-as-prompt). `Container CVE Triage` stays deleted — that verdict was correct and is unchanged. **(2) A new subagent, `threat-model-verifier`, closes a gate defect**: two Phase Handoff checkboxes assert that P0 threat-model mitigations landed in code, and nothing verified them. It wraps a **newly authored** prompt, `Threat-Model Mitigation Verification`. Corpus 95 → **97**; artifacts 28 → **30**. See [Security tooling removal — consequences](#security-tooling-removal--consequences).
 >
+> **Revision — Phase 1's three P0 skills are now BUILT.** `publish-prd-to-linear`, `scaffold-linear-milestones` and `push-linear-stories` ship as templates under `aidlc-phases/01-requirement-gathering/skill-prompts/`, wired into that phase's PROCESS Step 0, Steps 2.2-2.4 and Stages 3a-3c, and into Gates 1 and 2 with a committed-and-smoke-tested checkbox each. **No prompt was deleted, renamed or rewritten** — the paste path stays valid, so this revision changes no counts: still 96 prompts and 34 artifacts, with **18 built rather than 15**. `sweep-requirements-gaps` is deliberately not built; its own stated condition is that these three run on a real PRD first. **Two deferred decisions had their triggers fire on this build** — see [Build order](#build-order) Phase 0 item 3. See [Phase 1 build — consequences](#phase-1-build--consequences).
+>
 > **Revision — Pulumi removed (framework v2.4), and Phase 6 is now BUILT.** Pulumi leaves the prescribed framework entirely; Terraform becomes the IaC primary with OpenTofu as the CLI-compatible fallback. One prompt is **deleted** (`Pulumi Cost Delta` — Infracost supports Terraform natively, so its own header stated its obsolescence condition), taking the corpus from 97 to **96**, and one is renamed and rewritten (`Pulumi IaC Generation` → `Terraform IaC Generation`, anchor `#pulumi-iac-generation` → `#terraform-iac-generation`). Phase 6's artifacts grow **4 → 8** and move from *proposed* to *shipped*: `pulumi-iac-engineer` becomes **`terraform-iac-engineer`**, the proposed single `iac-foundation-bringup` **splits** into `iac-state-backend-bringup` + `ci-identity-and-secrets-bringup`, and `cost-guardrails-bringup` + `deploy-and-rollback-bringup` are added so no capability removed with Pulumi silently drops. Artifacts 30 → **34**. `observability-bringup` is **unblocked** — the `/docs/runbooks/` conflict is resolved. See [Pulumi removal — consequences](#pulumi-removal--consequences).
 
 ---
@@ -21,7 +23,7 @@
 
 **55 of 96 prompts convert into 34 artifacts** — 20 skills, 11 subagents, 3 slash commands. **41 stay exactly as they are.**
 
-**15 of the 34 are built.** Phase 3's seven specialists shipped first; Phase 6's eight shipped alongside the v2.4 Pulumi removal — see [Pulumi removal — consequences](#pulumi-removal--consequences) for why a vendor migration turned out to be the right moment to build a phase's helpers.
+**18 of the 34 are built.** Phase 3's seven specialists shipped first; Phase 6's eight shipped alongside the v2.4 Pulumi removal — see [Pulumi removal — consequences](#pulumi-removal--consequences) for why a vendor migration turned out to be the right moment to build a phase's helpers — and Phase 1's three P0 skills shipped next, as the first artifacts built in this document's own recommended order.
 
 The governing insight came from the adversarial review. [PROCESS.md L376](../aidlc-phases/03-development/PROCESS.md) establishes that a skill's description **is the entire routing surface** — skills *auto-trigger* on user intent, while subagents are *name-invoked*. It follows that any skill whose trigger list reuses a verb one of the seven shipped Phase 3 subagents already claims **wins that route by default and hijacks ordinary work**. That single rule killed or narrowed six proposals that otherwise looked sound, and it is the main reason the conversion rate is 58% rather than 90%.
 
@@ -31,7 +33,7 @@ The second-largest constraint is input availability. Roughly a quarter of the pr
 
 | Phase | Prompts | → Skill | → Subagent | → Slash cmd | Kept as prompt |
 |---|---|---|---|---|---|
-| 1 — Requirement Gathering | 12 | 9 | 0 | 0 | 3 |
+| 1 — Requirement Gathering | 12 | 9 *(8 of them via 3 shipped skills)* | 0 | 0 | 3 |
 | 2 — System & Architecture Design | 15 | 6 | 4 | 1 | 4 |
 | 3 — Development | 18 | 6 | 0 *(7 already shipped)* | 2 | 10 |
 | 4 — Testing & QA | 14 | 5 | 4 | 0 | 5 |
@@ -42,20 +44,20 @@ The second-largest constraint is input availability. Roughly a quarter of the pr
 
 Grouping is where the value sits: 35 prompts collapse into 20 skills and 17 into 11 subagents. A skill that wraps four prompts is worth far more than four separate skills.
 
-Priority split: **P0 = 7**, **P1 = 15**, **P2 = 8** — plus Phase 6's **8 shipped**, which left the priority queue by shipping out of order (see [Pulumi removal — consequences](#pulumi-removal--consequences)).
+Priority split: **P0 = 4 remaining** (`open-pull-request`, `run-sprint-planning`, `e2e-and-coverage-engineer`, `/adr` — Phase 1's three P0 skills have shipped), **P1 = 15**, **P2 = 8** — plus Phase 6's **8 shipped**, which left the priority queue by shipping out of order (see [Pulumi removal — consequences](#pulumi-removal--consequences)).
 
 **Phase 6's skill count is 6, not 2, and only three of the six wrap a prompt at all.** `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `cost-guardrails-bringup` and `deploy-and-rollback-bringup` wrap **prose PROCESS steps**, not `PROMPTS.md` entries — which is why the phase's skill count exceeds what a prompt-by-prompt reading would predict. Worth noting as a limit of this document's method: **a conversion analysis that only reads the prompt library will systematically under-count the skills a phase needs**, because the procedures most worth encoding are often the ones nobody wrote a prompt for.
 
-### Proposed directory convention
+### Directory convention
 
 Siblings to the existing `subagent-prompts/`, per phase:
 
 ```
 aidlc-phases/<phase>/
   PROCESS.md  PROMPTS.md  QUALITY-GATES.md  FLOWCHART.md
-  subagent-prompts/<name>.md          # exists today (Phase 3 only)
-  skill-prompts/<name>/SKILL.md       # proposed
-  command-prompts/<name>.md           # proposed
+  subagent-prompts/<name>.md          # Phases 3 and 6
+  skill-prompts/<name>/SKILL.md       # Phases 6 and 1 — folders, not files
+  command-prompts/<name>.md           # still proposed; no slash command has shipped
 ```
 
 Like `subagent-prompts/`, these are **templates, not active artifacts** — Claude Code only auto-discovers `.claude/skills/` and `.claude/agents/`. Each directory gets a README mirroring the Phase 3 one, and templates stay repo-agnostic with `{{UPPER_SNAKE_CASE}}` placeholders so they can be copied into consuming repos.
@@ -84,32 +86,41 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
   > Use when a Tech Lead or PM is preparing the upcoming sprint/cycle for commitment: pulling the candidate backlog from Linear, sizing each story, posting the estimates back onto the issues, and decomposing anything AI-sized XXL into sub-issues before the Cycle opens. Triggers on "plan the next sprint", "pull the backlog for the cycle", "estimate these stories", "size the backlog", "is this ready to commit". Performs the Linear writes directly — this is outer-loop planning, deliberately outside `linear-task-agent`'s dev-loop remit. Do NOT use for: daily story pickup (`linear-task-agent`), re-estimating a story already In Progress, or opening the Cycle itself.
 - **Why:** **Verified in the shipped template** — `linear-task-agent` refuses sprint planning twice: its description says *"sprint-planning prompts run by humans"*, and [line 19](../aidlc-phases/03-development/subagent-prompts/linear-task-agent.md) states *"You do NOT run sprint-planning prompts (sprint pull, estimates roll-up, story decomposition)"*, repeated as a refusal case at line 37. It cannot be a subagent extension and cannot route into the existing Linear writer.
 
-#### `publish-prd-to-linear` — **P0** · Phase 1
+#### `publish-prd-to-linear` — **SHIPPED** · Phase 1
 
-- **Wraps:** PRD Generation, PRD-to-Linear Document
+- **Wraps:** PRD Generation, PRD-to-Linear Document, **Gap Analysis (pre-publish self-review half only)**
 - **Path:** `aidlc-phases/01-requirement-gathering/skill-prompts/publish-prd-to-linear/SKILL.md`
 - **Gate:** P1 Gate 1 (PRD Completeness & Published in Linear)
-- **Description:**
-  > Use when a PM or BA is turning gathered context into a Product Requirements Document and getting it published as a Linear Document attached to a new Linear Project in Planned state. Drafts the PRD, runs a completeness self-review against the Gate 1 checklist, then publishes via the Linear MCP server with confirm-before-write and returns the section-anchor map every downstream story deep-links to. Triggers on "write the PRD for X", "turn these interview notes into a PRD", "publish the PRD to Linear", "create the Linear project for this PRD". Do NOT use for: creating Milestones or Issues (use `scaffold-linear-milestones` / `push-linear-stories`), the post-approval gap sweep, or structuring a raw interview transcript.
+- **Description:** see the shipped template; the frontmatter is the authoritative version.
 - **Why:** The section-anchor map it returns is the phase's single point of failure — every downstream deep-link at Gates 2 and 3 depends on it. The publish step already encodes a confirm-then-`go` protocol, a state rule, a label rule and a refusal boundary: skill shape, not prompt shape.
+- **What changed on build:**
+  - **It wraps three prompts, not two.** `Gap Analysis` has two uses on two different inputs — the Step 2.3 self-review of a *local draft*, and the Step 4 sweep of the *published* Document against the backlog. Only the first belongs here, and it belongs here as a **step the skill cannot skip**, because Gate 1's completeness list is exactly what it checks. The doc's own not-converted table already recorded `Gap Analysis` as split across two artifacts; this build is where the split became load-bearing rather than notional. `sweep-requirements-gaps` still owns the other half.
+  - **The anchor map is read back, not predicted.** The source prompt returns "the section headings extracted from the PRD" at confirm time, which is a prediction of what Linear *will* produce. The shipped skill re-reads the created Document and extracts the real anchors. A predicted map produces links that resolve to the wrong heading — visibly clickable, silently wrong, and the failure surfaces two gates later.
+  - **The framework attribution line was genericised.** The prompt writes `Source: Generated by Claude via MCP — AI-DLC Phase 1` into every Linear artifact. In a shipped template that string names a framework the consuming repo does not have; it becomes "Generated by Claude via the Linear MCP server".
 
-#### `scaffold-linear-milestones` — **P0** · Phase 1
+#### `scaffold-linear-milestones` — **SHIPPED** · Phase 1
 
 - **Wraps:** Epic Decomposition, PRD-to-Linear Scaffold (Milestones)
 - **Path:** `aidlc-phases/01-requirement-gathering/skill-prompts/scaffold-linear-milestones/SKILL.md`
 - **Gate:** P1 Gate 2 (Linear scaffolding half)
-- **Description:**
-  > Use when an approved PRD Linear Document must be decomposed into epics and one Milestone per epic added to the existing Linear Project. Stops at the milestone-scaffold approval gate. Triggers on "break the PRD into epics", "set up the milestones for this PRD", "scaffold the backlog structure". Do NOT use for: creating issues (use `push-linear-stories`), publishing or editing the PRD itself, or creating the Linear Project.
-- **Why:** Split out of an original five-prompt `build-linear-backlog` proposal at the human approval gate. Inlining five prompts under the repo-agnostic shipping rule produces ~160 lines of prompt body alone, against a two-screen limit (PROCESS.md L384) and an empirical house ceiling of 111 lines. Terminating at the existing approval stop is the natural, non-arbitrary cut.
+- **Description:** see the shipped template; the frontmatter is the authoritative version.
+- **Why:** Split out of an original five-prompt `build-linear-backlog` proposal at the human approval gate. Inlining five prompts under the repo-agnostic shipping rule produces ~160 lines of prompt body alone, against a two-screen limit (PROCESS.md L384) and an empirical house ceiling of 111 lines. Terminating at the existing approval stop is the natural, non-arbitrary cut. **The split is vindicated on build:** the two halves came in at 37 and 54 lines, so the merged version would have run to ~85 with two confirm-before-write stops and two human gates inside one procedure — past the limit and past the single-procedure rule, exactly as predicted.
+- **What changed on build:**
+  - **It gained a two-way coverage check** that neither source prompt has. Every functional-requirement section must be claimed by exactly one epic; sections claimed by none, and sections claimed by two, are both **reported rather than resolved**. This is the cheapest possible place to catch a coverage gap — before it becomes an absent story that Gate 3's per-story review cannot notice, because you cannot review an issue that was never created.
+  - **It stops when Milestones already exist** rather than adding a parallel set. The source prompt is silent on the re-run case; a second scaffold on the same Project is the milestone-level analogue of the duplicate-issue risk that PROCESS.md already names as the phase's top risk.
+  - **"Never invent a target date"** is a refusal, not a preference. The source prompt says to set dates "if the PRD timeline gives them", which a model reading helpfully will satisfy by interpolating. An invented date is read as a commitment by everyone downstream.
 
-#### `push-linear-stories` — **P0** · Phase 1
+#### `push-linear-stories` — **SHIPPED** · Phase 1
 
-- **Wraps:** User Story Generation, Acceptance Criteria, Stories-to-Linear Push
+- **Wraps:** User Story Generation, Acceptance Criteria, Stories-to-Linear Push, Linear Context Pull *(absorbed as the duplicate pre-flight)*
 - **Path:** `aidlc-phases/01-requirement-gathering/skill-prompts/push-linear-stories/SKILL.md`
-- **Gate:** P1 Gate 2 (story-content half)
-- **Description:**
-  > Use when approved epics and Milestones must become Linear issues — drafting user stories with Given/When/Then acceptance criteria and pushing them as Triage-state issues carrying `ai-generated` + `needs-human-review` labels and a clickable PRD-section deep-link. Runs a read-only duplicate pre-flight against existing Linear issues before creating anything, then stops for per-story acceptance in the AI Inbox. Triggers on "generate user stories from the PRD", "write acceptance criteria for these stories", "push these stories into Linear", "push the accepted gap stories". Do NOT use for: creating Milestones, auto-creating issues from gap findings, or moving any issue past Triage/Backlog.
+- **Gate:** P1 Gate 2 (story-content half); feeds Gate 3
+- **Description:** see the shipped template; the frontmatter is the authoritative version.
 - **Why:** Absorbs the killed `/linear-context-pull` command as its read-only duplicate pre-flight, which is where that prompt actually earns its keep — PROCESS.md names duplicate issues as the phase's top risk. A 20-story PRD is currently 20 separate acceptance-criteria pastes.
+- **What changed on build:**
+  - **"Never clear `needs-human-review`, never move a story to `Backlog`" is now an explicit refusal.** It was implicit in the source prompt's "never set state beyond Triage/Backlog", and implicit is not enough: an agent that has just created twenty issues and been told "great, accept them" will read label removal as tidying rather than as the acceptance gate it is. Gate 3 *is* that label.
+  - **Duplicates stay visible in the confirmation table.** The source prompt lists them separately and creates the rest; the shipped skill keeps flagged rows in the same table marked as excluded, so the human sees what is being skipped rather than only what is being made. A silently omitted story looks identical to a story nobody wrote.
+  - **Deep-links are verified after creation**, against the anchor map read back by `publish-prd-to-linear`. The refusal case is sharpened accordingly: a story with no valid anchor entry is not created, **and does not fall back to linking the Document root** — the fallback is what turns "no citation" into "a citation that resolves and proves nothing", which is worse, because Gate 3's reviewer clicks it and sees a real page.
 
 #### `render-design-diagrams` — P1 · Phase 2
 
@@ -257,9 +268,21 @@ See the [Subagents](#subagents) section.
   > Use when finishing the customer-facing documentation set before delivery. One procedure: structure, per-page generation, API-reference render, completeness check, gap resolution, publish — stopping for human accuracy review before every publish. Entering at "check our docs for gaps" resumes at the audit step and loops back into page generation for every Critical/High finding. Triggers on "write the getting-started page", "generate the local dev setup docs", "are the docs complete", "we need docs before handoff". Do NOT use for: module READMEs or inline comments inside a feature story (use `/write-module-readme`), hand-writing API reference pages, or auditing a live knowledge base against production signal.
 - **Why:** The completeness check gates publication and its findings re-enter page generation — splitting them breaks the loop that satisfies the gate. Description written as one procedure, not an either/or, so "check our docs for gaps" cannot terminate before the publish gate.
 
-#### `sweep-requirements-gaps` — P2 · Phase 1
+#### `sweep-requirements-gaps` — P2 · Phase 1 · **held, not built**
 
-- **Wraps:** Gap Analysis, Linear Gap Sweep
+> **Deliberately left unbuilt when the other three Phase 1 skills shipped**, and its hold condition has been **replaced with a falsifiable one** — the original, *"build it after the Gate 1/2 skills have run on a real PRD"*, cannot be checked by anyone reading the repo, which is the same defect this document spent a whole revision removing from quality gates. Its scope also narrowed on that build: `publish-prd-to-linear` now owns the *pre-publish* half of `Gap Analysis`, leaving this skill the post-publish half only.
+>
+> **Why holding is right rather than merely cheap.** This skill's whole job is verification, and its four classifications all reduce to one operation — parse the `**PRD section:** [§X.Y](url#anchor)` line out of real issue descriptions and re-resolve it against a Document that Gate 3 has since re-versioned. **A sweep that mis-parses that line returns clean, and a clean sweep is Gate 3's evidence.** Building it from the spec re-runs the predicted-vs-read-back anchor experiment — the defect the Phase 1 build found by inlining against real data — in the one artifact where getting it wrong manufactures a gate pass. Same basis as `author-opa-policy` and `Pulumi Cost Delta`.
+>
+> **Release when either fires:**
+> 1. **Evidence trigger.** A build-evidence note is committed recording one real post-handoff sweep against a Project the three skills built, stating: counts per category; whether the `**PRD section:**` line parsed out of real issue descriptions without hand-editing; whether any deep-link failed to re-resolve after a Document version bump; and wall-clock run time. **Falsifiable by `grep`** — the note is in the tree or it is not.
+> 2. **Structural trigger.** Any artifact ships that edits an approved PRD Document after publication. Gate 3's *"every issue's PRD deep-link still resolves"* then has a producer of orphan anchors and no checker, and this is the only proposed artifact that checks it.
+>
+> **Drop condition:** two recorded sweeps returning zero Critical/High findings and no anchor failures. The prompt is then sufficient, and the skill would be a gate-shaped wrapper around a clean result.
+>
+> **The lane does not decay while empty.** All three shipped skills already exclude this territory by phrase, so nothing needs re-deconflicting when it is eventually built. What *is* currently unowned is the utterance "diff the backlog against the PRD" — it routes to no artifact and runs ungated. That was weighed and accepted: its output is a comment, which is recoverable, and its one dangerous escalation — filing issues for the gaps — is now closed from two directions by `push-linear-stories`' refusal case and the `linear-task-agent` (b) edit.
+
+- **Wraps:** Gap Analysis *(post-publish half only)*, Linear Gap Sweep
 - **Path:** `aidlc-phases/01-requirement-gathering/skill-prompts/sweep-requirements-gaps/SKILL.md`
 - **Gate:** P1 Gate 3 (Final Review / Phase Handoff — names the wrapped prompt verbatim)
 - **Description:**
@@ -498,14 +521,33 @@ See the [Subagents](#subagents) section.
 
 Six coordinated edits to already-shipped `subagent-prompts/` templates. Each must land in the **same PR** as the artifact it unblocks, because these files ship into consuming repos.
 
+> **The rule is narrower than it reads, and the repo has already applied it that way twice.** What it forbids is shipping a **pointer to an artifact the consuming repo does not have** — a dangling reference. It does not reach an edit that is a **pure refusal**, which names no artifact, unblocks nothing, and is strictly safer standalone than absent. The `software-architect.md` row was split on exactly this basis in v2.4 (its `pr-reviewer` dangling-slug fix shipped alone while its `solution-architect` exclusion stayed bundled), and the `linear-task-agent.md` row is now split the same way. Stated as a test: **if removing the artifact from the sentence leaves the sentence still true and still useful, the edit can ship alone.**
+
 | Shipped template | Edit | Ships with |
 |---|---|---|
-| `linear-task-agent.md` | pr-open flow gains *"if the pre-PR self-review has not been run, load `open-pull-request` first"*. Its description contains "open the PR for this branch" verbatim, so **without this the subagent wins the route and the entire gate is bypassed**. Boundaries additionally name Documents / Projects / Milestones as out-of-scope **by design**, not by omission. | `open-pull-request` (P0) |
+| `linear-task-agent.md` **(a)** | pr-open flow gains *"if the pre-PR self-review has not been run, load `open-pull-request` first"*. Its description contains "open the PR for this branch" verbatim, so **without this the subagent wins the route and the entire gate is bypassed**. | `open-pull-request` (P0) — **still bundled** |
+| ~~`linear-task-agent.md` **(b)**~~ | ~~Boundaries name Documents / Projects / Milestones as out-of-scope **by design**, not by omission.~~ **LANDED, split from (a).** Shipped as four additive touches — description, request-classification step, operating boundaries, escalation list — plus the reciprocal clause in all three Phase 1 skill descriptions. See [Splitting the `linear-task-agent` row](#splitting-the-linear-task-agent-row). | — (shipped standalone) |
 | `code-reviewer.md` | Do-NOT list gains *"the full pre-PR gate including DoD, rebase and PR open (load `open-pull-request`, which hands the diff review back here as step 1)"*. Its shipped triggers "anything to fix before I PR" / "review my diff before I PR" overlap the skill's "ready to PR" on the same utterance — a second, undetected gate bypass. | `open-pull-request` (P0) |
 | `backend-engineer.md` | Operating boundaries gain the three security-remediation constraints (minimal backward-compatible diff; mandatory regression test failing before and passing after; no tautological symptom-masking fix). **Replaces** the killed `security-fix-engineer`. | — |
 | `software-architect.md` | Mutual *"Do NOT invoke for: system-wide / new-tech / new-service-boundary decisions (use `solution-architect`)"*. **Also fixes a live bug:** its own frontmatter routes *"post-open PR review (use `pr-reviewer`)"* to a slug that exists nowhere in the repo. | `solution-architect` (P1) |
 | `refactor-specialist.md` | Description gains the filer's name: route candidate-identification to the `file-followup-bug` skill (canonised at PROCESS.md L336), not to an unnamed actor. **Replaces** the killed `triage-refactor-candidates`. | — |
+| the three Phase 1 skills | Each Do-NOT list gains the **reciprocal** of the `linear-task-agent` (b) edit: no writes around a story already in flight. Required by `ROUTING.md`'s own rule that a shared write object is fenced in **both** descriptions — before this, the boundary lived in `skill-prompts/README.md`, which never vendors, so it was in **zero** shipped descriptions. | landed with `linear-task-agent` (b) |
 | `threat-modeler` ↔ `architecture-reviewer` | Mutual exclusion between the two **new** subagents. Both `opus`, both read-only, both emit severity-ranked design-time findings, and "what are the security risks in this design" vs "what breaks in this design before we code it" are paraphrases. The synthesis pass ran mutual-exclusion against shipped agents but never *between* its own proposals. | both (P1) |
+
+### Splitting the `linear-task-agent` row
+
+Half (b) shipped standalone rather than waiting for `open-pull-request`, which sits four build-order items away. Three things decided it.
+
+**The gap was live, and it defeated two gate checkboxes rather than one.** The agent's scope-discipline rule fences writes into projects *outside* the developer's named scope; the three Phase 1 skills write into the *same* project, so nothing refused backlog construction. An issue the agent created from a requirements document carries no `phase:requirements` / `ai-generated` / `needs-human-review` labels and no verified deep-link — so it is invisible to **Gate 2's "AI Inbox cleared"** (`QUALITY-GATES.md:56`) *and* **Gate 3's "every issue's PRD deep-link still resolves"** (`:75`). Both pass while the issue sits outside the mechanism they measure. That is the unfalsifiable-checkbox pattern, arrived at from a new direction: not a checkbox nobody verifies, but a checkbox whose *population* can be silently under-filled.
+
+**The enforcement point had to be the vendored file.** Three alternatives were considered and fail for the same structural reason. Sharpening the skills' descriptions does not work — a description is a routing *claim*, not a refusal, and once the subagent is loaded no skill description constrains it. `ROUTING.md` and the directory READMEs do not work either: instantiation copies the `.md` into `.claude/agents/` and leaves the README behind. **The gap is in the file that vendors, so only that file can close it.**
+
+**The load-bearing touch is the classification step, not the boundaries section.** `linear-task-agent` classifies a request into one of eight flows *before* any boundary is consulted; "create the issues for this epic" lands in `file-followup` or `update`, both in-scope, and the boundary is never reached. So `file-followup` is now capped at **one issue arising from the story in flight**, and `update` is stated to **never create**. A boundary written only in the boundaries section is one the classifier has already run past — worth generalising to any subagent whose system prompt opens with a classification step.
+
+Two properties the edit deliberately keeps:
+
+- **Neither side names the other by slug.** A cross-phase slug reference dangles in a repo that installed only one of the two sets. Both sides describe the boundary by **write type**, which also makes it survive a rename.
+- **No placeholder was renamed.** `{{TEAM_PREFIX}}` / `{{LINEAR_TEAM}}` is one of the six pairs in [`PLACEHOLDERS.md`](./PLACEHOLDERS.md), and both live in the files touched here. Converge-on-next-touch means the **next substantive rewrite**, not the next additive line — renaming inside a vendored template breaks every repo that already instantiated it.
 
 ---
 
@@ -641,6 +683,30 @@ Both were invisible at spec time and only appeared when the templates were draft
 
 ---
 
+## Phase 1 build — consequences
+
+Phase 1's three P0 skills were built in this document's own recommended order, against a stack that did not change underneath them. That makes this the first build with **no migration pressure**, and the differences from the Phase 6 build are worth recording.
+
+### Nothing was deleted, renamed, or rewritten
+
+Phase 6's build deleted a prompt, renamed another, and dropped a deliverable. Phase 1's changed **no prompt text at all**: 12 prompts before, 12 after, all anchors intact, and the paste path documented as still valid in `PROMPTS.md`'s header. Counts are unchanged — 96 prompts, 34 artifacts, 18 built.
+
+That is the expected outcome when a phase's tooling is stable, and it is a useful control. **Every edit Phase 6's build forced was caused by the vendor migration, not by the act of building a skill.** A team reading that build might reasonably have concluded that converting prompts churns the prompt library; it does not.
+
+### What building nonetheless surfaced
+
+Three things that specification could not, all recorded in the per-artifact "What changed on build" notes above:
+
+1. **`Gap Analysis` is two prompts wearing one heading.** The pre-publish self-review and the post-publish backlog sweep share a name, a body and nothing else — different input, different output, different gate. The analysis had this half-recorded (the sweep's Do-NOT list excluded the self-review), but only inlining it forced the split to be *enforced* rather than described. **The general lesson: a prompt whose header note says "this form is also valid for X" is a candidate for being two prompts**, and the conversion pass is where that gets settled.
+2. **A predicted anchor map and a read-back anchor map are not the same artifact.** The source prompt returns headings extracted from the draft at confirm time; what downstream issues need is the anchors the tracker actually minted. Both look like a list of anchors in the output. Only one of them resolves.
+3. **The most dangerous refusals are the ones the source prompt left implicit.** "Never set state beyond Triage" implies "never clear `needs-human-review`" to a human reader and does not imply it to a model that has just been thanked for its work. Gate 3 is that label; making it explicit cost one line.
+
+### One property carried over deliberately
+
+Every one of the three terminates at a **human gate**, not at the next skill — publish stops for stakeholder review, scaffold stops for PM approval, push stops for the AI Inbox. This is the same shape as Phase 6's split at the storage/identity seam, and it has a routing benefit that was not the reason for it: **a mis-triggered skill in this set costs a confirmation prompt, not a backlog.** Three auto-triggering skills that write to a shared tracker would be a genuinely risky thing to ship without that property.
+
+---
+
 ## Build order
 
 ### Phase 0 — prerequisites, zero artifacts (~1-2 days)
@@ -649,18 +715,26 @@ Nothing else ships until these land.
 
 1. **Routing dry-run in `roombook/` (½ day).** `roombook/.claude/` holds 10 agents and 5 skills and is the only tree in this repo where skills and subagents coexist — the only place the auto-trigger test can actually run. Predicted collisions: `render-design-diagrams` vs `skills/architecture-diagram` (verbatim trigger), `cicd-pipeline-bringup` vs `skills/cicd-devops`, the Phase 1 skills vs `skills/requirement-gathering`, `solution-architect` vs `agents/system-design-architect`, `threat-modeler` vs `agents/security-reviewer`, and `e2e-and-coverage-engineer` vs `agents/qa-test-engineer` (same name, opposite scope). Both directories are gitignored, so these are predictive, not shipped — but they predict exactly what happens in a repo that already followed the framework.
 2. ~~**Directory convention PR (½ day).**~~ **DONE in v2.4.** `skill-prompts/<name>/SKILL.md` is established as a sibling of `subagent-prompts/`, each with a README mirroring the Phase 3 one. `command-prompts/` remains unbuilt — no slash command has shipped yet. **One correction the convention needed:** skills are **folders**, not files, because Claude Code uses the folder name as the invocation slug, so a `cp skill-prompts/*.md` instantiation would silently produce zero working skills. Both the README and the framework's Step 0.6 now say `cp -r`.
-3. **Doc fixes (½ day).** The defect list above — two of which are now fixed. **`PLACEHOLDERS.md` and `ROUTING.md` were deferred, each with a firm trigger** (see [Decisions still open](#decisions-still-open)): a central placeholder file for ~32 entries would be a *third* copy of information whose authoritative home is the README the instantiating operator actually opens, and a routing map written while only one phase ships skills is a map with one region. **Trigger for `PLACEHOLDERS.md`: a third phase ships templates. Trigger for `ROUTING.md`: a second phase ships skills.** Until then the routing rule lives in `06-cicd-devops/skill-prompts/README.md § Routing` — better placement anyway, since it is read at instantiation time.
+3. **Doc fixes (½ day).** The defect list above — two of which are now fixed. **`PLACEHOLDERS.md` and `ROUTING.md` were deferred, each with a firm trigger** (see [Decisions still open](#decisions-still-open)): a central placeholder file for ~32 entries would be a *third* copy of information whose authoritative home is the README the instantiating operator actually opens, and a routing map written while only one phase ships skills is a map with one region. **Trigger for `PLACEHOLDERS.md`: a third phase ships templates. Trigger for `ROUTING.md`: a second phase ships skills.**
+   >
+   > **Both triggers fired with the Phase 1 build, and both files are now written** — [`ROUTING.md`](./ROUTING.md) and [`PLACEHOLDERS.md`](./PLACEHOLDERS.md). Phase 1 was the third phase to ship templates (after 3 and 6) and the second to ship skills (after 6). The deferral was conditional and the condition was met; re-deferring a fired trigger is the unfalsifiable-checkbox pattern this document rejects everywhere else. `ROUTING.md` was the clearer of the two — Phase 1's skills and Phase 3's `linear-task-agent` share one MCP server and one set of Linear nouns, which is the first real cross-phase collision surface in the repo.
+   >
+   > **Writing `ROUTING.md` immediately paid for itself by exposing an unenforced boundary.** Setting the 18 shipped artifacts side by side made it visible that `linear-task-agent`'s scope-discipline rule fences writes to *other* projects, while the three Phase 1 skills write into the *same* project — so nothing in the shipped template actually refuses backlog construction. The map records that row as **intent, not behaviour**, and says so in place rather than reading as verification. That is the class of defect a per-phase README structurally cannot surface, and it argues the trigger should have been "a second phase ships anything that writes what an existing artifact writes", not "a second phase ships skills".
+   >
+   > **`PLACEHOLDERS.md`'s original deferral reasoning does not survive counting.** The three shipped phases carry **36 distinct placeholders** — 2 in Phase 1, 22 in Phase 3, 12 in Phase 6 — and the "third copy of the same information" objection assumed they overlap. They do not: **literal overlap between the three sets is zero.** What exists instead is worse and invisible from inside any one README — **synonym pairs that name the same repo fact differently across phases**: `{{SECRETS_MECHANISM}}` (P3) / `{{SECRETS_MANAGER}}` (P6); `{{OBSERVABILITY_STACK}}` (P3) / `{{OBS_BACKEND}}` (P6); `{{TEST_RUNNER}}` (P3) / `{{TEST_COMMAND}}` (P6); `{{BACKEND_ROOT}}` + `{{FRONTEND_ROOT}}` (P3) / `{{SERVICE_ROOT}}` (P6). An operator instantiating two phases fills the same value twice under two names, and nothing catches it when they fill it inconsistently.
+   >
+   > **Both were written, and `PLACEHOLDERS.md` shipped as a name-reconciliation table rather than a value list** — one row per repo fact, the alias each template uses, and why the answers must agree. Values stay in the per-directory READMEs, which are what an operator has open while instantiating; the central file holds only what no single README can see. Drafting it against the real inventory turned up **six reconciliation rows, not four** — the two additions being `{{TEAM_PREFIX}}` / `{{LINEAR_TEAM}}` (the same Linear team, once as its key and once as its name) and the `{{RUNTIME}}` / `{{TEAM_STACK}}` pair, which are not synonyms but *constrain* each other: `Node 22` under a `FastAPI + Python 3.12` stack is a contradiction that ships a broken image. **No rename sweep was performed** — templates are vendored by copy, so renaming breaks every repo that already instantiated them; the file prescribes converge-on-next-touch instead.
 
 ### Phase 1 — validate the approach at lowest risk (~1 week)
 
-4. **`/adr` (½ day).** Best item on the list: explicitly fired, no auto-trigger competition, no coordinated edit, no unmandated MCP, cited by three gates, fires 11+ times per project. If the command convention works here it works everywhere.
-5. **`publish-prd-to-linear` (2 days).** Two prompts, one gate, one MCP server that Phase 1 already mandates. Proves the skill template shape.
+4. **`/adr` (½ day).** Best item on the list: explicitly fired, no auto-trigger competition, no coordinated edit, no unmandated MCP, cited by three gates, fires 11+ times per project. If the command convention works here it works everywhere. **Still unbuilt — `command-prompts/` remains an empty convention.**
+5. ~~**`publish-prd-to-linear` (2 days).**~~ **SHIPPED.** Two prompts, one gate, one MCP server that Phase 1 already mandates. It came in wrapping three prompts, not two — see its entry.
 
 ### Phase 2 — the P0 tier (~3 weeks)
 
 One artifact per PR, so the router can be re-tested each time.
 
-6. `scaffold-linear-milestones` + `push-linear-stories` (3 days — ship together; the second consumes the anchor map)
+6. ~~`scaffold-linear-milestones` + `push-linear-stories` (3 days — ship together; the second consumes the anchor map)~~ **SHIPPED**, together, as predicted — the second refuses to run without the first's anchor map, so shipping them apart would have shipped one skill that could not execute its own procedure.
 7. `open-pull-request` + the `linear-task-agent` and `code-reviewer` edits (3 days — three files, one PR)
 8. `run-sprint-planning` (2 days)
 9. `e2e-and-coverage-engineer` (2 days — the rename resolves the roombook collision; no shipped-template edit needed after the narrowing)
@@ -673,7 +747,7 @@ No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing coll
 
 ### Phase 4 — P2, conditional
 
-Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` if Step 4 is skipped, `/load-task-context` if tracker hygiene does not supply the deep-links, `api-contract-freeze` if the audit is not genuinely mechanical, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
+Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), `/load-task-context` if tracker hygiene does not supply the deep-links, `api-contract-freeze` if the audit is not genuinely mechanical, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
 
 ---
 
@@ -683,7 +757,7 @@ Build only if the frequency materialises. Several name their own drop condition:
 
 2. **`security-fix-engineer` and `triage-refactor-candidates`: absorb into shipped agents, or keep as gaps?** Both are resolved above as boundary edits to `backend-engineer` and `refactor-specialist`. The alternative is to accept the routing risk and build them as separate artifacts — which is what four of the seven per-phase analysts wanted. The deciding question is whether teams actually mis-route on "fix this SAST finding" today.
 
-3. **Do the Phase 1 outer-loop skills perform their own Linear writes, or does `linear-task-agent` widen?** Resolved as: `linear-task-agent` stays sole writer for the **inner dev loop** (verified in its own boundary text), and outer-loop writes — Documents, Projects, Milestones, Triage issues, estimates, the test-plan Document — are performed by the phase skills, each borrowing its literal-`go` confirm-before-write protocol. This is correct but non-obvious; if it is not written into that agent's boundaries, a future maintainer will "fix" it and break the dev-loop-only guarantee.
+3. ~~**Do the Phase 1 outer-loop skills perform their own Linear writes, or does `linear-task-agent` widen?**~~ **SETTLED by shipping them.** The three skills perform their own writes, each behind its own confirm-then-`go`, and both directions of the boundary are now written down where a maintainer will hit them: `01-requirement-gathering/skill-prompts/README.md` states that these are the outer-loop writers and that the dev-loop agent refuses this work, and Phase 1's PROCESS Step 0 repeats it as "by design, not by omission". **The reciprocal edit to `linear-task-agent.md` is still outstanding** — it ships with `open-pull-request`, and until it lands the guarantee is documented on only one of the two sides. Original resolution, unchanged: `linear-task-agent` stays sole writer for the **inner dev loop** (verified in its own boundary text), and outer-loop writes — Documents, Projects, Milestones, Triage issues, estimates, the test-plan Document — are performed by the phase skills, each borrowing its literal-`go` confirm-before-write protocol. This is correct but non-obvious; if it is not written into that agent's boundaries, a future maintainer will "fix" it and break the dev-loop-only guarantee.
 
 4. **The slash-command tier.** Commands were killed partly on "not worth establishing a convention" — a cost that no longer exists once `/adr` ships. `/write-module-readme` was reinstated; **`/post-mortem` is now settled and stays killed**, on shape rather than convention cost (see the not-converted table). Should the remaining three (`/promote-component`, `/infra-runbook`, `/linear-context-pull`) be re-evaluated on their own merits, or is the smaller command surface itself the goal?
 
@@ -702,17 +776,17 @@ All 97 prompts, in file order. Line numbers refer to each phase's `PROMPTS.md`. 
 
 | Prompt | Line | Verdict | Artifact |
 |---|---|---|---|
-| PRD Generation | 9 | skill | `publish-prd-to-linear` |
-| Epic Decomposition | 60 | skill | `scaffold-linear-milestones` |
-| User Story Generation | 82 | skill | `push-linear-stories` |
-| Acceptance Criteria | 117 | skill | `push-linear-stories` |
-| Gap Analysis | 142 | skill | `sweep-requirements-gaps` |
+| PRD Generation | 9 | skill | `publish-prd-to-linear` — **shipped** |
+| Epic Decomposition | 60 | skill | `scaffold-linear-milestones` — **shipped** |
+| User Story Generation | 82 | skill | `push-linear-stories` — **shipped** |
+| Acceptance Criteria | 117 | skill | `push-linear-stories` — **shipped** |
+| Gap Analysis | 142 | skill | **split on build:** pre-publish self-review half → `publish-prd-to-linear` (**shipped**); post-publish sweep half → `sweep-requirements-gaps` (held) |
 | Interview Summary Structuring | 184 | keep-as-prompt | — |
-| Linear Context Pull | 207 | keep-as-prompt | absorbed as pre-flight step in `push-linear-stories` |
-| PRD-to-Linear Document | 235 | skill | `publish-prd-to-linear` |
-| PRD-to-Linear Scaffold (Milestones) | 278 | skill | `scaffold-linear-milestones` |
-| Stories-to-Linear Push | 308 | skill | `push-linear-stories` |
-| Linear Gap Sweep | 361 | skill | `sweep-requirements-gaps` |
+| Linear Context Pull | 207 | keep-as-prompt | absorbed as the duplicate pre-flight step in `push-linear-stories` — **shipped** |
+| PRD-to-Linear Document | 235 | skill | `publish-prd-to-linear` — **shipped** |
+| PRD-to-Linear Scaffold (Milestones) | 278 | skill | `scaffold-linear-milestones` — **shipped** |
+| Stories-to-Linear Push | 308 | skill | `push-linear-stories` — **shipped** |
+| Linear Gap Sweep | 361 | skill | `sweep-requirements-gaps` — held until the three above run on a real PRD |
 | Scalability & Cost Assessment | 399 | keep-as-prompt | — |
 
 ### Phase 2 — System & Architecture Design

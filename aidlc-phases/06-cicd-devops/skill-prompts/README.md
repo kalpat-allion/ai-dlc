@@ -70,4 +70,6 @@ Skills auto-trigger; subagents do not. A skill whose trigger phrases reuse a ver
 | `observability-bringup` | dashboards, SLOs, alerts, alert runbooks | instrumentation code, service runbooks, incident work |
 | `deploy-and-rollback-bringup` | the production gate, strategy, rollback trigger, the drill | the build pipeline, the SLO definition |
 
+The cross-phase version of this table — every shipped subagent and skill, mapped by the work it owns rather than the phase that ships it — lives in [`docs/ROUTING.md`](../../../docs/ROUTING.md). Placeholders below that recur under different spellings in other phases are reconciled in [`docs/PLACEHOLDERS.md`](../../../docs/PLACEHOLDERS.md).
+
 Two notes on why the collision surface is small, worth preserving as the set grows. The **`-bringup` suffix is a routing asset**, not just a naming convention — no ordinary development utterance contains "bring up", and it makes each description's subject a *repository capability* rather than a *unit of code*. And `cicd-pipeline-bringup` deliberately **does not lead with the bare phrase "CI/CD"**, which is what keeps it from colliding with project-scope skills of that name in consuming repos; any future edit that reintroduces "set up CI/CD for this repo" as a trigger re-opens that collision.

@@ -98,7 +98,7 @@ flowchart TD
 
 ## Step 2: PRD Generation & Publish to Linear
 
-Entry point is the structured findings + Linear context bundle from Step 1. Sub-stages 2.1 → 2.6 compile context, draft the PRD in Claude, self-review and PM-review the Markdown draft, publish to a Linear Project + Document via `prd-to-linear-document`, run stakeholder review inside Linear, and approve at Gate 1. On Gate 1 No, the loop returns to 2.2 to regenerate. See [QUALITY-GATES.md → Gate 1](./QUALITY-GATES.md#gate-1-prd-completeness--published-in-linear).
+Entry point is the structured findings + Linear context bundle from Step 1. Sub-stages 2.1 → 2.6 compile context, draft the PRD in Claude, self-review and PM-review the Markdown draft, publish to a Linear Project + Document via `prd-to-linear-document`, run stakeholder review inside Linear, and approve at Gate 1. **Sub-stages 2.2 → 2.4 are one procedure, run end-to-end by the [`publish-prd-to-linear`](./skill-prompts/publish-prd-to-linear/SKILL.md) skill**; 2.5 and 2.6 are human. On Gate 1 No, the loop returns to 2.2 to regenerate. See [QUALITY-GATES.md → Gate 1](./QUALITY-GATES.md#gate-1-prd-completeness--published-in-linear).
 
 ```mermaid
 flowchart TD
@@ -107,7 +107,7 @@ flowchart TD
     P1[2.1 Compile context + Linear bundle<br/>interviews, brief, competitive data,<br/>technical constraints<br/>👤 PM gathers inputs] --> P2
     P2[2.2 Generate PRD v1<br/>PRD generation prompt - feed all context once<br/>cite Linear IDs in relevant sections<br/>Markdown only - no Linear write yet<br/>🤖 Claude] --> P3
     P3[2.3 Self-review + PM review<br/>gap-analysis prompt on draft<br/>+ PM checks PRD completeness checklist<br/>remove hallucinated requirements<br/>🤖 Claude + 👤 PM] --> P4
-    P4[2.4 prd-to-linear-document<br/>Claude creates Linear Project Planned<br/>+ attached PRD Document with section anchors<br/>+ labels phase:requirements, ai-generated<br/>🔌 Claude + Linear MCP] --> P5
+    P4[2.4 prd-to-linear-document<br/>Claude creates Linear Project Planned<br/>+ attached PRD Document with section anchors<br/>+ labels phase:requirements, ai-generated<br/>anchor map read back from the created Document<br/>🤖 publish-prd-to-linear skill · 🔌 Linear MCP] --> P5
     P5[2.5 Stakeholder review IN LINEAR<br/>inline comments on the Document<br/>Guests added for non-engineering reviewers<br/>iterate Document via Claude or by hand<br/>👤 PM + stakeholders] --> G1
 
     G1{GATE 1: PRD Approved in Linear?<br/>see QUALITY-GATES.md Gate 1}
@@ -124,20 +124,20 @@ flowchart TD
 
 ## Step 3: User Stories — Milestones & Issues
 
-Entry point is the approved PRD Document URL + existing Linear Project from Step 2. Stage 3a decomposes epics locally in Claude Code (no Linear write). Stage 3b runs `prd-to-linear-scaffold` to add Milestones to the existing Project, gated by Gate 2. Stage 3c runs `stories-to-linear-push` to create Triage issues with PRD deep-links, gated per-story by Gate 3 (AI Inbox empty). On Gate 2 No, the loop returns to S3B to regenerate the scaffold; on Gate 3 No, the loop returns to per-story acceptance. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-user-story-completeness-incl-linear-scaffolding).
+Entry point is the approved PRD Document URL + existing Linear Project from Step 2. Stage 3a decomposes epics locally in Claude Code (no Linear write). Stage 3b runs `prd-to-linear-scaffold` to add Milestones to the existing Project, gated by Gate 2. Stage 3c runs `stories-to-linear-push` to create Triage issues with PRD deep-links, gated per-story by Gate 3 (AI Inbox empty). **Stages 3a → 3b are one procedure, run by the [`scaffold-linear-milestones`](./skill-prompts/scaffold-linear-milestones/SKILL.md) skill; Stage 3c is a second, run by [`push-linear-stories`](./skill-prompts/push-linear-stories/SKILL.md)** — the cut between them is Gate 2, and the second skill refuses to run without the first's epic-to-Milestone mapping. On Gate 2 No, the loop returns to S3B to regenerate the scaffold; on Gate 3 No, the loop returns to per-story acceptance. See [QUALITY-GATES.md → Gate 2](./QUALITY-GATES.md#gate-2-user-story-completeness-incl-linear-scaffolding).
 
 ```mermaid
 flowchart TD
     S_IN([From Step 2: PRD Document Approved v1.0<br/>+ Project out of Planned]) --> S3A
 
     S3A[3a Decompose into epics<br/>epic-decomposition prompt against PRD Document URL<br/>chat only - no Linear write yet<br/>🤖 Claude] --> S3B
-    S3B[3b prd-to-linear-scaffold<br/>Claude adds one Milestone per epic to existing Project<br/>milestone target dates from PRD timeline<br/>🔌 Claude + Linear MCP] --> G2
+    S3B[3b prd-to-linear-scaffold<br/>Claude adds one Milestone per epic to existing Project<br/>milestone target dates from PRD timeline only<br/>every requirement section claimed by exactly one epic<br/>🤖 scaffold-linear-milestones skill · 🔌 Linear MCP] --> G2
 
     G2{GATE 2: Milestones Approved?<br/>see QUALITY-GATES.md Gate 2}
     G2 -- No --> S3B
     G2 -- Yes --> S3C[3c Generate stories + AC<br/>persona/goal/benefit + Given/When/Then<br/>happy + error + edge cases<br/>🤖 Claude]
 
-    S3C --> PUSH[stories-to-linear-push<br/>Triage issues with labels<br/>phase:requirements, ai-generated, needs-human-review<br/>+ PRD section deep-links into the Document<br/>🔌 Claude + Linear MCP]
+    S3C --> PUSH[stories-to-linear-push<br/>read-only duplicate pre-flight first<br/>Triage issues with labels<br/>phase:requirements, ai-generated, needs-human-review<br/>+ verified PRD section deep-links into the Document<br/>🤖 push-linear-stories skill · 🔌 Linear MCP]
     PUSH --> INBOX[AI Inbox review<br/>filter ai-generated AND needs-human-review<br/>per story: click deep-link, verify, edit, accept<br/>delete stories without valid PRD citation<br/>👤 PM]
     INBOX --> G3{GATE 3: AI Inbox Empty?<br/>see QUALITY-GATES.md Gate 2 Linear scaffolding}
 

@@ -2,6 +2,8 @@
 
 This directory holds the **system-prompt templates** for the Phase 3 specialist Claude Code subagents referenced in [`../PROCESS.md`](../PROCESS.md) (Step 0 → "Bundle the recurring workflow into a local Claude Code subagent" and "Specialist subagents for Phase 3 roles"). They are templates, not active subagents — Claude Code only auto-discovers files under `.claude/agents/`.
 
+**These roles are not scoped to a stage of the project** — a developer works stories in month one and month nine, and these agents serve both. Where one of them borders an artifact shipped by another phase, the boundary is recorded in [`docs/ROUTING.md`](../../../docs/ROUTING.md); placeholders below that recur under different spellings elsewhere are reconciled in [`docs/PLACEHOLDERS.md`](../../../docs/PLACEHOLDERS.md).
+
 ## Files
 
 | File | Role |

@@ -45,6 +45,28 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Linea
 5. **Restrain write scope until the team is confident.** For Phase 1, keep Claude Code to **read + create issues + create comments**, with **update / state-change actions withheld** — enforced through Claude Code's tool-permission settings and the confirm-before-write design of this phase's Linear-writing prompts (see [Risks & Guardrails](#risks--guardrails)). Promote to update / state-change scopes only when the team is confident.
 6. **Revoke when done** (e.g., off-boarding): `claude mcp remove linear`, and revoke the OAuth grant in Linear under **Settings → Security & access → OAuth applications**.
 
+#### Install the Phase 1 requirement skills
+
+Phase 1 ships three **skills** as templates — one per Linear write step. Copy them into the consuming repo, fill the placeholders, and commit; they are project artefacts, not personal config, and they transfer with the repo at Phase 7. Install them after the MCP server is connected, because all three call it on their first step.
+
+```bash
+# From the consuming repo root
+mkdir -p .claude/skills
+cp -r <ai-dlc>/aidlc-phases/01-requirement-gathering/skill-prompts/*/ .claude/skills/
+```
+
+Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, where the folder name must equal the `name:` field. A mismatch means the skill silently never loads, so copy the directories with `cp -r` rather than globbing the Markdown.
+
+| Skill | Owns | Gate |
+|-------|------|------|
+| [`publish-prd-to-linear`](./skill-prompts/publish-prd-to-linear/SKILL.md) | Steps 2.2–2.4 — drafts the PRD, self-reviews it, creates the Project (`Planned`) and publishes the Document, returns the section-anchor map | Gate 1 |
+| [`scaffold-linear-milestones`](./skill-prompts/scaffold-linear-milestones/SKILL.md) | Stages 3a–3b — decomposes the approved Document into ordered epics and creates one Milestone each | Gate 2 |
+| [`push-linear-stories`](./skill-prompts/push-linear-stories/SKILL.md) | Stage 3c — drafts stories with AC, runs the duplicate pre-flight, creates Triage issues with verified PRD deep-links | Gate 2 → Gate 3 |
+
+Fill `{{LINEAR_INITIATIVE}}` and `{{LINEAR_TEAM}}` before committing. Verify by confirming each appears in the available-skills list under its slug — **`/agents` does not list skills.** Then smoke-test the stop: invoke `publish-prd-to-linear` with a two-line brief and confirm it refuses to write anything until you reply `go`. Full instantiation and routing checklist in [`skill-prompts/README.md`](./skill-prompts/README.md).
+
+> **These three are the outer-loop Linear writers.** They create Documents, Projects, Milestones and Triage issues. The Phase 3 dev-loop writer (`linear-task-agent`) deliberately does none of this and refuses if asked — the split is by design, not by omission.
+
 #### Verification checklist
 
 - [ ] `claude mcp list` shows `linear: connected` in the repo (registration committed to `.mcp.json`)
@@ -52,6 +74,7 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Linea
 - [ ] Claude Code can list teams, projects, and initiatives the user has access to
 - [ ] Audit logging is on in Linear (Workspace settings → Security → Audit log)
 - [ ] Claude Code tool-permission settings keep Linear to read + create until the team matures
+- [ ] The three Phase 1 skills are committed under `.claude/skills/`, every placeholder filled, each listed in the available-skills list, and one confirm-before-write stop smoke-tested
 
 > **Permission inheritance:** Claude Code inherits the connecting user's Linear permissions. A user can only read/write what they themselves can read/write — there is no privilege escalation.
 
@@ -96,6 +119,8 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Linea
 
 **2.1 — Gather context.** Compile all inputs — interview summaries, business objectives, competitive data, technical constraints, and the Linear context bundle from Step 1.
 
+> **Steps 2.2 to 2.4 are one procedure, and the [`publish-prd-to-linear`](./skill-prompts/publish-prd-to-linear/SKILL.md) skill runs them as one** — draft, self-review, resolve, publish, return the anchor map. The three sub-steps below remain the definition of what it does and the paste-prompt path for teams that have not installed it.
+
 **2.2 — Draft in Claude Code.** Use Claude Code with the [PRD generation prompt](./PROMPTS.md#prd-generation). Feed ALL context in a single prompt (leverage the 200K+ token context window). Where the Linear bundle includes existing initiatives or related issues, ask Claude Code to **cite the Linear IDs** in the relevant PRD sections so traceability is established from day one. The draft stays local (Markdown) — no Linear write yet.
 
 **2.3 — Self-review with Claude Code.** Run the draft back through Claude Code with the [gap analysis prompt](./PROMPTS.md#gap-analysis) to get a "second opinion" on completeness. Refine. Then run a PM review against the PRD completeness checklist (see [QUALITY-GATES.md](./QUALITY-GATES.md#gate-1-prd-completeness)) and remove any hallucinated requirements.
@@ -129,6 +154,8 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Linea
 | **Human** | Validate completeness, approve milestone scaffold, accept stories one-by-one out of the AI Inbox view |
 
 This step is a three-stage write to Linear, with a human approval between each stage. The Project already exists — Step 3 only adds Milestones and Issues to it. Nothing reaches an Active state automatically.
+
+> **Stages 3a and 3b are one procedure** — the [`scaffold-linear-milestones`](./skill-prompts/scaffold-linear-milestones/SKILL.md) skill decomposes the approved Document and creates the Milestones, stopping at Gate 2. **Stage 3c is a second procedure**, run by [`push-linear-stories`](./skill-prompts/push-linear-stories/SKILL.md) only after that gate passes. The cut between them is the human approval, not a line count.
 
 **Stage 3a — Decompose into epics**
 1. Use Claude Code with the [epic decomposition prompt](./PROMPTS.md#epic-decomposition). Reference the PRD by Linear Document URL — Claude Code can read the Document directly via MCP. Output stays local — no Linear write yet.
@@ -300,7 +327,7 @@ Three explicit human gates ensure that **no Claude-authored Linear item reaches 
 
 | Risk | Mitigation |
 |------|------------|
-| **Duplicate issues** — Claude is re-run and pushes the same stories twice | The `stories-to-linear-push` prompt **must** call `linear-context-pull` first and report any title or AC matches before creating. PM rejects duplicates in the AI Inbox. |
+| **Duplicate issues** — Claude is re-run and pushes the same stories twice | The `stories-to-linear-push` prompt **must** call `linear-context-pull` first and report any title or AC matches before creating. The [`push-linear-stories`](./skill-prompts/push-linear-stories/SKILL.md) skill has that read-only pre-flight inlined as a step it cannot skip, which is what makes a re-run after a partial push safe. PM rejects duplicates in the AI Inbox. |
 | **Silent state changes / scope creep** — Claude moves issues to In Progress or edits AC on existing tickets | **Withhold update / state-change actions** in Claude Code's tool-permission settings for the Linear MCP server. Claude Code can create issues and post comments, not mutate existing ones. Promote scopes only when team maturity justifies it. |
 | **Hallucinated stories** — fabricated personas or features that never appeared in the PRD | `needs-human-review` gate label + the `**PRD section: §X.Y**` citation rule. Stories without a valid citation are deleted at Gate 3. The AI Inbox view enforces a daily sweep. |
 | **Permission escalation surprises** | Claude inherits the connecting user's Linear permissions only — no escalation. Off-board users by revoking the OAuth grant in Linear (Settings → Security & access → OAuth applications) and `claude mcp remove linear` on their machine. |
@@ -310,6 +337,7 @@ Three explicit human gates ensure that **no Claude-authored Linear item reaches 
 ## Related Documents
 
 - [Prompt Templates →](./PROMPTS.md)
+- [Skill Templates →](./skill-prompts/) (three Claude Code skills — one per Linear write step)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowcharts →](./FLOWCHART.md) (six per-step diagrams)
 - [PRD Template →](../templates/prd-template.md)
