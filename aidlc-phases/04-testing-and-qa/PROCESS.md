@@ -437,9 +437,6 @@ Four explicit gates ensure that **no AI-triaged bug or AI-generated test reaches
 - [Prompt Templates →](./PROMPTS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
-- [Test Plan Template →](../templates/test-plan-template.md)
-- [Bug Report Template →](../templates/bug-report-template.md)
-- [Code Review Checklist →](../templates/code-review-checklist.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
 - [Phase 3 Development PROCESS →](../03-development/PROCESS.md)
 

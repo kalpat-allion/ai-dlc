@@ -340,8 +340,6 @@ Three explicit human gates ensure that **no Claude-authored Linear item reaches 
 - [Skill Templates →](./skill-prompts/) (three Claude Code skills — one per Linear write step)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowcharts →](./FLOWCHART.md) (six per-step diagrams)
-- [PRD Template →](../templates/prd-template.md)
-- [User Story Template →](../templates/user-story-template.md)
 
 ## External References
 

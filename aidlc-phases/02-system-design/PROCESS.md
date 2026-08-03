@@ -42,9 +42,38 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Erase
 5. **Restrain write scope until the team is confident.** For Phase 2, keep Claude Code to **`generate` + `generateEdit` + `export` + `search`**, with **`delete` withheld** — enforced through Claude Code's tool-permission settings (see [Risks & Guardrails](#risks--guardrails)).
 6. **Revoke when done:** `claude mcp remove eraser`, and revoke the OAuth grant in Eraser under **Settings → Security → Connected applications**.
 
+#### Install the Phase 2 design artifacts
+
+Phase 2 ships **seven templates** — three subagents, three skills and one slash command. Copy them into the consuming repo, fill the placeholders, and commit; they are project artefacts, not personal config, and they transfer with the repo at Phase 7. Install them after the Eraser MCP server is connected, because `render-design-diagrams` calls it on its second step.
+
+```bash
+# From the consuming repo root
+mkdir -p .claude/agents .claude/skills .claude/commands
+cp    <ai-dlc>/aidlc-phases/02-system-design/subagent-prompts/*.md   .claude/agents/
+cp -r <ai-dlc>/aidlc-phases/02-system-design/skill-prompts/*/        .claude/skills/
+cp    <ai-dlc>/aidlc-phases/02-system-design/command-prompts/adr.md  .claude/commands/
+```
+
+Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, where the folder name must equal the `name:` field. A mismatch means the skill silently never loads, so copy the directories with `cp -r` rather than globbing the Markdown. Subagents and commands are single files, and for a command **the filename is the invocation slug** (`adr.md` → `/adr`).
+
+| Artifact | Type | Owns | Step | Gate |
+|---|---|---|---|---|
+| [`solution-architect`](./subagent-prompts/solution-architect.md) | Subagent | 2–3 architecture options, the 10x stress test on each, the recommendation, the proposal document | 1.2–1.3, 1.5 | Gate 1 |
+| [`architecture-reviewer`](./subagent-prompts/architecture-reviewer.md) | Subagent | The independent production-readiness verdict on a design it did not author | 1.6 | Gate 1 |
+| [`accessibility-auditor`](./subagent-prompts/accessibility-auditor.md) | Subagent | The WCAG 2.1 AA verdict on one rendered surface | 4.6 | Gate 3 |
+| [`render-design-diagrams`](./skill-prompts/render-design-diagrams/SKILL.md) | Skill | Eraser DSL, PNG/SVG exports, the editor URL, and the in-repo Mermaid mirror | 1.4–1.5, 2.3–2.4 | Gates 1, 2, 4 |
+| [`data-model-design`](./skill-prompts/data-model-design/SKILL.md) | Skill | The schema, its indexes, the migrations and the seed data | 2.1–2.2, 2.5–2.6 | Gate 2 |
+| [`api-contract-freeze`](./skill-prompts/api-contract-freeze/SKILL.md) | Skill | The OpenAPI spec, the mechanical audit, the mock URL, the unsigned freeze note | 3.1–3.5 | Gate 2 |
+| [`/adr`](./command-prompts/adr.md) | Command | One decision record, with the next sequential number allocated and reported | 1.7, 5.3 | Gates 1, 3, 4 |
+
+Fill the placeholders before committing — full lists in each directory's README ([subagents](./subagent-prompts/README.md), [skills](./skill-prompts/README.md), [commands](./command-prompts/README.md)). Verify subagents with `/agents`; **`/agents` lists neither skills nor commands** — confirm a skill by its slug in the available-skills list, and a command by typing `/` and finding it in the menu.
+
+> **Settle the diagram-skill question before the first diagram, not after.** If the repo already has an in-repo-Mermaid-only diagram skill, bare *"draw the architecture diagram"* routes there and produces the Mermaid mirror **only** — one gate line satisfied, three (DSL committed, editor URL recorded, PNG/SVG exported) silently not, and the run looks like the diagram got done. Either uninstall the incumbent, or keep it for sketches and invoke `render-design-diagrams` explicitly for anything gate-bearing.
+
 #### Verification checklist
 
 - [ ] `claude mcp list` shows `eraser: connected` in the repo (registration committed to `.mcp.json`)
+- [ ] The three subagents are listed by `/agents`; the three skills appear under their slugs; `/adr` appears in the `/` menu
 - [ ] Smoke-test diagram appears in your Eraser workspace
 - [ ] Claude Code can `search` your workspace and `export` to PNG/SVG
 - [ ] Audit logging is on in Eraser
@@ -71,17 +100,23 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Erase
 
 **1.1 — Pull inputs.** In Claude Code with the **Linear MCP server connected**, fetch the approved PRD Document and any related initiatives/issues from the Phase 1 Project. Do not paste — let Claude Code read via MCP so the trace stays clean. Record the PRD Document URL and PRD version (`v1.0`, etc.) — every ADR and diagram must cite both.
 
+> **Steps 1.2, 1.3 and 1.5 are one procedure, and the [`solution-architect`](./subagent-prompts/solution-architect.md) subagent runs them as one** — options, stress test, recommendation, stop at the Tech Lead gate. The sub-steps below remain the definition of what it does and the paste-prompt path for teams that have not installed it. **One difference on purpose:** 1.3 reads as an optional follow-up; inside the agent it is a mandatory step run on *every* seriously-considered option and *before* the recommendation. A stress test run after the recommendation argues against a decision already anchored, and Gate 1 asking for it on "the chosen option" is circular — the stress test is part of how you choose.
+
 **1.2 — Generate architecture options with Claude Code.** Use the [`architecture-proposal`](./PROMPTS.md#architecture-proposal) prompt. Feed in the PRD reference, NFRs, team profile, budget, and timeline. Claude Code produces 2–3 candidate architectures with components, communication patterns, data architecture, and trade-off tables. The output stays local — no diagrams or ADRs yet.
 
 **1.3 — Trade-off interrogation.** For each option, run the [`trade-off-interrogation`](./PROMPTS.md#trade-off-interrogation) prompt (or follow up in Claude Code with `Stress-test option 2 at 10x current load — where does it break first, and what is the mitigation?`). Force Claude Code to surface failure modes, single points of failure, and cost cliffs. Capture the answers; they become inputs to the design review prompt at 1.6.
 
-**1.4 — Render diagrams in Eraser.io (via MCP).** With the Eraser MCP server connected, run the [`eraser-architecture-diagram`](./PROMPTS.md#eraser-architecture-diagram) prompt. Claude Code calls Eraser MCP `generate` to produce a cloud architecture diagram and a system overview diagram in Eraser's diagram-as-code DSL. Eraser supports flowcharts, sequence diagrams, ER diagrams, cloud architecture, and BPMN/swimlane natively ([eraser.io/diagramgpt](https://www.eraser.io/diagramgpt)). For each generated diagram, Claude Code returns the editor URL and the DSL — open the URL, refine in the visual editor or via inline AI requests, then export PNG/SVG. The DSL is checked into `/docs/diagrams/eraser/` alongside the export so the diagram round-trips.
+> **Steps 1.4 and 1.5 are one procedure, and the [`render-design-diagrams`](./skill-prompts/render-design-diagrams/SKILL.md) skill runs them as one** — generate through Eraser, commit the DSL, export PNG/SVG, record the editor URL, then commit the Mermaid mirror. Keeping them as two steps is what lets a team ship the Eraser half and forget the mirror; the skill will not.
+
+**1.4 — Render diagrams in Eraser.io (via MCP).** With the Eraser MCP server connected, run the [`eraser-architecture-diagram`](./PROMPTS.md#eraser-architecture-diagram-via-mcp) prompt. Claude Code calls Eraser MCP `generate` to produce a cloud architecture diagram and a system overview diagram in Eraser's diagram-as-code DSL. Eraser supports flowcharts, sequence diagrams, ER diagrams, cloud architecture, and BPMN/swimlane natively ([eraser.io/diagramgpt](https://www.eraser.io/diagramgpt)). For each generated diagram, Claude Code returns the editor URL and the DSL — open the URL, refine in the visual editor or via inline AI requests, then export PNG/SVG. The DSL is checked into `/docs/diagrams/eraser/` alongside the export so the diagram round-trips.
 
 **1.5 — Render in-repo diagrams in Mermaid.** For diagrams that must live in version control and render in GitHub/GitLab markdown (sequence diagrams in ADRs, C4 Context/Container diagrams), use Claude to produce Mermaid directly. Mermaid in 2026 supports the full C4 model — Context, Container, Component, Dynamic ([mermaid.js.org/syntax/c4](https://mermaid.js.org/syntax/c4.html)). Commit these to `/docs/diagrams/mermaid/` and reference them from the ADR.
 
-**1.6 — Design review with Claude.** Run the [`design-review`](./PROMPTS.md#design-review) prompt against the selected option, attaching the architecture text and the diagram links. Claude returns a severity-ranked issue list across scalability, security, reliability, operability, and cost. Resolve every Critical and High before proceeding.
+**1.6 — Design review with Claude.** Invoke [`architecture-reviewer`](./subagent-prompts/architecture-reviewer.md) **in a session that did not produce the design** — it refuses a same-session self-review, which is exactly what Gate 1's "not the author" line measures. It returns a severity-ranked issue list across scalability, security, reliability, operability and cost, a list of anything the inputs did not let it evaluate, and a verdict derived from the counts rather than chosen. Resolve every Critical and High before proceeding. The paste path via the [`design-review`](./PROMPTS.md#design-review) prompt stays valid.
 
-**1.7 — Create ADRs.** For each significant decision (chosen pattern, datastore selection, sync vs async boundaries, deployment topology) run the [`adr-generation`](./PROMPTS.md#adr-generation) prompt. Store ADRs in `/docs/adrs/` using the [ADR template](../templates/adr-template.md). Each ADR cites the PRD section that drove the decision and embeds the relevant Mermaid diagram inline.
+**1.7 — Create ADRs.** For each significant decision (chosen pattern, datastore selection, sync vs async boundaries, deployment topology) run [`/adr <the decision>`](./command-prompts/adr.md). It allocates the next sequential number, reports what it allocated from, and writes the record to `/docs/adrs/` with Status `Proposed`. **It refuses when no alternative was genuinely weighed and rejected** — Gate 1 reads that rejected-alternatives list as the evidence that the alternatives were real, so a straw man is worse than no record. It also refuses to state a figure it cannot source. The paste path via the [`architecture-decision-record-generation`](./PROMPTS.md#architecture-decision-record-generation) prompt stays valid. Each ADR cites the PRD section that drove the decision and embeds the relevant Mermaid diagram inline.
+
+> **The architecture agent does not write the record for the option it argued for.** `solution-architect` supplies the options and the specific rejection reasons and then refuses, redirecting here. A decision record written by the advocate is a paraphrase of the advocacy.
 
 **1.8 — Team review.** Present the proposal, diagrams, and ADRs to the dev team. Use the design-review output as the agenda. Capture objections in the ADR's "Consequences" section before sign-off.
 
@@ -104,11 +139,15 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Erase
 
 **Workflow:**
 
+> **Steps 2.1, 2.2, 2.5 and 2.6 are one procedure, run by the [`data-model-design`](./skill-prompts/data-model-design/SKILL.md) skill** — extract, generate, stop for the backend-developer review, then migrate and seed. **2.5 is the skill's own hard stop, not a step after it**, and the skill will not continue because the reviewer is unavailable. **2.3 and 2.4 are not this skill's** — both diagram surfaces belong to `render-design-diagrams`, which owns the gate lines that count them.
+>
+> The skill claims **greenfield data-model design only**. A schema change or migration inside a story already in flight belongs to the repo's server-side implementation specialist, who ships it in the story's own commit — the triggers are deliberately narrow so an ordinary story turn cannot pull this chain in.
+
 **2.1 — Extract entities.** Run the [`entity-extraction`](./PROMPTS.md#entity-extraction) prompt in Claude Code with the Linear MCP server connected. Claude Code reads the PRD Document and produces a structured entity list with attributes, relationships, cardinalities, and a cross-context map. Entities that span bounded contexts may need duplication or an event contract, not a foreign key — the prompt flags these explicitly.
 
 **2.2 — Generate schema with Claude Code.** From inside the repo, run the [`schema-generation`](./PROMPTS.md#schema-generation) prompt. Specify the ORM (Prisma / TypeORM / Drizzle / raw SQL) and naming convention. Claude Code reads existing repo conventions and produces a schema that matches them — this is the key reason to drive schema generation from Claude Code rather than chat. Output includes constraints, indexes covering the top query patterns, soft-delete columns where appropriate, and timestamps on every entity.
 
-**2.3 — Render ER diagram in Eraser.io.** Run the [`eraser-er-diagram`](./PROMPTS.md#eraser-er-diagram) prompt. Claude calls Eraser MCP `generate` with the schema as input — Eraser's ER syntax is purpose-built for this and accepts paste of either DDL or natural language ([eraser.io/use-case/api-diagrams](https://www.eraser.io/use-case/api-diagrams)). Refine in the Eraser editor, export PNG/SVG, commit DSL to `/docs/diagrams/eraser/`.
+**2.3 — Render ER diagram in Eraser.io.** Covered with 2.4 by [`render-design-diagrams`](./skill-prompts/render-design-diagrams/SKILL.md), which takes the committed schema as its source. Run the [`eraser-er-diagram`](./PROMPTS.md#eraser-er-diagram-via-mcp) prompt. Claude calls Eraser MCP `generate` with the schema as input — Eraser's ER syntax is purpose-built for this and accepts paste of either DDL or natural language ([eraser.io/use-case/api-diagrams](https://www.eraser.io/use-case/api-diagrams)). Refine in the Eraser editor, export PNG/SVG, commit DSL to `/docs/diagrams/eraser/`.
 
 **2.4 — Render ER diagram in Mermaid for in-repo docs.** Ask Claude for the Mermaid `erDiagram` equivalent. Commit to `/docs/diagrams/mermaid/erd.mmd` so it renders in the README and ADRs.
 
@@ -132,6 +171,10 @@ All Claude interaction in the AI-DLC runs through **Claude Code**, and the Erase
 | **Human** | Validate endpoint design, review error envelope, approve contracts, gate frontend start |
 
 **Workflow:**
+
+> **Steps 3.1 to 3.5 are one procedure, run by the [`api-contract-freeze`](./skill-prompts/api-contract-freeze/SKILL.md) skill** — map flows to resources, generate the spec, audit it mechanically, stand up the mock, write the freeze note, stop. **3.3's walkthrough and 3.5's signature are the human half of its terminal stop:** the audit proves the spec is *complete*, only a reader proves it is *right*, so the skill leaves the freeze note **unsigned** and hands over the audit result, the mock URL and the note.
+>
+> **One step the sub-steps below do not have.** Before generating anything, the skill demands two declarations it refuses to infer: **which endpoints are public**, and **which POSTs are non-idempotent**. Gate 2's "auth on every *protected* endpoint" and "Idempotency-Key on POSTs that *require* it" are product judgements, and an agent that infers them then audits its own inference passes every time. With both declared, the audit is genuinely mechanical.
 
 **3.1 — Map flows to endpoints.** Use Claude Code with the Linear MCP server connected to read each PRD user-flow section and propose the resource model and endpoints. Resolve naming and verb questions here before writing any spec — REST mistakes calcify fast.
 
@@ -174,7 +217,7 @@ UI/UX in the AI-DLC is generated **as real code in the repo** by Claude Code wit
 
 **4.5 — Promote to production-grade components.** Because screens are already real code, "handoff" is just promotion: lift the mature component into the shared component library (`src/components/ui/…`), tighten its typed props and variants, add the render + a11y tests, and open a PR. There is no canvas-to-code export — the [`production-component`](./PROMPTS.md#production-component) prompt drives this directly in Claude Code.
 
-**4.6 — Accessibility review.** Run the [`accessibility-review`](./PROMPTS.md#accessibility-review) prompt against each generated component. Claude Code checks WCAG 2.1 AA: keyboard navigation, focus order, colour contrast, screen-reader labelling, semantic HTML, motion-reduction respect. Resolve every Critical and High; document accepted Mediums in the ADR for that flow.
+**4.6 — Accessibility review.** Invoke [`accessibility-auditor`](./subagent-prompts/accessibility-auditor.md) per component. It checks WCAG 2.1 AA — keyboard navigation, focus order, contrast, screen-reader labelling, semantic HTML, motion-reduction — and is explicit about what a source read cannot establish. **It cannot reach PASS from source alone:** PASS requires the automated scan run against the *rendered* page with no serious or critical violations, plus a described keyboard traversal. Without both it returns **`PASS WITHHELD`**, which is a gate blocker, not a soft pass. Resolve every Critical and High; document accepted Mediums in the ADR for that flow. The paste path via the [`accessibility-review`](./PROMPTS.md#accessibility-review-claude) prompt stays valid.
 
 **4.7 — Stakeholder review.** Share a running preview — a deploy preview, a Storybook link, or a screen recording of the flow — with PM and stakeholders (or the Figma file if the flow was designed there). Capture feedback, iterate in Claude Code, approve.
 
@@ -208,7 +251,7 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 
 **5.2 — Generate scored comparisons.** Use Claude with the [`tech-stack-comparison`](./PROMPTS.md#tech-stack-comparison) prompt for each non-trivial decision. Claude produces a 1–5 scored matrix across criteria and a recommendation. For technology that ships fast (frontend frameworks, AI tooling), supplement with Perplexity for current benchmarks and adoption data — Claude's training data is good but not real-time.
 
-**5.3 — Create ADRs.** Run the [`adr-generation`](./PROMPTS.md#adr-generation) prompt for each decision. Every ADR includes the rejected alternatives with reasons — future engineers thank you for this.
+**5.3 — Create ADRs.** Run [`/adr <the decision>`](./command-prompts/adr.md) for each decision. Every ADR includes the rejected alternatives with reasons — future engineers thank you for this, and the command refuses to write the record without them.
 
 **5.4 — Team review and buy-in.** Walk the stack with the dev team. The blocker is rarely "is this the right tool" — it is "do we know how to operate it in production". For every choice the team has not shipped before, attach a training plan (book chapter, course, internal mentor, time budget) to the ADR.
 
@@ -249,11 +292,11 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 
 | Risk | Mitigation |
 |------|------------|
-| **Diagram drift** — Eraser/Mermaid diagrams diverge from the implemented system over time | Commit Eraser DSL alongside exports so diagrams round-trip via MCP. For C4/ERD, use Mermaid in repo and regenerate from the codebase via Claude Code on every ADR change. Add a CI check that fails if `/docs/diagrams/` has not been touched in the same PR as a structural code change. |
-| **Hallucinated architecture decisions** — Claude proposes a pattern that sounds plausible but does not match the actual NFRs (e.g., recommends event sourcing for a CRUD app) | Always run the [`design-review`](./PROMPTS.md#design-review) prompt before accepting a proposal; require the trade-off interrogation step (1.3) on every option; ADRs must list the **rejected** alternatives with the specific reason — if Claude cannot articulate why an alternative was rejected, it has not actually evaluated it. |
+| **Diagram drift** — Eraser/Mermaid diagrams diverge from the implemented system over time | [`render-design-diagrams`](./skill-prompts/render-design-diagrams/SKILL.md) is the mitigation's owner: it commits the DSL, the exports, the editor URL **and** the Mermaid mirror in one pass, so the two surfaces cannot drift apart from each other, and it titles every diagram with the requirements version so a stale one is identifiable without opening it. It also refuses to certify that a diagram matches production without reading the code. Add a CI check that fails if `/docs/diagrams/` has not been touched in the same PR as a structural code change. |
+| **Hallucinated architecture decisions** — Claude proposes a pattern that sounds plausible but does not match the actual NFRs (e.g., recommends event sourcing for a CRUD app) | [`architecture-reviewer`](./subagent-prompts/architecture-reviewer.md) before accepting a proposal — its severity is assigned from **consequence and the load at which it occurs**, never from how serious a finding sounds, and its verdict is derived from the counts rather than chosen, which is what stops a genuine blocker being written politely enough to read as Medium. `solution-architect` runs the trade-off interrogation on every seriously-considered option before recommending. ADRs must list the **rejected** alternatives with the specific reason, and [`/adr`](./command-prompts/adr.md) refuses to write one without them — if Claude cannot articulate why an alternative was rejected, it has not actually evaluated it. |
 | **Hallucinated requirements in ADRs** — Claude writes consequences that read well but were never validated | ADRs require human "Status: Accepted" sign-off; PRs that touch `/docs/adrs/` need a non-author reviewer. Treat every numeric claim ("latency drops 40%") as a citation-needed flag — strike it or back it. |
 | **OpenAPI spec drift** — the spec is correct on day one but the implemented API diverges by week three | Make the spec the source of truth: contract-test the running API against `openapi.yaml` in CI (e.g., Schemathesis or Dredd). Spec changes go through the [Gate 2](./QUALITY-GATES.md#gate-2-data-model--api-contracts) review path, not casual edits. |
-| **Generated UI ignores accessibility** — frontend-design output looks good but fails keyboard navigation, contrast, or screen-reader semantics | The accessibility review at Step 4.6 is mandatory, not optional. Resolve every Critical and High before Gate 3. The frontend-design Skill helps with intent but does not replace the audit. |
+| **Generated UI ignores accessibility** — frontend-design output looks good but fails keyboard navigation, contrast, or screen-reader semantics | The accessibility review at Step 4.6 is mandatory, not optional. Resolve every Critical and High before Gate 3. The frontend-design Skill helps with intent but does not replace the audit. [`accessibility-auditor`](./subagent-prompts/accessibility-auditor.md) cannot return PASS from source alone — contrast ratio, reflow at 320 CSS px, resize to 200%, computed tap-target size, focus order against *visual* reading order, and what an assistive technology actually announces are all unmeasurable from source, and it reports them unmeasured rather than asserting them. Without the rendered-page scan and a keyboard pass it returns `PASS WITHHELD`. |
 | **Wireframe-to-prod creep** — stakeholders fall in love with a wireframe screen and it ships without engineering review | Mark every wireframe screen explicitly as "wireframe — not production" (e.g., a route flag or Storybook tag). The production path is **promote component → PR → Phase 3 review**, never wireframe-branch-to-prod. |
 | **Eraser permission overreach** — an MCP server with `delete` enabled wipes diagrams during an aggressive refactor prompt | Withhold the `delete` action in Claude Code's tool-permission settings until the team is mature. Audit logs must be on in Eraser. Off-board users by revoking the OAuth grant. |
 | **Spec/schema/diagram fan-out without traceability** — three diagrams, two ADRs, an ER diagram, an OpenAPI spec, and nobody can find the PRD section that drove any of it | Every artifact cites the PRD section (Linear Document anchor) it traces to. The handoff checklist enforces this; the Phase 3 team rejects unlinked artifacts. |
@@ -273,7 +316,7 @@ If wireframes reveal user flows not in the PRD, **loop back to Phase 1** — edi
 [Step 1.5] Mermaid C4 Context/Container committed to /docs/diagrams/mermaid/
    │
 [Step 1.6] design-review prompt → severity-ranked issue list, resolved
-[Step 1.7] adr-generation → /docs/adrs/ (every decision cites a PRD section)
+[Step 1.7] /adr → /docs/adrs/ (every decision cites a PRD section)
 [Step 1.8] Team review
    │
    ▼  GATE 1: Architecture approved by Tech Lead
@@ -315,7 +358,8 @@ Four explicit human gates ensure that **no AI-generated artifact reaches Phase 3
 - [Prompt Templates →](./PROMPTS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowcharts →](./FLOWCHART.md) (six per-step diagrams)
-- [ADR Template →](../templates/adr-template.md)
+- [ADR Command Template →](./command-prompts/adr.md) (`/adr` — carries the record shape inline)
+- [Subagent Templates →](./subagent-prompts/README.md) · [Skill Templates →](./skill-prompts/README.md) · [Command Templates →](./command-prompts/README.md)
 
 ## External References
 

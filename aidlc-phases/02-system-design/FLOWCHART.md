@@ -203,7 +203,7 @@ flowchart TD
 
     T1[5.1 Frame each decision<br/>language, framework, datastores, cache,<br/>broker, IaC, observability, auth<br/>+ constraints per decision<br/>👤 Tech Lead] --> T2
     T2[5.2 Scored comparisons<br/>1-5 matrix across criteria + recommendation<br/>Perplexity for fast-moving areas<br/>🤖 Claude Code tech-stack-comparison] --> T3
-    T3[5.3 ADRs per decision<br/>rejected alternatives with reasons<br/>🤖 Claude Code adr-generation - /docs/adrs/] --> T4
+    T3[5.3 ADRs per decision<br/>rejected alternatives with reasons<br/>🤖 Claude Code /adr - /docs/adrs/] --> T4
     T4[5.4 Team buy-in + training plans<br/>every unfamiliar choice gets a plan<br/>book / course / mentor / time budget<br/>👤 Dev team] --> G4
 
     G4{GATE 4: Phase handoff<br/>complete?<br/>see QUALITY-GATES.md Gate 4}
@@ -223,4 +223,4 @@ flowchart TD
 - [Process Definition →](./PROCESS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
-- [ADR Template →](../templates/adr-template.md)
+- [ADR Command Template →](./command-prompts/adr.md) (`/adr` — carries the record shape inline)

@@ -386,5 +386,4 @@ Linear's git integration handles state changes between Gate 2 and Gate 3 automat
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
 - [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
-- [Code Review Checklist →](../templates/code-review-checklist.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
