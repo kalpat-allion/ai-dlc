@@ -4,6 +4,8 @@ This directory holds the **system-prompt templates** for the Phase 3 specialist 
 
 **These roles are not scoped to a stage of the project** — a developer works stories in month one and month nine, and these agents serve both. Where one of them borders an artifact shipped by another phase, the boundary is recorded in [`docs/ROUTING.md`](../../../docs/ROUTING.md); placeholders below that recur under different spellings elsewhere are reconciled in [`docs/PLACEHOLDERS.md`](../../../docs/PLACEHOLDERS.md).
 
+> **Two of these templates name a Phase 3 skill by slug — install [`../skill-prompts/`](../skill-prompts/README.md) in the same change.** `linear-task-agent` and `code-reviewer` both route the pre-PR gate to [`open-pull-request`](../skill-prompts/open-pull-request/SKILL.md), and that routing is not decoration: without it each of them wins the same utterance the skill claims, and the PR opens with no self-review, no Definition-of-Done walk and no rebase while looking entirely normal. The dependency runs both ways — `open-pull-request` names five of the agents here and hands work to each. Installing one directory without the other leaves a pointer with nothing behind it.
+
 ## Files
 
 | File | Role |
@@ -41,6 +43,6 @@ This directory holds the **system-prompt templates** for the Phase 3 specialist 
 3. Adjust the `model:` frontmatter if the team's default differs (Sonnet for high-throughput coding and Linear MCP work, Opus for review/refactor/design).
 4. Commit `.claude/agents/<role>.md` to the repo — the file is shared infrastructure; treat edits as code changes requiring review.
 5. Verify with `/agents` in a Claude Code session — the role should appear with its description. Per-role smoke tests:
-   - `linear-task-agent` — from [`../PROCESS.md`](../PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp): "Use the linear-task-agent to fetch my next Todo issue from the active cycle and print its branchName — do not transition state yet."
+   - `linear-task-agent` — from [`../PROCESS.md`](../PROCESS.md#step-0-one-time-setup--connect-claude-code-to-linear-via-mcp): "Use the linear-task-agent to fetch my next Todo issue from the active cycle and print its branchName — do not transition state yet."
    - `software-architect` — "Use the software-architect to design the architecture for ENG-XXX — present the plan and stop without recommending implementation; do not invoke any implementation specialist." A passing run produces the structured plan and ends at the approval question without handing off.
    - `conflict-resolver` — do NOT smoke-test in a real conflict state. Instead: "Use the conflict-resolver to describe how it would handle a hypothetical 3-file merge conflict between `feature-x` and `main` — explain its workflow and resolution rules without actually running git commands." A passing run articulates the 7-step workflow and the rule priority order, names the never-`--abort`-without-instruction safety property, and does not touch the working tree.
