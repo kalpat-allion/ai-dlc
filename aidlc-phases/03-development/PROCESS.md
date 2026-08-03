@@ -34,10 +34,11 @@ The Linear MCP server set up in Phase 1 is the same server (the same committed `
 1. [Claude Code setup](#claude-code-setup), plus [Phase 3 scope expansion](#phase-3-scope-expansion-tech-lead-teamenterprise-only)
 2. [Bundle the recurring workflow into `linear-task-agent`](#bundle-the-recurring-workflow-into-a-local-claude-code-subagent-recommended)
 3. [Specialist subagents for Phase 3 roles](#specialist-subagents-for-phase-3-roles-recommended) — `software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`
-4. [Build-your-own subagent recipe](#creating-your-own-claude-code-subagent--step-by-step)
-5. [Build-your-own skill recipe](#creating-your-own-claude-code-skill--step-by-step)
-6. [Verification checklist](#verification-checklist)
-7. [Linear Workspace Setup (Phase-3 additions)](#linear-workspace-setup-phase-3-additions)
+4. [Install the Phase 3 skills and commands](#install-the-phase-3-skills-and-commands) — `run-sprint-planning`, `open-pull-request`, `/load-task-context`, `/write-module-readme`
+5. [Build-your-own subagent recipe](#creating-your-own-claude-code-subagent--step-by-step)
+6. [Build-your-own skill recipe](#creating-your-own-claude-code-skill--step-by-step)
+7. [Verification checklist](#verification-checklist)
+8. [Linear Workspace Setup (Phase-3 additions)](#linear-workspace-setup-phase-3-additions)
 
 #### Claude Code setup
 
@@ -215,6 +216,31 @@ Each specialist follows the same packaging pattern as `linear-task-agent`: a mar
 
 > **Rule of thumb:** if the work is **cross-file or multi-step** (scaffolds a new feature, refactors across modules, generates tests for a whole service, runs a structured pre-PR review), use a specialist subagent — it carries the right system prompt and runs in its own scoped session. If the work is **intra-file and incremental** (rename a variable, add one missing branch in a conditional, tweak a JSX prop), a direct Claude Code edit in the main session is faster and lower-friction than spinning up a scoped specialist. The specialist gives you a focused, boundaried session; a direct edit keeps you in the current context. Most stories use both — open the specialist for the scaffold and the tests, drop back to direct edits for the small changes in between.
 
+#### Install the Phase 3 skills and commands
+
+Alongside the seven subagents above, Phase 3 ships **two skills** and **two slash commands**. Copy them into the consuming repo, fill the placeholders, and commit — they are project artefacts, not personal config, and they transfer with the repo at Phase 7. Install them **with** `.claude/agents/`, not after it as an optional extra: `open-pull-request` names five of the subagents in its body and hands work to each, and two of those subagents now name `open-pull-request` back.
+
+```bash
+# From the consuming repo root
+mkdir -p .claude/agents .claude/skills .claude/commands
+cp    <ai-dlc>/aidlc-phases/03-development/subagent-prompts/*.md  .claude/agents/
+cp -r <ai-dlc>/aidlc-phases/03-development/skill-prompts/*/       .claude/skills/
+cp    <ai-dlc>/aidlc-phases/03-development/command-prompts/*.md   .claude/commands/
+```
+
+Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, where the folder name must equal the `name:` field. A mismatch means the skill silently never loads, so copy the directories with `cp -r`; globbing the Markdown flattens the structure and produces zero working skills. Subagents and commands are single files, and for a command **the filename is the invocation slug** (`load-task-context.md` → `/load-task-context`).
+
+| Artifact | Type | Owns | Step | Gate |
+|---|---|---|---|---|
+| [`run-sprint-planning`](./skill-prompts/run-sprint-planning/SKILL.md) | Skill | The candidate pull, the sizing, the estimate writes, the XXL decomposition, the commitment-readiness report | 1.1–1.3, 1.5 | [Gate 1](./QUALITY-GATES.md#gate-1-sprint-commitment) — three of its five criteria |
+| [`/load-task-context`](./command-prompts/load-task-context.md) | Command | Dereferencing the story's pointers — requirement section, decision records, API-spec section per endpoint, existing tests in the module | 2.4 | [Gate 2](./QUALITY-GATES.md#gate-2-pr-merge) — "Architecture alignment verified" |
+| [`open-pull-request`](./skill-prompts/open-pull-request/SKILL.md) | Skill | The ordered pre-PR gate: self-review → verified fixes → the Definition-of-Done walk → rebase → the composed title and body | 3.5, 4.1 | [Gate 2](./QUALITY-GATES.md#gate-2-pr-merge) — the whole pre-merge half |
+| [`/write-module-readme`](./command-prompts/write-module-readme.md) | Command | One Module README, from seven candidate sections, each admitted only on evidence found in the module | 6.2 | [Gates 2 and 3](./QUALITY-GATES.md#gate-3-phase-completion) |
+
+Fill the placeholders before committing — full lists in each directory's README ([subagents](./subagent-prompts/README.md), [skills](./skill-prompts/README.md), [commands](./command-prompts/README.md)). Verify subagents with `/agents`; **`/agents` lists neither skills nor commands** — confirm a skill by its slug in the available-skills list, and a command by typing `/` and finding it in the menu.
+
+> **Settle the pre-PR routing at install time, not after the first PR.** `open-pull-request` auto-triggers from its description, and two subagents in the directory next door claim the same utterance verbatim: `linear-task-agent` on *"open the PR for this branch"*, `code-reviewer` on *"anything to fix before I PR"*. **The templates in this phase's `subagent-prompts/` carry the edits that close both** — install those, not an older copy you already have in the repo. An incumbent `linear-task-agent` that predates them wins the route and opens the PR with **no self-review, no Definition-of-Done walk and no rebase**, and the PR looks entirely normal; an incumbent `code-reviewer` hands back a clean report that reads as *ready* when four of five steps have not run. If you must keep an older copy of either, treat `/open-pull-request` as explicitly invoked and do not rely on the auto-trigger.
+
 #### Creating your own Claude Code subagent — step-by-step
 
 The seven subagents above (`linear-task-agent`, `software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) cover the Phase 3 defaults. Teams routinely need more — a `db-migration-reviewer`, a `release-notes-writer`, a `flaky-test-detective`, a `dependency-upgrader`. This sub-section explains, in plain terms, how a developer creates a brand-new subagent and gets the team using it. **No special tooling required — a subagent is just a markdown file Claude Code reads on startup.**
@@ -321,7 +347,9 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
 |------|-----------|-----|
 | A multi-turn conversation in its own scoped context (review a diff, drive a story end-to-end, implement a feature) | **Subagent** | Owns a sub-session with its own context window. Can take many tool calls, branch on observations, and report back. |
 | A deterministic procedure that should run the same way every time (file a follow-up bug, open a PR, write a Phase plan, run a CLAUDE.md audit) | **Skill** | Loads its instructions into the *current* session. The user invokes it explicitly (`/file-followup`) or Claude auto-triggers when the prompt matches. |
-| A one-shot prompt with no procedure (e.g., "summarise this file") | **Slash command** (`.claude/commands/<name>.md`) | Fires one prompt with arguments. No procedure, no checklist, no supporting files. |
+| A one-shot prompt with arguments and no procedure (e.g., "summarise this file"), that only a human should be able to fire | **Slash command** — `.claude/commands/<name>.md` **plus `disable-model-invocation: true`** | Fires one prompt with arguments. No procedure, no checklist, no supporting files. **The tier is that frontmatter field, not the directory** — see below. |
+
+> **Custom commands have been merged into skills — the third row is a convention, not a mechanism.** A file at `.claude/commands/adr.md` and a skill at `.claude/skills/adr/SKILL.md` both create `/adr` and both work the same way, and **by default both the user *and* Claude can invoke either**. So a command's `description` is a routing claim exactly like a skill's, and a verb it borrows is a verb it steals. **`disable-model-invocation: true` is the whole difference**: with it, the description is menu text and the command competes with nothing; without it, the command inherits every collision rule a skill has. Both Phase 3 commands carry the field deliberately — see [`command-prompts/README.md` → Routing](./command-prompts/README.md#routing).
 
 > **A useful test.** If you find yourself writing the phrase *"first, then, then, then, finally"* in plain English to teach the team how to do something — that is a skill. If you find yourself writing *"you are the X agent, your responsibility is …"* — that is a subagent.
 
@@ -333,12 +361,12 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
    ```markdown
    ---
    name: file-followup-bug
-   description: Use when a developer wants to file a follow-up bug discovered during Phase 3 implementation — typically a bug the current story is not scoped to fix. Triggers on phrases like "file a bug for X", "follow-up issue for the auth race", "track this for later", "log a tech-debt item". Creates a Linear issue with the right project, labels, parent linkage, and reproduction steps formatted to PROMPTS.md → bug-report. Do NOT use for: bugs the current story IS scoped to fix (those go straight into the current branch), or for filing brand-new feature ideas (use the product backlog instead).
+   description: Use when a developer wants to file a follow-up bug discovered during Phase 3 implementation — typically a bug the current story is not scoped to fix. Triggers on phrases like "file a bug for X", "follow-up issue for the auth race", "track this for later", "log a tech-debt item". Creates a Linear issue with the right project, labels, parent linkage, and reproduction steps in the team's standard bug shape. Do NOT use for: bugs the current story IS scoped to fix (those go straight into the current branch), or for filing brand-new feature ideas (use the product backlog instead).
    ---
 
    # File a follow-up bug
 
-   You are guiding the developer through filing a follow-up bug discovered mid-story. The canonical procedure lives in [PROCESS.md → Step 3 / follow-ups](../../aidlc-phases/03-development/PROCESS.md). The Linear write is performed exclusively by the `linear-task-agent` subagent — this skill produces the structured payload it consumes.
+   You are guiding the developer through filing a follow-up bug discovered mid-story. The Linear write is performed exclusively by the `linear-task-agent` subagent — this skill produces the structured payload it consumes.
 
    ## Procedure
 
@@ -350,7 +378,7 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
       - Affected component / file path.
       - Suggested severity (Critical / High / Medium / Low) with one-line justification.
       - Optional: a link to the line(s) in the current branch that surfaced it.
-   3. Format the payload using the [`bug-report`](../../aidlc-phases/03-development/PROMPTS.md#bug-report) template from PROMPTS.md. Do not deviate from the template; the team filters Linear by its structure.
+   3. Format the payload exactly as listed in step 2 — title, numbered reproduction steps, expected vs. actual, affected component / file path, severity with a one-line justification. Do not deviate; the team filters Linear by that structure.
    4. Hand the payload to `linear-task-agent` with: *"File this as a new bug in {{LINEAR_PROJECT}}, label `bug`, parent = the current story, assignee = unassigned. Confirm the new issue ID and post it back to me."*
    5. Once `linear-task-agent` returns the new issue ID, paste it back into the current branch as a code comment near the surfacing line: `// follow-up: ENG-1234`.
 
@@ -380,7 +408,7 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
 1. **Open with the role and the source of truth.** One sentence — *"You are guiding the developer through X. The canonical procedure lives in [PROCESS.md → Step Y]."* This anchors the skill in the AI-DLC docs and makes it auditable.
 2. **Procedure as a numbered list.** Each step should be one concrete action — confirm scope, gather payload, format with template, hand off. If a step branches, write the branches inline (*"If yes, refuse. If no, continue."*). Avoid open-ended prose.
 3. **Refusal / escalation cases.** A bulleted list at the end. This is the equivalent of a subagent's "operating boundaries" — it stops the skill from doing something the team did not authorise.
-4. **Reference, do not duplicate.** Link to PROMPTS.md, PROCESS.md, and template files by relative path. The whole point of a skill is to keep the team's procedure in one place — duplicating it inside the skill body creates two places to maintain and inevitably one falls behind.
+4. **Inline the procedure; never link out of the skill folder into the framework.** A skill ships into a repo that has no `aidlc-phases/` directory, and the arithmetic defeats you even when it does: from `.claude/skills/<name>/`, `../..` is `.claude/`, not the repo root — so a two-dot link silently resolves inside `.claude/` and a three-dot one only works in this repository. Carry the procedure in the body with `{{PLACEHOLDERS}}` and record where it came from in the shipping directory's README, which never vendors. **Supporting files inside the skill's own folder are the one thing you do link by relative path** — those travel with the skill.
 5. **Keep it short.** A skill body that runs past two screens is doing too much. Split into two skills or move detail into supporting files that the body links to.
 
 ##### Test the new skill before committing
@@ -408,8 +436,10 @@ Skills are Claude Code's second extensibility surface. Where a **subagent** spin
 - [ ] Claude Code tool-permissions: `update_issue`, `assign_issue`, `create_issue` allowed; `delete_issue` denied
 - [ ] `.claude/agents/linear-task-agent.md` committed to the repo; `/agents` in Claude Code lists `linear-task-agent`; the subagent smoke test returns a real `branchName` without writing state
 - [ ] Each Phase 3 specialist subagent (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) listed by `/agents` and committed under `.claude/agents/`; team has agreed on the model + tool-permission defaults for each
+- [ ] The two Phase 3 skills (`run-sprint-planning`, `open-pull-request`) appear under their slugs in the available-skills list, and the two commands (`/load-task-context`, `/write-module-readme`) appear in the `/` menu — `/agents` lists none of the four, so it is not the check
+- [ ] Negative-routing check run once after install: *"review my diff"* must reach `code-reviewer` and **not** `open-pull-request`, and *"open the PR for this branch"* must reach `open-pull-request` and not go straight to `linear-task-agent`
 - [ ] Team understands the **new-subagent recipe** (`/agents` interactive flow, frontmatter shape, system-prompt structure, four pre-commit tests: discovery, no-write smoke, boundary, negative-routing) and the single-responsibility rule before committing any new role
-- [ ] Team understands the **new-skill recipe** (folder + `SKILL.md` layout, description-as-router rule, four pre-commit tests: discovery, explicit invocation, auto-trigger, refusal) and the single-procedure rule before committing any new skill
+- [ ] Team understands the **new-skill recipe** (folder + `SKILL.md` layout, description-as-router rule, **five** pre-commit tests: discovery, explicit invocation, auto-trigger, refusal, **hand-off integrity**) and the single-procedure rule before committing any new skill — the fifth is the one that catches a skill handing the receiving subagent the wrong shape, which is a confident-looking failure rather than a visible one
 - [ ] Audit log on in Linear (Workspace settings → Security → Audit log)
 
 > **Permission inheritance:** Claude Code inherits the connecting developer's Linear permissions — no privilege escalation.
@@ -455,6 +485,10 @@ The Phase 1 workspace setup (Initiative → Project → Milestone → Issue, plu
 
 **Workflow:**
 
+> **Steps 1.1, 1.2, 1.3 and 1.5 are one procedure, and the [`run-sprint-planning`](./skill-prompts/run-sprint-planning/SKILL.md) skill runs them as one** — pull read-only, size against the repo, post the estimates behind a literal `go`, decompose XXL into sub-issues, stop. The sub-steps below stay the definition of what it does and the paste-prompt path for teams that have not installed it. **Two steps are deliberately not its: 1.4 and 1.6.** It ends in a commitment-readiness report that marks velocity calibration and owner assignment **`not mine to judge`** rather than guessing them — three of [Gate 1](./QUALITY-GATES.md#gate-1-sprint-commitment)'s five criteria answered, and saying which two are not is the deliverable.
+>
+> **Two additions the sub-steps below do not have.** It refuses to size a story with fewer than three acceptance-criteria bullets, or with any ambiguous bullet, and returns the questions the PM has to answer instead — a fabricated bullet becomes a test somebody writes. And it drops any story that has left `Backlog`, however the story reached it: a story in flight already carries a committed number, and re-sizing it mid-cycle rewrites the history the team calibrates against.
+
 **1.1 — Pull the candidate backlog.** In Claude Code, run the [`linear-sprint-pull`](./PROMPTS.md#linear-sprint-pull) prompt. Claude Code calls `search_issues` filtered by the Phase 1 Project, `state=Backlog`, ordered by priority. The result is a structured list of stories with their AC, milestone, labels, and **`branchName`** (Linear computes this — it is what we will use in Step 2).
 
 **1.2 — Generate estimates per story.** For each candidate, run the [`estimation`](./PROMPTS.md#estimation) prompt with the story body, AC, ADRs, and similar shipped code as context. Claude returns T-shirt size (S/M/L/XL/XXL), Fibonacci points, subtask breakdown, risks, and dependencies.
@@ -492,7 +526,7 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 **2.3 — Create the local branch from Linear's `branchName`.** Claude Code reads the `branchName` field from the issue object (Linear computes it from team prefix + identifier + slugified title — e.g., `david/eng-247-oauth2-callback-handler`). Claude runs `git checkout -b <branchName>` in the working directory. Linear's git integration will recognise this name on PR open and auto-link the issue without any developer action. **Do not invent your own branch name** — drift between branch and issue breaks the integration.
 
-**2.4 — Pull dependent context.** Run the [`task-context`](./PROMPTS.md#task-context) prompt. Claude reads, in order: the PRD section the issue cites, the relevant ADR(s), the OpenAPI section for any endpoint touched, the existing tests in the affected module. This becomes the working context for Step 3 — no further Linear reads happen until the PR. For **non-trivial stories** (cross-module touch, schema change, new endpoint surface, new external integration, or no clear in-pattern reference module), the next stop is **Step 3.0** (`software-architect` design) before Step 3.1 (scaffold); in-pattern stories that follow an existing reference module skip Step 3.0 and go directly to Step 3.1.
+**2.4 — Pull dependent context.** Run [`/load-task-context <identifier>`](./command-prompts/load-task-context.md), or the [`task-context`](./PROMPTS.md#task-context) prompt directly. Claude reads, in order: the PRD section the issue cites, the relevant ADR(s), the OpenAPI section for **every** endpoint the AC touch — one row per endpoint, never one row for "the API" — and the existing tests in the affected module. **The command's load-bearing output is what it could not read:** any source it could not open is reported `not found` with its conflict column marked `unchecked`, because a record it never opened cannot agree with the AC, and `none found` on a row nobody read is the exact failure this step exists to prevent. It reports; it does not write the missing record or start the implementation. This becomes the working context for Step 3 — no further Linear reads happen until the PR. For **non-trivial stories** (cross-module touch, schema change, new endpoint surface, new external integration, or no clear in-pattern reference module), the next stop is **Step 3.0** (`software-architect` design) before Step 3.1 (scaffold); in-pattern stories that follow an existing reference module skip Step 3.0 and go directly to Step 3.1.
 
 > **Convention:** the *only* Linear write between *In Progress* and PR open should be progress comments. Do not flip the issue back to Todo or Backlog mid-flight; if blocked, comment with the blocker and tag the blocker — Linear's blocker UI handles the rest.
 
@@ -539,7 +573,11 @@ This step is the daily entry point. It replaces the manual "open Linear → copy
 
 #### 3.5 Self-review before PR
 
-Run the [`self-review`](./PROMPTS.md#self-review-before-pr) prompt against the diff. Claude returns a severity-ranked issue list across correctness, security, performance, error handling, edge cases, naming, tests, docs. Resolve every Critical and High before opening the PR. **Each fix is a separate commit** — preserves rollback points and gives reviewers a clean history.
+Run the [`self-review`](./PROMPTS.md#self-review-before-pr) prompt against the diff, or invoke [`code-reviewer`](#code-reviewer). Claude returns a severity-ranked issue list across correctness, security, performance, error handling, edge cases, naming, tests, docs. Resolve every Critical and High before opening the PR. **Each fix is a separate commit** — preserves rollback points and gives reviewers a clean history.
+
+> **3.5 and 4.1 are one gate, and the [`open-pull-request`](./skill-prompts/open-pull-request/SKILL.md) skill runs them as one** — suite, self-review, fix **and re-review**, the Definition-of-Done walk, rebase, the composed title and body, hand-off to `linear-task-agent` to post verbatim. Splitting them across two steps is what lets a branch reach 4.1 with the review done and the DoD walk skipped.
+>
+> **The re-review is the step this sub-section does not have.** A first report's projected post-fix counts are a prediction, not a measurement, and a count nobody re-measured is how a Critical reaches a reviewer. The skill re-runs the review against the fixed diff before anything else proceeds, and it re-reviews any hunk a rebase conflict touched — resolution code is code no reviewer has ever read.
 
 #### Linear Agent (optional, autonomous pickup)
 
@@ -727,7 +765,7 @@ The patterns are stackable: a typical heavy-load day looks like Conductor (D) ho
 
 **Workflow:**
 
-**4.1 — Open the PR with the right title and description.** Before opening, rebase the feature branch onto the latest main; if conflicts arise, invoke [`conflict-resolver`](#conflict-resolver) to work through them — never `--abort` without an explicit reason, since reflexive aborts have lost already-done resolution work in past incidents. Then run the [`pr-description`](./PROMPTS.md#pr-description) prompt. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
+**4.1 — Open the PR with the right title and description.** This is the tail of [`open-pull-request`](./skill-prompts/open-pull-request/SKILL.md), which started at 3.5 — it arrives here having already walked the Definition of Done and re-reviewed the fixed diff. Before opening, rebase the feature branch onto the latest main; if conflicts arise, invoke [`conflict-resolver`](#conflict-resolver) to work through them — never `--abort` without an explicit reason, since reflexive aborts have lost already-done resolution work in past incidents. Then run the [`pr-description`](./PROMPTS.md#pr-description) prompt. **Ask one question before composing the body — is this the only PR for this story?** `Closes` on a multi-PR story closes the issue at the first merge; a story that spans several PRs takes `Part of` and closes by hand. Never assume. The title **must** include the Linear identifier (`[ENG-247] OAuth2 callback handler`), and the description **must** include the closing keyword `Closes ENG-247`. Linear's git integration uses this to auto-transition the issue to **In Review** on PR open and to **Done** on merge — no manual updates needed in Linear from this point.
 
 **4.2 — CI runs.** The pipeline executes: lint → type check → unit tests → integration tests → **CodeQL SAST** → **coverage gate**. Coverage is enforced by the test runner's own threshold config (`coverage.thresholds` in Vitest, `coverageThreshold` in Jest, `--cov-fail-under` in pytest) set to **80%** — the test command fails the build below it, and the coverage report is published as a CI artefact rather than pushed to a hosted dashboard. A failure at any step blocks AI and human review until fixed.
 
@@ -815,7 +853,7 @@ Whichever is configured, the same rules apply:
 
 **6.1 — Inline docs (continuous).** Claude Code generates docstrings as code is written. Review and refine in the same commit as the code — docs added as an afterthought drift.
 
-**6.2 — Module READMEs.** When a module crosses ~500 lines or > 3 public exports, run the [`documentation-generation`](./PROMPTS.md#documentation-generation) prompt in Claude Code. Output covers overview, architecture, key concepts, usage, configuration, testing, limitations.
+**6.2 — Module READMEs.** When a module crosses ~500 lines or > 3 public exports, run [`/write-module-readme <path>`](./command-prompts/write-module-readme.md), or the [`documentation-generation`](./PROMPTS.md#documentation-generation) prompt directly. Seven sections are available — overview, architecture, key concepts, usage, configuration, testing, limitations — and **each is admitted only on evidence found in the module itself.** Fewer than seven is the normal outcome; seven every time means the evidence rule is not being applied, and an invented configuration key is the line a new developer trusts most and can verify least. The command reports all seven back as written-with-evidence or omitted-with-what-was-looked-for, so an omission is visible rather than silent. **Deciding that a module has crossed the threshold stays yours** — the command documents the path it is handed and does not go looking. It never hand-writes API reference either; endpoints and payload shapes render from the spec at 6.3, and a hand-copy is wrong the first time the spec changes with nothing telling the reader which of the two is stale.
 
 **6.3 — API docs.** Auto-generated from `/docs/api/openapi.yaml` (the Phase 2 artifact) using Redoc or Swagger UI. **Never maintain hand-written API docs alongside the spec** — they will drift within two sprints.
 
@@ -837,7 +875,8 @@ Morning:
        Claude Code transitions issue to In Progress, self-assigns,
        and posts kickoff comment
   2.3  git checkout Linear branchName
-  2.4  Pull dependent context (PRD, ADRs, OpenAPI, existing tests)
+  2.4  /load-task-context — PRD, ADRs, OpenAPI per endpoint, existing tests
+       (anything unreadable reports not found / unchecked)
 
 Design (non-trivial stories only):
   3.0  software-architect → plan → developer approves → linear-task-agent
@@ -848,10 +887,13 @@ Coding (Claude Code):
   3.2  Implement incrementally, reviewing each diff
   3.3  Tests alongside code
   3.4  Post progress comments on the Linear issue at checkpoints
-  3.5  Self-review: Claude Code with self-review prompt
+  3.5  open-pull-request: self-review → fix + re-review every Critical/High
+       → Definition-of-Done walk (met / not met / cannot verify)
 
 Review:
-  4.1  Open PR with [ENG-XXX] title + Closes ENG-XXX → Linear auto-moves to In Review
+  4.1  open-pull-request: rebase → compose title + body → linear-task-agent
+       posts them verbatim ([ENG-XXX] + Closes ENG-XXX) → Linear auto-moves
+       to In Review
   4.2  CI: lint + types + tests + CodeQL SAST + coverage threshold
   4.3  AI review: configured reviewer(s) — CodeRabbit and/or Claude PR review bot
   4.4  Human review (≥ 1 approval, 2 for high-blast-radius)
@@ -901,22 +943,27 @@ When all MVP stories in the cycle are merged and [Gate 3: Phase Completion](./QU
 ```
 [Phase 2 handoff] Linear Project = approved PRD + ADRs + OpenAPI + wireframes
    │
-[Step 1.1-1.5] Claude Code + Linear MCP → pull backlog, estimate, post comments,
-               decompose XXLs into sub-issues (parentId)
+[Step 1.1-1.5] run-sprint-planning → pull backlog read-only, size, post estimates
+               behind a literal `go`, decompose XXLs into sub-issues (parentId),
+               return the readiness report (3 of 5 criteria; velocity calibration
+               and owner assignment come back `not mine to judge`)
    │
-   ▼  GATE 1: SPRINT COMMITMENT — Tech Lead opens the Cycle in Linear
+   ▼  GATE 1: SPRINT COMMITMENT — Tech Lead calibrates, assigns owners,
+              and opens the Cycle in Linear
    │
 [Step 2.1-2.4] linear-next-task → fetch issue → update_issue (In Progress, assignee=me)
-               → git checkout <branchName> → kickoff comment → context pull
+               → git checkout <branchName> → kickoff comment → /load-task-context
    │
 [Step 3.0]     software-architect → plan → developer approves → plan summary on Linear
                (non-trivial stories only; in-pattern stories skip to 3.1)
    │
 [Step 3.1-3.4] Claude Code implement + test + checkpoint comments
-[Step 3.5] self-review → fix Critical/High before PR
+[Step 3.5] open-pull-request → self-review → fix + re-review every Critical/High
+              → Definition-of-Done walk (met / not met / cannot verify)
    │
-[Step 4.1] Open PR with [ENG-XXX] title + Closes ENG-XXX
-              ↳ if rebase conflicts → conflict-resolver
+[Step 4.1] open-pull-request → rebase → compose title + body → linear-task-agent
+           posts verbatim ([ENG-XXX] title + Closes ENG-XXX)
+              ↳ if rebase conflicts → conflict-resolver, then re-review the hunks
            → Linear auto-transitions to In Review
 [Step 4.2] CI: lint + types + tests + CodeQL SAST + coverage threshold
 [Step 4.3] AI review: configured reviewer(s) — CodeRabbit and/or Claude bot
@@ -966,7 +1013,7 @@ Three explicit gates ensure that **no code reaches main without CI + AI review +
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
 - [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
-- [Specialist Subagent Prompts →](./subagent-prompts/README.md)
+- [Specialist Subagent Prompts →](./subagent-prompts/README.md) · [Skill Templates →](./skill-prompts/README.md) · [Command Templates →](./command-prompts/README.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
 
 ## External References

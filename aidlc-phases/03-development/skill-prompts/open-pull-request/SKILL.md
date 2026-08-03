@@ -1,0 +1,30 @@
+---
+name: open-pull-request
+description: Use when a developer has finished implementing a story on a branch and the change is going up for review — running the pre-PR self-review on the diff, requiring every Critical and High to be fixed and then re-reviewed before anything else proceeds, walking the per-story Definition of Done line by line and marking each line met / not met / cannot verify, rebasing onto the current default branch, and only then opening the PR with the tracker identifier in the title and the closing keyword in the body. Triggers on "I'm done, open the PR", "ready to PR", "take this branch to PR", "ship this branch", "raise the PR for ENG-XXX", "run the pre-PR checks", "can this go up for review". Hands the diff review to `code-reviewer`, the fixes to `frontend-engineer` / `backend-engineer`, rebase conflicts to `conflict-resolver`, and the PR write itself to `linear-task-agent` — this skill writes no tracker field and merges nothing. Do NOT use for: a diff review with no PR at the end of it (that is the pre-PR diff reviewer on its own), reviewing or answering a PR that is already open, merging, or a refactor branch with no tech-debt issue behind it.
+---
+
+# Take a finished branch to PR
+
+You are running the gate between *the code works on my machine* and *a reviewer's time is now being spent*. The source of truth is the story's acceptance criteria and the team's Definition of Done. The number this procedure exists to protect is **zero PRs opened carrying a Critical or High the author already knew about**.
+
+Nothing downstream re-runs any of this. The PR writer opens whatever it is handed, and the reviewer assumes this pass already happened.
+
+## Procedure
+
+1. **Establish the identifier first.** Read the story identifier off the working branch and ask the developer which story this PR is for. **If the two disagree, stop and surface both — do not pick.** A one-character difference de-links the PR from the tracker and can auto-close an unrelated issue on merge.
+2. Run `{{TEST_RUNNER}}`. **A red suite is not a review input** — stop and report it. Then hand the full diff against `{{DEFAULT_BRANCH}}`, plus the story and its acceptance criteria, to `code-reviewer` for a read-only severity-ranked pass.
+3. **Every Critical and every High is fixed before step 4.** Hand each to `frontend-engineer` or `backend-engineer`, one commit per fix, then **re-run step 2 against the new diff**. The first report's projected post-fix counts are a prediction, not a measurement, and a count nobody re-measured is how a Critical reaches a reviewer. Medium and Low may be deferred, each with the one-line reason recorded for step 6.
+4. **Walk the Definition of Done one line at a time** — every AC verified · unit tests on all new business logic · inline docs on new public functions · no known bugs introduced · module READMEs updated where a module crossed the team's documentation threshold — and mark each line **met** (naming the test or file that proves it), **not met**, or **cannot verify**. `cannot verify` is a real answer and you will need it: a manual check you did not watch, and "no known bugs", cannot be established from a diff. **Never round `cannot verify` up to `met`**, and never call the DoD complete while any line reads `not met`.
+5. Rebase onto current `{{DEFAULT_BRANCH}}`. Conflicts go to `conflict-resolver` — never abort a rebase without an explicit instruction that names the work being discarded. **If any conflict was resolved, the step-2 review is now stale:** re-review the resolved hunks before continuing. Resolution code is code no reviewer has ever read.
+6. Ask one question — **is this the only PR for this story?** — then write, without posting: the title in `{{PR_TITLE_FORMAT}}` carrying the exact identifier from step 1; and the body — Summary (3-5 lines, what and why) · the closing keyword, `Closes <identifier>` for a single-PR story or `Part of <identifier>` where the story spans several and closes by hand · Approach, citing the reference module followed · an AC checklist naming the test that proves each bullet · the AI-generated sections by file path, one line each · Notes for reviewer, carrying the step-3 deferrals and every step-4 `cannot verify` line. **Never assume `Closes`** — on a multi-PR story it closes the issue at the first merge.
+7. Hand `linear-task-agent` the **finished title and body verbatim, to post unmodified**, and stop at its confirm-then-`go`. Do not hand it a summary to draft from: it carries a body shape of its own, and re-drafting is where the closing keyword and the AI-generated notation quietly go missing. → the PR-merge gate — CI, the configured AI reviewers and human approval, none of which are yours.
+
+## Refusal cases
+
+- **Never proceed past step 3 with an open Critical or High**, whatever reason is offered — *the reviewer will catch it*, *we'll fix it in review*, *the release is today*. Deferral is the excuse that reads like a reason, and nothing downstream refuses it on your behalf.
+- **Never mark a Definition-of-Done line `met` on an assertion you were handed rather than evidence you saw.** `cannot verify` exists precisely for that case; using it is not a failure of the pass.
+- Never apply the fixes yourself. The review is read-only and the fixes belong to the implementation specialists, in their own commits, so the history stays reviewable.
+- **Never force-push a branch that carries commits you did not watch land.** Confirm with the developer first; a rebase plus a reflexive force-push is how a teammate's work disappears.
+- Never open a PR whose title identifier differs from the branch's, and never edit the identifier to make them agree — surface the mismatch instead.
+- A refactor branch with no tech-debt issue behind it does not go up here. Refactors are PRs against tracked tech-debt, never against a feature story.
+- Reviewing, answering or merging a PR that is already open is not yours — that is the team's post-open PR review tooling and the human approver.

@@ -4,7 +4,7 @@
 >
 > **Why it is not per-phase.** Artifacts are **not scoped to the phase that ships them.** `linear-task-agent` is used whenever someone works a story, in month one or month nine. `publish-prd-to-linear` is used whenever requirements are written, including a mid-project change request. A boundary between two artifacts used across phases cannot be expressed inside either phase's README — which is exactly why this file exists.
 >
-> **Scope: 25 shipped artifacts** — 7 development subagents, 2 DevOps subagents, 3 design subagents, 6 DevOps skills, 3 requirement skills, 3 design skills, 1 command. Proposed-but-unbuilt artifacts are listed in [PROMPT-CONVERSION-ANALYSIS.md](./PROMPT-CONVERSION-ANALYSIS.md) and enter this map when they ship, not before.
+> **Scope: 29 shipped artifacts** — 7 development subagents, 2 DevOps subagents, 3 design subagents, 6 DevOps skills, 3 requirement skills, 3 design skills, **2 development skills**, and **3 commands** (1 design, 2 development). Proposed-but-unbuilt artifacts are listed in [PROMPT-CONVERSION-ANALYSIS.md](./PROMPT-CONVERSION-ANALYSIS.md) and enter this map when they ship, not before.
 
 ---
 
@@ -35,7 +35,10 @@ The **Provenance** column records which phase ships the template. It is a lookup
 | `publish-prd-to-linear` | Skill | The requirements Document, the Project that carries it, the section-anchor map | Milestones, Issues, marking anything approved | P1 |
 | `scaffold-linear-milestones` | Skill | Milestones — creation, order, target dates | The Project, the Document, Issues | P1 |
 | `push-linear-stories` | Skill | First-time story creation from a requirements document: Triage issues, their AC, labels, deep-links | Milestones, any state move past Triage, clearing `needs-human-review` | P1 |
-| `linear-task-agent` | Subagent | Writes **around a story already in flight**: find, start, progress comment, PR-open, done, single follow-up filing, field updates | Requirements Documents, Projects, Milestones, bulk issue creation from a requirements document; sprint planning; code | P3 |
+| `linear-task-agent` | Subagent | Writes **around a story already in flight**: find, start, progress comment, PR-open, done, single follow-up filing, field updates | Requirements Documents, Projects, Milestones, bulk issue creation from a requirements document; sprint planning; code; **opening a PR before the pre-PR gate has run** | P3 |
+| `run-sprint-planning` | Skill | Outer-loop cycle preparation: the read-only candidate pull, the sizing, the estimate field and its comment, XXL decomposition into sub-issues of an existing backlog story | Every write around a story already in flight; backlog construction from a requirements document; velocity calibration; owner assignment; opening or committing the cycle | P3 |
+
+**The tracker now has three write types, not two.** The requirement skills **construct** the backlog from a document; `run-sprint-planning` **prepares** what is already in it for commitment; `linear-task-agent` **operates** on one story in flight. All three create issues, so "does it create an issue?" separates none of them. The tests that do: *where does the issue come from* (a requirements document vs. a parent backlog story vs. the work in hand), and *what state is the story in* — `run-sprint-planning` writes only to `Backlog` and drops anything that has left it, because a story in flight already carries a committed number and re-sizing it mid-cycle rewrites the history the team calibrates against.
 
 **The tie-break, stated as a write type:** the three skills **construct the backlog**; `linear-task-agent` **operates on a story that already exists in it**. Both write issues, so "does it create an issue?" is not the test. The test is *where the issue comes from* — a requirements document (skills) or a developer working a story who found something (agent).
 
@@ -55,8 +58,32 @@ The **Provenance** column records which phase ships the template. It is a lookup
 | `refactor-specialist` | Subagent | Refactoring executed against an existing `tech-debt` issue | Identifying candidates for filing, behaviour changes | P3 |
 | `code-reviewer` | Subagent | Pre-PR self-review of a diff, read-only | Applying fixes, post-open PR review, architecture review | P3 |
 | `conflict-resolver` | Subagent | Merge / rebase / cherry-pick conflict resolution on the working tree | Anything not conflict-shaped; never `--abort`s unasked | P3 |
+| `open-pull-request` | Skill | The **ordered pre-PR gate** as one procedure: identifier reconciliation, self-review, fixes **and their re-review**, the Definition-of-Done walk, the rebase and the re-review of resolved hunks, the composed title and body | The diff review itself, the fixes, the conflict resolution, **any tracker write**, the merge, anything after the PR is open | P3 |
+| `/load-task-context` | Command | **Dereferencing** a story's pointers — the requirement section, the governing decision records, the API-spec section per endpoint, the module's existing tests — and reporting each with a conflict verdict | Any tracker write, writing a missing source, resolving a conflict it found, starting the implementation | P3 |
+| `/write-module-readme` | Command | One module's `README.md`, from seven candidate sections each admitted only on evidence found in the module | API reference content (it renders from the spec), clearing the `TODO`/`FIXME` markers it surfaces, documenting a repo or a module it was not pointed at | P3 |
 
 **Test-writing is deliberately not a separate owner.** The implementation specialists claim unit and integration tests by **positive** trigger, because the test ships in the same commit as the code. An artifact that claimed "write the tests" generally would take that work away from them mid-story.
+
+#### The `open-pull-request` collision set — **CLOSED**, and worth reading phrase by phrase
+
+The sharpest collision in this repo so far. `open-pull-request` auto-triggers, and **two shipped subagents claimed the same utterances verbatim in their own descriptions.** Both are now closed by coordinated edits that landed in the same PR as the skill — recorded here rather than deleted, because the closure is three sentences in three files and the next edit to any of them re-opens it.
+
+| Skill phrase | Was claimed by, verbatim | What the incumbent winning costs |
+|---|---|---|
+| *"I'm done, open the PR"* · *"raise the PR for ENG-XXX"* | `linear-task-agent` — **"open the PR for this branch"** | The PR opens with **no self-review, no Definition-of-Done walk and no rebase.** Gate 2's entire pre-merge half is bypassed — **and the PR looks completely normal.** Nothing downstream re-runs any of it, and the reviewer assumes the pass already happened |
+| *"ready to PR"* · *"run the pre-PR checks"* · *"can this go up for review"* | `code-reviewer` — **"anything to fix before I PR"** / **"review my diff before I PR"** | The developer gets **step 2 of 7** and reads a clean report as *ready*. Steps 3-7 — the verified fixes, the DoD walk, the rebase, the composed body, the hand-off — never run |
+| *"ship this branch"* | **nothing** | Free. Claimed by no other artifact, which is why it survived the narrowing intact |
+
+**How each was closed, and where the closure lives:**
+
+- **`linear-task-agent`** — five additive touches, not one. Its description, its operating boundaries, its **request-classification step** (`pr-open` now presupposes the gate has run), its pr-open flow, and its escalation list. The classification step is the load-bearing one: a request is classified into one of eight flows *before* any boundary is consulted, so a boundary written only in the boundaries section is one the classifier has already run past.
+- **`code-reviewer`** — three touches, and the prescribed edit was in the wrong place. A description-only fix would have missed the real bypass: the agent's **step-5 output format** ended by recommending *"`linear-task-agent` to open the PR"* — **the bypass written into the agent's own output, firing after routing had already succeeded.** Generalise it: *the load-bearing surface is wherever an artifact emits a recommendation, not only where it accepts a request.* Any boundary check that reads only descriptions will miss this class.
+
+> **A lower-severity adjacency that needed no edit, recorded so nobody "fixes" it.** `conflict-resolver` claims *"merge main into my branch"* and *"fix the conflicts on this rebase"*; `open-pull-request` has **no rebase trigger**, so there is no collision. But *"rebase onto main and open the PR"* speaks both artifacts' language in one sentence, and **the conflict resolver has no notion of the gate around it** — it resolves, reports, and stops, and nothing tells the developer that the resolved hunks are now unreviewed code. The mitigation is inside the skill (it re-reviews resolved hunks) rather than in either description, because the utterance is genuinely ambiguous and narrowing either side would cost a real trigger.
+
+> **`run-sprint-planning` collides with nothing, and that is a decision rather than luck.** Its lane was reserved in advance from two directions: the Phase 1 `skill-prompts/README.md` negative-routing check already lists *"estimate these stories for the sprint"* as work the requirement skills must not take, and `linear-task-agent` refuses sprint planning in **three** places — its description, its operating boundaries and its escalation list. **A deliberately reserved lane reads identically to an oversight unless it is written down**, which is the same reasoning that gave the deliberately-unclaimed diagram lane its row in the Phase 2 build. Do not add a bare tracker verb to it, and **do not restore the trigger *"is this ready to commit"*** — unqualified, it reads as a question about a working tree.
+
+> **Both Phase 3 commands carry `disable-model-invocation: true`, so neither has an auto-trigger surface today.** The phrase-level check below is therefore the state of the world **if that field were removed** — which is precisely the scenario the two `command-prompts/README.md` files exist to prevent. `/load-task-context` would claim *"what's the context for ENG-247"* and *"pull the ADRs for this story"*, overlapping `linear-task-agent`'s read-only find flow, which returns those pointers without dereferencing them. `/write-module-readme` would claim *"document this module"* and *"write the README for src/orders"*, which nothing else claims — its exposure is the smaller of the two. **Verify the field is present rather than assuming the directory grants it.**
 
 ### Design-time artifacts
 
@@ -112,6 +139,13 @@ Where two artifacts could plausibly take the same sentence. These are the rows w
 | "is the contrast OK here" | `accessibility-auditor` — **answered as unmeasured** | — | No agent can compute rendered contrast from source. The honest answer names the colour pair and asks for the scan |
 | "draw the architecture diagram" | a project-scope `architecture-diagram` skill where installed | `render-design-diagrams` | Deliberately left with the incumbent — see the collision table below. The framework skill claims the Eraser round-trip, not the bare phrasing |
 | "freeze the API contract" | `api-contract-freeze` | a project-scope `system-design-architect` agent | Skill beats agent on auto-trigger; decide at install which one the repo keeps |
+| "open the PR for this branch" | `open-pull-request` | `linear-task-agent` | The tracker agent **posts** the PR; it does not run the gate in front of it. Closed in the agent's classification step, not only its description — `pr-open` is chosen before any boundary is read |
+| "anything to fix before I PR" | `code-reviewer` | `open-pull-request` | A diff review with **no PR at the end of it**. The skill excludes bare "review my diff" by name, which is what leaves the reviewer its own lane in the reciprocal direction |
+| "ready to PR" · "can this go up for review" | `open-pull-request` | `code-reviewer` | There *is* a PR at the end of it. A clean review is step 2 of 7, and it reads as *ready* to anyone in a hurry |
+| "rebase onto main and open the PR" | `open-pull-request` | `conflict-resolver` | Both artifacts' language in one sentence. The resolver owns the conflict; it has no notion of the gate around it, and resolved hunks are unreviewed code until the skill re-reviews them |
+| "estimate these stories for the sprint" | `run-sprint-planning` | `linear-task-agent` / the requirement skills | Outer-loop cycle preparation. The lane was reserved in advance in three places on one side and one on the other — see the collision set above |
+| "re-estimate ENG-247, it's bigger than we thought" | *nothing* | `run-sprint-planning` | The story has left `Backlog`. The skill refuses: a committed number is what velocity is calibrated against, and overwriting it makes the machine guess and the team's number indistinguishable |
+| "document this module" | `/write-module-readme` — **explicitly fired only** | — | The command carries `disable-model-invocation: true`, so today this utterance routes nowhere. Listed because removing that field would make it a live claim |
 
 ---
 
@@ -122,16 +156,20 @@ A verb in this list is spoken for. **Never add it to a new artifact's trigger ph
 | Verb / phrase | Owner |
 |---|---|
 | implement, build the feature, scaffold the component | `frontend-engineer` / `backend-engineer` |
-| review my diff, anything to fix before I PR | `code-reviewer` |
+| review my diff, anything to fix before I PR | `code-reviewer` — **a diff review with no PR at the end of it** |
+| ready to PR, run the pre-PR checks, can this go up for review, ship this branch | `open-pull-request` |
 | refactor | `refactor-specialist` |
 | resolve the conflicts, fix the rebase | `conflict-resolver` |
-| my next task, move ENG-XXX to, comment progress, open the PR | `linear-task-agent` |
-| file a bug, log a follow-up, track this for later | `linear-task-agent` (and `file-followup-bug` where built) |
+| my next task, move ENG-XXX to, comment progress, open the PR | `linear-task-agent` — **but "open the PR" only after `open-pull-request` has run the gate** |
+| plan the next sprint, size the backlog, decompose this XXL story | `run-sprint-planning` — every trigger names the sprint, the cycle or the backlog. **Never add "is this ready to commit"** |
+| file a bug, log a follow-up, track this for later | `linear-task-agent`. **Not `file-followup-bug`** — see the note below |
 | apply, destroy, terraform state | **nobody** — no agent holds an apply credential by design |
 | commit the DSL, the editor URL, the PNG/SVG export | `render-design-diagrams` |
 | freeze the spec, stand up the mock server | `api-contract-freeze` |
 | write the ADR, record the decision, document why we chose X | `/adr` |
 | draw the architecture diagram, diagram this flow, generate a C4 diagram | **deliberately unclaimed** — left to a project-scope diagram skill. Claiming it is what re-opens the collision above |
+
+> **`file-followup-bug` is not a shipped artifact, and this file said it was.** The row above previously read *"`linear-task-agent` (and `file-followup-bug` where built)"*, which reads as a slug awaiting a build. It is not: it exists only as the **worked teaching example** in `03-development/PROCESS.md` (L363) — the illustration used to show what a `SKILL.md` looks like — plus references in this file, in [PROMPT-CONVERSION-ANALYSIS.md](./PROMPT-CONVERSION-ANALYSIS.md) and in a Phase 1 README. **No directory contains it and none is planned to.** The follow-up-filing capability is `linear-task-agent`'s `file-followup` flow, capped at one issue arising from the story in flight. The Phase 3 build's `refactor-specialist` edit was prescribed to route to this name and shipped **restated by work type** instead, precisely to avoid minting a fourth reference to a template that does not exist — the same dangling-slug defect the `pr-reviewer` fix removed in v2.4. **Do not name it in a shipped template.**
 
 Two naming patterns keep the surface small and are worth preserving:
 
@@ -152,6 +190,8 @@ Predicted, not observed — both trees below are gitignored, so these are what h
 | `data-model-design`, `api-contract-freeze` | a project-scope `system-design-architect` agent | **Newly recorded.** That agent claims "produce the data model / OpenAPI contract / ADRs" and "freeze the API contract" as invocation phrases. Skills beat agents on auto-trigger, so the skills take those utterances — the gate-favourable outcome — but the agent's own boundaries stop running for that work. A silent behaviour change in any repo with both; decide at install |
 | `solution-architect` | a project-scope `system-design-architect` agent | Same agent, third overlap — it also claims system-level option generation. Its scope is the union of three framework artifacts, so a repo keeping it should retire it rather than run both |
 | `e2e-and-coverage-engineer` *(unbuilt)* | a project-scope `qa-test-engineer` agent | Renamed pre-emptively; the existing agent carries the opposite scope |
+| `open-pull-request` | **an already-vendored copy of `linear-task-agent` or `code-reviewer`** | **A collision class the others do not have, because Phase 3 shipped across two builds.** Its seven subagents vendored into consuming repos long before the skill existed, so the edits that close the collision set above are in templates those repos already have an older copy of. **This is the only entry in this table that is not predicted — it is certain** for any repo that installed Phase 3 before this build and does not re-copy. Symptom: the PR opens with no self-review, no DoD walk and no rebase, and looks entirely normal. Re-copy `subagent-prompts/` alongside `skill-prompts/`, or treat `/open-pull-request` as explicitly invoked |
+| `open-pull-request` | **a partial Phase 3 install** | Not a name collision but the same failure. `open-pull-request` names five sibling subagents by slug; `linear-task-agent` and `code-reviewer` name it back. **Installing `subagent-prompts/` without `skill-prompts/` leaves two templates pointing at a skill the repo does not have** — and the reverse leaves a skill pointing at five absent agents. The repo's "same-phase slugs never dangle" rule assumes a repo installs *the phase*; installation is per-directory, so the rule needs that qualifier |
 
 ---
 

@@ -212,12 +212,20 @@ ai-dlc-resources/
 │   │   ├── QUALITY-GATES.md
 │   │   ├── FLOWCHART.md
 │   │   ├── PR-REVIEW-BOT.md                        ← Claude PR review bot CI integration (a Step 4.3 option)
-│   │   └── subagent-prompts/                       ← Specialist Claude Code subagent templates
+│   │   ├── subagent-prompts/                       ← Specialist Claude Code subagent templates
+│   │   │   ├── README.md                           ← How to instantiate per repo
+│   │   │   ├── frontend-engineer.md                ← UI implementation (Steps 3.1–3.3)
+│   │   │   ├── backend-engineer.md                 ← Server-side implementation (Steps 3.1–3.3)
+│   │   │   ├── code-reviewer.md                    ← Pre-PR self-review (Step 3.5, read-only)
+│   │   │   └── refactor-specialist.md              ← Step 5 refactoring against tech-debt issues
+│   │   ├── skill-prompts/                          ← Development skill templates (folders)
+│   │   │   ├── README.md                           ← How to instantiate per repo
+│   │   │   ├── open-pull-request/SKILL.md          ← Self-review → DoD walk → rebase → PR (Steps 3.5, 4.1)
+│   │   │   └── run-sprint-planning/SKILL.md        ← Backlog pull → sizing → estimates → XXL split (Step 1)
+│   │   └── command-prompts/                        ← Slash-command templates
 │   │       ├── README.md                           ← How to instantiate per repo
-│   │       ├── frontend-engineer.md                ← UI implementation (Steps 3.1–3.3)
-│   │       ├── backend-engineer.md                 ← Server-side implementation (Steps 3.1–3.3)
-│   │       ├── code-reviewer.md                    ← Pre-PR self-review (Step 3.5, read-only)
-│   │       └── refactor-specialist.md              ← Step 5 refactoring against tech-debt issues
+│   │       ├── load-task-context.md                ← `/load-task-context` — dereference a story's sources (Step 2.4)
+│   │       └── write-module-readme.md              ← `/write-module-readme` — evidence-gated module README (Step 6.2)
 │   ├── 04-testing-and-qa/
 │   │   ├── PROCESS.md
 │   │   ├── PROMPTS.md

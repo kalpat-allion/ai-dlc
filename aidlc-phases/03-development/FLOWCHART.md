@@ -24,7 +24,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 | 👤 | Human-led action |
 | Diamond | Decision point or quality gate |
 | Dark navy node | Phase / step entry or exit |
-| Purple node | One-time setup callout (Step 0) **or** Claude Code subagent invocation (`software-architect`, `conflict-resolver`) |
+| Purple node | One-time setup callout (Step 0) **or** Claude Code subagent invocation (`software-architect`, `conflict-resolver`) — skills and commands are named inside the step nodes they run, not given nodes of their own |
 | Blue node | Linear MCP write action |
 | Green node | Auto-transition driven by Linear ↔ git integration |
 | Amber node | Fallback / escalation branch |
@@ -57,7 +57,7 @@ The phase is split into seven per-step flowcharts so each can be navigated, embe
 
 ## Step 0: One-Time Setup
 
-One-off MCP wiring per developer — Claude Code in the terminal (or its IDE extension). After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster (new subagents at `.claude/agents/<name>.md`, new skills at `.claude/skills/<name>/SKILL.md`) following a uniform frontmatter shape, system-prompt structure, and four-test pre-commit gate (discovery, smoke / explicit invocation, boundary / refusal, negative-routing / auto-trigger). Phase 3 also widens Claude Code's Linear tool-permission settings from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster committed to the repo, and the team aligned on how to add new subagents and skills safely.
+One-off MCP wiring per developer — Claude Code in the terminal (or its IDE extension). After the MCP is wired and the git integration enabled, the team commits a local Claude Code subagent roster under `.claude/agents/` — `linear-task-agent` (workflow orchestration: fetch next story, transition state, branch from `branchName`, kickoff/progress comments, PR open) plus the Phase 3 role specialists (`software-architect`, `frontend-engineer`, `backend-engineer`, `code-reviewer`, `refactor-specialist`, `conflict-resolver`) that carry the role-scoped system prompts for per-story architecture design, actual implementation, pre-PR review, refactoring, and on-demand resolution of merge/rebase conflicts. Alongside the roster the team installs the phase's **two skills** (`run-sprint-planning`, `open-pull-request`) under `.claude/skills/<name>/SKILL.md` and its **two commands** (`/load-task-context`, `/write-module-readme`) under `.claude/commands/<name>.md` — in the same change as the subagents, because `open-pull-request` and two of the subagents now name each other. The team then adopts the two **extensibility recipes** — `Creating your own Claude Code subagent` and `Creating your own Claude Code skill` — so any developer can extend the roster following a uniform frontmatter shape, system-prompt structure, and a pre-commit gate of four tests for a subagent (discovery, no-write smoke, boundary / refusal, negative-routing) or **five for a skill**, the fifth being hand-off integrity: a skill that hands the receiving subagent the wrong shape produces a confident-looking failure rather than a visible one. Phase 3 also widens Claude Code's Linear tool-permission settings from Phase 1's read-only baseline to permit `update_issue` (state changes), `assign_issue`, and `create_issue` with `parentId` (sub-issues). Output is a verified Claude Code ↔ Linear MCP integration with the Linear ↔ git auto-link enabled, the full subagent roster plus the two skills and two commands committed to the repo, and the team aligned on how to add new subagents and skills safely.
 
 ```mermaid
 flowchart TD
@@ -75,10 +75,13 @@ flowchart TD
     S0_GIT --> S0_AGENT
 
     S0_AGENT[Commit local subagent roster under .claude/agents/<br/>linear-task-agent for workflow orchestration<br/>+ Phase 3 specialists: software-architect, frontend-engineer,<br/>backend-engineer, code-reviewer, refactor-specialist,<br/>conflict-resolver<br/>verify with /agents and a no-write smoke test<br/>🤖 Claude Code + 👤 Tech Lead reviews]
-    S0_AGENT --> S0_RECIPES
+    S0_AGENT --> S0_INSTALL
 
-    S0_RECIPES[Adopt extensibility recipes<br/>new subagents at .claude/agents/&lt;name&gt;.md<br/>new skills at .claude/skills/&lt;name&gt;/SKILL.md<br/>shared frontmatter shape + system-prompt structure<br/>four pre-commit tests: discovery, smoke / explicit invocation,<br/>boundary / refusal, negative-routing / auto-trigger<br/>single-responsibility for agents, single-procedure for skills<br/>👤 Tech Lead walks team through the recipes]
-    S0_RECIPES --> S0_VERIFY{Verification checklist:<br/>linear connected,<br/>branchName returns on smoke test,<br/>git integration ON,<br/>update_issue + assign_issue + create_issue scopes ON,<br/>delete_issue OFF,<br/>linear-task-agent + 6 Phase 3 specialists listed by /agents,<br/>linear-task-agent passes no-write smoke test,<br/>gh / git CLI available for conflict-resolver,<br/>team understands new-subagent recipe + four tests,<br/>team understands new-skill recipe + four tests,<br/>audit log on?}
+    S0_INSTALL[Install the Phase 3 skills and commands<br/>skills copied as folders with cp -r into .claude/skills/<br/>run-sprint-planning + open-pull-request<br/>commands copied as files into .claude/commands/<br/>load-task-context + write-module-readme<br/>install with .claude/agents/, not after -<br/>open-pull-request and two subagents name each other<br/>🤖 Claude Code + 👤 Tech Lead reviews]
+    S0_INSTALL --> S0_RECIPES
+
+    S0_RECIPES[Adopt extensibility recipes<br/>new subagents at .claude/agents/&lt;name&gt;.md<br/>new skills at .claude/skills/&lt;name&gt;/SKILL.md<br/>shared frontmatter shape + system-prompt structure<br/>four pre-commit tests for subagents: discovery, smoke,<br/>boundary / refusal, negative-routing<br/>five for skills - the fifth is hand-off integrity<br/>single-responsibility for agents, single-procedure for skills<br/>👤 Tech Lead walks team through the recipes]
+    S0_RECIPES --> S0_VERIFY{Verification checklist:<br/>linear connected,<br/>branchName returns on smoke test,<br/>git integration ON,<br/>update_issue + assign_issue + create_issue scopes ON,<br/>delete_issue OFF,<br/>linear-task-agent + 6 Phase 3 specialists listed by /agents,<br/>2 skills under their slugs + 2 commands in the / menu,<br/>linear-task-agent passes no-write smoke test,<br/>gh / git CLI available for conflict-resolver,<br/>team understands new-subagent recipe + four tests,<br/>team understands new-skill recipe + five tests,<br/>audit log on?}
 
     S0_VERIFY -- No --> S0_ANTH
     S0_VERIFY -- Yes --> S0_END([Setup complete<br/>Ready for Step 1: Sprint Planning])
@@ -88,6 +91,7 @@ flowchart TD
     style S0_ANTH fill:#5C2E8A,color:#fff
     style S0_GIT fill:#5C2E8A,color:#fff
     style S0_AGENT fill:#5C2E8A,color:#fff
+    style S0_INSTALL fill:#5C2E8A,color:#fff
     style S0_RECIPES fill:#5C2E8A,color:#fff
     style S0_A3 fill:#3D6B9F,color:#fff
 ```
@@ -96,25 +100,25 @@ flowchart TD
 
 ## Step 1: Sprint Planning
 
-Entry point is the Phase 2 handoff: the Linear Project with PRD Document, ADRs, OpenAPI, and wireframes ready. Sub-stages 1.1 → 1.6 pull the candidate backlog from Linear via MCP, generate AI estimates, post estimates back as comments, decompose XXL stories into sub-issues using `parentId`, calibrate with the team, and commit to a Linear Cycle. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment)** closes the step — every committed story has AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. On a failed gate, the loop returns to 1.4 to re-calibrate.
+Entry point is the Phase 2 handoff: the Linear Project with PRD Document, ADRs, OpenAPI, and wireframes ready. Sub-stages 1.1 → 1.6 pull the candidate backlog from Linear via MCP, generate AI estimates, post estimates back as comments, decompose XXL stories into sub-issues using `parentId`, calibrate with the team, and commit to a Linear Cycle. **1.1, 1.2, 1.3 and 1.5 are one procedure, run by the [`run-sprint-planning`](./skill-prompts/run-sprint-planning/SKILL.md) skill**; 1.4 and 1.6 are deliberately outside it. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment)** closes the step — every committed story has AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. The skill answers **three of those five** and returns velocity calibration and owner assignment as `not mine to judge`, so the gate diamond is genuinely a human stop, not a formality. On a failed gate, the loop returns to 1.4 to re-calibrate.
 
 ```mermaid
 flowchart TD
     SP_IN([From Phase 2 handoff: Linear Project<br/>PRD + ADRs + OpenAPI + wireframes<br/>+ accepted backlog]) --> SP1
 
-    SP1[1.1 linear-sprint-pull<br/>search_issues filtered by Project,<br/>state Backlog, priority order<br/>returns title + AC + branchName<br/>🔌 Claude Code + Linear MCP] --> SP2
-    SP2[1.2 estimation prompt per story<br/>T-shirt + Fibonacci + subtasks<br/>+ risks + dependencies<br/>🤖 Claude Code] --> SP3
-    SP3[1.3 estimates-to-linear<br/>update_issue sets estimate field<br/>+ create_comment with subtasks + risks<br/>signed via Claude Code MCP<br/>🔌 Claude Code + Linear MCP] --> SP4
+    SP1[1.1 run-sprint-planning - candidate pull<br/>search_issues filtered by Project,<br/>state Backlog, priority order, capped at 50<br/>returns title + AC + branchName<br/>anything outside Backlog is dropped and named<br/>🔌 Claude Code + Linear MCP] --> SP2
+    SP2[1.2 Size each story<br/>T-shirt + Fibonacci + subtasks<br/>+ risks + dependencies<br/>fewer than 3 AC bullets equals refuse to size<br/>🤖 Claude Code] --> SP3
+    SP3[1.3 Post estimates behind a literal go<br/>update_issue sets estimate field<br/>+ create_comment with subtasks + risks<br/>signed via Claude Code MCP<br/>existing estimate needs per-issue confirmation<br/>🔌 Claude Code + Linear MCP] --> SP4
     SP4[1.4 Team calibration<br/>walk AI estimates - capture divergence reasons<br/>greater than 30 percent gets a comment<br/>👤 Dev team] --> SP5
 
     SP5{Any XXL stories<br/>greater than 5 days?}
-    SP5 -- Yes --> SP5A[1.5 story-decomposition<br/>create_issue with parentId<br/>parent stays - sub-issues carry AC slices<br/>🔌 Claude Code + Linear MCP]
+    SP5 -- Yes --> SP5A[1.5 Decompose into sub-issues<br/>create_issue with parentId - separate approval<br/>parent stays - sub-issues carry AC slices verbatim<br/>fewer than 5 AC bullets equals no seams:<br/>record not met and send back for AC<br/>🔌 Claude Code + Linear MCP]
     SP5A --> SP6
     SP5 -- No --> SP6
 
     SP6[1.6 Commit to Linear Cycle<br/>Tech Lead opens Cycle, drags committed stories,<br/>sets dates - velocity drives capacity<br/>👤 Tech Lead] --> G1
 
-    G1{Gate 1: Sprint Commitment?<br/>every story has AC equal or greater than 3,<br/>estimate set, no blocking dependencies,<br/>clear owner}
+    G1{Gate 1: Sprint Commitment?<br/>every story has AC equal or greater than 3,<br/>estimate set, no blocking dependencies,<br/>clear owner<br/>skill answers 3 of 5 - velocity calibration and<br/>owner assignment come back not mine to judge}
     G1 -- No --> SP4
     G1 -- Yes --> SP_OUT([To Step 2: Pick & Start a Story<br/>Inputs: active Cycle + assigned issues])
 
@@ -129,7 +133,7 @@ flowchart TD
 
 ## Step 2: Pick & Start a Story
 
-Entry point is the active Linear Cycle with stories assigned to the developer. Sub-stages 2.1 → 2.4 fetch the next assigned issue, transition it to *In Progress* with self-assign via the `me` keyword, check out the local branch from Linear's `branchName` field (so Linear's git integration auto-links on PR open), post a kickoff comment, and pull dependent context (PRD section, ADRs, OpenAPI, existing tests). There is no gate at the end of Step 2 — flow runs straight into Step 3.
+Entry point is the active Linear Cycle with stories assigned to the developer. Sub-stages 2.1 → 2.4 fetch the next assigned issue, transition it to *In Progress* with self-assign via the `me` keyword, check out the local branch from Linear's `branchName` field (so Linear's git integration auto-links on PR open), post a kickoff comment, and pull dependent context. **2.4 is [`/load-task-context`](./command-prompts/load-task-context.md)** — it follows the story's pointers to the requirement section, the governing decision records, the API-spec section for *every* endpoint the AC touch, and the module's existing tests, and reports each with a conflict column. A source it could not open comes back `not found` / `unchecked` rather than summarised, which is the whole point: missing reads as a blocker and stops someone, plausible reads as done and stops no one. There is no gate at the end of Step 2 — flow runs straight into Step 3.
 
 ```mermaid
 flowchart TD
@@ -144,7 +148,7 @@ flowchart TD
 
     PS2 -- Yes --> PS3[2.2 Transition + assign + kickoff comment<br/>update_issue state=In Progress + assignee=me<br/>+ create_comment - Started by user via Claude Code,<br/>plan two to three lines<br/>🔌 Claude Code + Linear MCP]
     PS3 --> PS4[2.3 git checkout branchName<br/>read branchName from issue object<br/>git checkout -b - never invent a branch name<br/>🤖 Claude Code]
-    PS4 --> PS5[2.4 task-context pull<br/>PRD section + ADRs + OpenAPI section<br/>+ existing tests in affected module<br/>last Linear read until the PR<br/>🤖 Claude Code]
+    PS4 --> PS5[2.4 /load-task-context<br/>PRD section + ADRs + one row per endpoint<br/>+ existing tests in affected module<br/>anything unreadable equals not found / unchecked<br/>read-only - reports, never fixes<br/>🤖 Claude Code]
     PS5 --> PS_OUT([To Step 3: Feature Development<br/>Inputs: working branch + AC + ADRs<br/>+ OpenAPI + data model])
 
     style PS_IN fill:#1B3A5C,color:#fff
@@ -159,7 +163,7 @@ flowchart TD
 
 ## Step 3: Feature Development
 
-Entry point is the working branch from Step 2. **Step 3.0** is a read-only per-story design pass via `software-architect` for non-trivial stories (cross-module touch, schema change, new endpoint surface, new external integration, no clear in-pattern reference module); in-pattern stories skip it and go directly to scaffolding. Sub-stages 3.1 → 3.5 scaffold the feature with Claude Code, write tests alongside code, post checkpoint comments to the Linear issue at substantive milestones, and self-review the diff before opening a PR. The Linear Agent fallback (LA) is an alternative entry where a Tech Lead routes a clearly scoped low-risk story directly to a Linear Agent — agent-authored output still flows through Step 4. The **Multi-agent** branch (MA) is an overlay on the standard path: the developer fans out across Claude Code subagents, an experimental Agent Team, parallel git worktrees, or [Conductor](https://www.conductor.build/) for cross-layer stories, sibling stories in flight, or adversarial review/debug — file-scoped before spawn, capped at 3–5 parallel agents, with `linear-task-agent` retaining sole Linear-write authority. When parallel branches reach merge time, `conflict-resolver` is invoked **inside each affected worktree** to resolve rebase conflicts — single-writer per working tree, never `--abort` without explicit instruction. Drain in-flight implementation specialists before spawning the resolver in the same session (Pattern A); for Conductor (Pattern D), use the dashboard's diff-first review to spot which agent's branch needs resolution vs which can be archived as redundant. Detail and decision rules live in [PROCESS.md → Multi-agent development patterns](./PROCESS.md#multi-agent-development-patterns). There is no gate at the end of Step 3 — Critical/High self-review issues must be resolved before PR open, then flow runs into Step 4.
+Entry point is the working branch from Step 2. **Step 3.0** is a read-only per-story design pass via `software-architect` for non-trivial stories (cross-module touch, schema change, new endpoint surface, new external integration, no clear in-pattern reference module); in-pattern stories skip it and go directly to scaffolding. Sub-stages 3.1 → 3.5 scaffold the feature with Claude Code, write tests alongside code, post checkpoint comments to the Linear issue at substantive milestones, and self-review the diff before opening a PR. **3.5 is where [`open-pull-request`](./skill-prompts/open-pull-request/SKILL.md) starts** — the loop back from the fix node is the skill's re-review, not a repeat of the same pass: a first report's projected post-fix counts are a prediction, and a count nobody re-measured is how a Critical reaches a reviewer. The skill continues into 4.1 and does not stop at the step boundary. The Linear Agent fallback (LA) is an alternative entry where a Tech Lead routes a clearly scoped low-risk story directly to a Linear Agent — agent-authored output still flows through Step 4. The **Multi-agent** branch (MA) is an overlay on the standard path: the developer fans out across Claude Code subagents, an experimental Agent Team, parallel git worktrees, or [Conductor](https://www.conductor.build/) for cross-layer stories, sibling stories in flight, or adversarial review/debug — file-scoped before spawn, capped at 3–5 parallel agents, with `linear-task-agent` retaining sole Linear-write authority. When parallel branches reach merge time, `conflict-resolver` is invoked **inside each affected worktree** to resolve rebase conflicts — single-writer per working tree, never `--abort` without explicit instruction. Drain in-flight implementation specialists before spawning the resolver in the same session (Pattern A); for Conductor (Pattern D), use the dashboard's diff-first review to spot which agent's branch needs resolution vs which can be archived as redundant. Detail and decision rules live in [PROCESS.md → Multi-agent development patterns](./PROCESS.md#multi-agent-development-patterns). There is no gate at the end of Step 3 — Critical/High self-review issues must be resolved before PR open, then flow runs into Step 4.
 
 ```mermaid
 flowchart TD
@@ -199,12 +203,13 @@ flowchart TD
 
     F_TESTS[3.3 Tests alongside code<br/>test-generation prompt with example test<br/>happy + error + edge + AC mapping<br/>🤖 Claude Code] --> F_PROG
     F_PROG[3.4 linear-progress-comment at checkpoints<br/>create_comment with diff summary<br/>checkpoint comments only on substantive change<br/>🔌 Claude Code + Linear MCP] --> F_SELF
-    F_SELF[3.5 self-review prompt<br/>severity-ranked issue list:<br/>correctness, security, performance,<br/>error handling, edge cases, naming, tests, docs<br/>🤖 Claude Code] --> F_FIX
+    F_SELF[3.5 open-pull-request - step 2: code-reviewer<br/>severity-ranked issue list:<br/>correctness, security, performance,<br/>error handling, edge cases, naming, tests, docs<br/>a red suite is not a review input<br/>🤖 Claude Code] --> F_FIX
 
     F_FIX{Critical / High<br/>issues found?}
-    F_FIX -- Yes --> F_RESOLVE[Resolve each as separate commit<br/>preserves rollback points<br/>👤 developer]
+    F_FIX -- Yes --> F_RESOLVE[Resolve each as separate commit<br/>frontend-engineer / backend-engineer apply<br/>the review is read-only<br/>👤 developer]
     F_RESOLVE --> F_SELF
-    F_FIX -- No --> F_OUT([To Step 4: Code Review<br/>Inputs: feature branch + passing local tests])
+    F_FIX -- No --> F_DOD[3.5 Definition-of-Done walk<br/>every line marked met / not met / cannot verify<br/>cannot verify is never rounded up to met<br/>🤖 Claude Code open-pull-request]
+    F_DOD --> F_OUT([To Step 4: Code Review<br/>Inputs: feature branch + passing local tests<br/>+ a DoD walk carrying its cannot-verify lines])
 
     style F_IN fill:#1B3A5C,color:#fff
     style F_OUT fill:#1B3A5C,color:#fff
@@ -221,7 +226,7 @@ flowchart TD
 
 ## Step 4: Code Review
 
-Entry point is the feature branch with passing local tests. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, CodeQL SAST, coverage threshold), receive **automated AI review**, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done.
+Entry point is the feature branch with passing local tests. **4.1a and 4.1 are the tail of [`open-pull-request`](./skill-prompts/open-pull-request/SKILL.md), which started at 3.5** — it rebases, composes the title and body, and hands them to `linear-task-agent` to post unmodified; the tracker agent writes no PR body of its own here, because re-drafting one is where the closing keyword and the AI-generated notation go missing. Sub-stages 4.1 → 4.6 open the PR with a `[ENG-XXX]` title and `Closes ENG-XXX` body (so Linear's git integration auto-transitions), run CI (lint, types, tests, CodeQL SAST, coverage threshold), receive **automated AI review**, complete human review (one approver minimum, two for high blast radius), merge, and verify Linear's auto-transition to Done.
 
 At 4.3 the diagram shows **two peer options, not a sequence** — a project configures CodeRabbit (hosted, vendor-tuned, flat cost, near-zero upkeep), the [Claude PR review bot](./PR-REVIEW-BOT.md) (self-hosted in CI, driven by a checklist committed in the repo, per-run cost, checklist upkeep), or both. Neither is a fallback for the other; the dashed edges mean "if configured". The selection rule lives in [PROCESS.md → Step 4.3](./PROCESS.md#step-4-code-review). Whichever runs, it is advisory and non-blocking: it never approves a PR and is never a required status check, so a provider outage cannot freeze the merge queue. **Gate 2: PR Merge** is per-PR — on No, fix and re-run; on Yes, the PR merges and Linear auto-closes the issue. See [QUALITY-GATES.md → Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).
 
@@ -229,13 +234,13 @@ At 4.3 the diagram shows **two peer options, not a sequence** — a project conf
 flowchart TD
     R_IN([From Step 3: Feature branch<br/>+ passing local tests + clean self-review]) --> R_REBASE
 
-    R_REBASE[4.1a Rebase feature branch onto latest main<br/>git fetch origin + git rebase origin/main<br/>👤 developer]
+    R_REBASE[4.1a open-pull-request - rebase onto latest main<br/>git fetch origin + git rebase origin/main<br/>👤 developer]
     R_REBASE --> R_REBASE_Q{Rebase clean?}
-    R_REBASE_Q -- No - conflicts --> R_CONFLICT[conflict-resolver<br/>walk each hunk - apply rule - git add -<br/>git rebase --continue - per-hunk report<br/>NEVER --abort without explicit instruction<br/>🤖 Claude Code]
+    R_REBASE_Q -- No - conflicts --> R_CONFLICT[conflict-resolver<br/>walk each hunk - apply rule - git add -<br/>git rebase --continue - per-hunk report<br/>NEVER --abort without explicit instruction<br/>then re-review the resolved hunks<br/>🤖 Claude Code]
     R_CONFLICT --> R_REBASE_Q
     R_REBASE_Q -- Yes - clean --> R1
 
-    R1[4.1 Open PR<br/>title contains the Linear identifier ENG-XXX<br/>body contains Closes ENG-XXX<br/>+ approach summary + AI-generated sections<br/>🤖 Claude Code pr-description] --> R_AUTO1
+    R1[4.1 open-pull-request composes, linear-task-agent posts<br/>title contains the Linear identifier ENG-XXX<br/>body contains Closes ENG-XXX - or Part of<br/>where the story spans several PRs<br/>+ approach summary + AI-generated sections<br/>+ every cannot-verify line in Notes for reviewer<br/>posted verbatim - never re-drafted<br/>🤖 Claude Code] --> R_AUTO1
     R_AUTO1[Linear auto-transitions issue to In Review<br/>git integration matches branchName + Closes<br/>🔁 Linear ↔ git auto] --> R2
 
     R2[4.2 CI pipeline<br/>lint - type check - unit tests - integration tests<br/>CodeQL SAST + test-runner coverage threshold<br/>equal or greater than 80 percent<br/>🤖 CI] --> R_CI
@@ -308,7 +313,7 @@ flowchart TD
 
 ## Step 6: Documentation
 
-Entry point is implementation code (continuous, alongside Step 3). Sub-stages 6.1 → 6.4 generate inline docs continuously in Claude Code, generate module READMEs when modules cross the threshold (~500 lines or > 3 public exports), auto-generate API docs from `/docs/api/openapi.yaml` (no hand-written API references), and draft operational runbooks via Claude Code with SRE review. There is no dedicated gate — documentation is verified at Phase Handoff.
+Entry point is implementation code (continuous, alongside Step 3). Sub-stages 6.1 → 6.4 generate inline docs continuously in Claude Code, generate module READMEs with [`/write-module-readme`](./command-prompts/write-module-readme.md) when modules cross the threshold (~500 lines or > 3 public exports — the threshold call is the human's, the command documents the path it is handed), auto-generate API docs from `/docs/api/openapi.yaml` (no hand-written API references), and draft operational runbooks via Claude Code with SRE review. There is no dedicated gate — documentation is verified at Phase Handoff.
 
 ```mermaid
 flowchart TD
@@ -317,7 +322,7 @@ flowchart TD
     DOC1[6.1 Inline docs continuous<br/>Claude Code generates docstrings as code is written<br/>review and refine in same commit<br/>🤖 Claude Code + 👤 developer] --> DOC_CHECK
 
     DOC_CHECK{Module crosses<br/>500 lines or 3 public exports?}
-    DOC_CHECK -- Yes --> DOC2[6.2 module-readme prompt<br/>overview, architecture, key concepts,<br/>usage, configuration, testing, limitations<br/>🤖 Claude Code]
+    DOC_CHECK -- Yes --> DOC2[6.2 /write-module-readme<br/>seven candidate sections: overview, architecture,<br/>key concepts, usage, configuration, testing, limitations<br/>each admitted only on evidence in the module<br/>fewer than seven is the normal outcome<br/>report says which were omitted and why<br/>🤖 Claude Code]
     DOC_CHECK -- No --> DOC3
     DOC2 --> DOC3
 
@@ -340,17 +345,18 @@ flowchart TD
     DW_M1 --> DW_M2[linear-next-task<br/>🔌 Claude Code + Linear MCP]
     DW_M2 --> DW_M3[Review AC + ADRs + PRD section<br/>👤]
     DW_M3 --> DW_M4[update_issue In Progress + self-assign<br/>+ git checkout branchName + kickoff comment<br/>🔌 Claude Code + Linear MCP]
-    DW_M4 --> DW_DESIGN{Non-trivial story?}
+    DW_M4 --> DW_M5[2.4 load-task-context command<br/>dereference the story's pointers -<br/>unreadable sources report unchecked<br/>🤖 Claude Code]
+    DW_M5 --> DW_DESIGN{Non-trivial story?}
     DW_DESIGN -- No --> DW_C([Coding])
     DW_DESIGN -- Yes --> DW_D[software-architect → plan →<br/>developer approves →<br/>linear-task-agent posts plan summary<br/>🤖 Claude Code + 🔌 Linear MCP]
     DW_D --> DW_C
 
     DW_C --> DW_C1[Claude Code implement + tests<br/>🤖]
     DW_C1 --> DW_C2[Checkpoint comments on Linear issue<br/>at substantive change<br/>🔌 Claude Code + Linear MCP]
-    DW_C2 --> DW_C3[self-review prompt<br/>resolve Critical/High before PR<br/>🤖 Claude Code]
+    DW_C2 --> DW_C3[open-pull-request<br/>self-review - fix + re-review Critical/High -<br/>DoD walk - rebase<br/>🤖 Claude Code]
     DW_C3 --> DW_R([Review])
 
-    DW_R --> DW_R1[Open PR ENG-XXX + Closes ENG-XXX<br/>Linear auto In Review<br/>🔁]
+    DW_R --> DW_R1[linear-task-agent posts the composed PR verbatim<br/>ENG-XXX + Closes ENG-XXX<br/>Linear auto In Review<br/>🔁]
     DW_R1 --> DW_R2[CI - AI review - Human review<br/>🤖 + 👤]
     DW_R2 --> DW_R3[Merge - Linear auto Done<br/>🔁]
     DW_R3 --> DW_E([End of Day])
@@ -372,8 +378,8 @@ flowchart TD
 
 The flow has three explicit human gates so that no AI-generated code reaches main without sign-off:
 
-1. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment).** Tech Lead opens the Linear Cycle with stories that have AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. AI estimates inform; team velocity commits.
-2. **[Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).** Per PR — CI green, Critical/High findings from every configured AI reviewer resolved or dismissed with a reason, ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations), Linear identifier in title and `Closes` body match the diff.
+1. **[Gate 1: Sprint Commitment](./QUALITY-GATES.md#gate-1-sprint-commitment).** Tech Lead opens the Linear Cycle with stories that have AC ≥ 3, an estimate, no blocking dependencies, and a clear owner. AI estimates inform; team velocity commits — `run-sprint-planning` answers three of the five criteria and returns the calibration and the owner as **`not mine to judge`**, which is why this is a human stop rather than a report to sign.
+2. **[Gate 2: PR Merge](./QUALITY-GATES.md#gate-2-pr-merge).** Per PR — CI green, Critical/High findings from every configured AI reviewer resolved or dismissed with a reason, ≥ 1 human approval (2 for high-blast-radius changes — auth, payments, schema migrations), Linear identifier in title and `Closes` body match the diff. The pre-merge half runs before the PR is open: `open-pull-request`'s Definition-of-Done walk, whose **`cannot verify`** lines are closed by a human, never by the rest of the walk having been clean.
 3. **[Gate 3: Phase Completion](./QUALITY-GATES.md#gate-3-phase-completion).** Coverage ≥ 80% on new code, 0 Critical/High SAST findings on main, all stories Done, retrospective filed with AI-estimate variance recorded.
 
 Linear's git integration handles state changes between Gate 2 and Gate 3 automatically — In Review on PR open, Done on merge — so developers never manually transition issues during normal flow.
@@ -386,4 +392,5 @@ Linear's git integration handles state changes between Gate 2 and Gate 3 automat
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
 - [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
+- [Subagent Templates →](./subagent-prompts/README.md) · [Skill Templates →](./skill-prompts/README.md) · [Command Templates →](./command-prompts/README.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
