@@ -15,6 +15,8 @@
 >
 > **Revision — Phase 1's three P0 skills are now BUILT.** `publish-prd-to-linear`, `scaffold-linear-milestones` and `push-linear-stories` ship as templates under `aidlc-phases/01-requirement-gathering/skill-prompts/`, wired into that phase's PROCESS Step 0, Steps 2.2-2.4 and Stages 3a-3c, and into Gates 1 and 2 with a committed-and-smoke-tested checkbox each. **No prompt was deleted, renamed or rewritten** — the paste path stays valid, so this revision changes no counts: still 96 prompts and 34 artifacts, with **18 built rather than 15**. `sweep-requirements-gaps` is deliberately not built; its own stated condition is that these three run on a real PRD first. **Two deferred decisions had their triggers fire on this build** — see [Build order](#build-order) Phase 0 item 3. See [Phase 1 build — consequences](#phase-1-build--consequences).
 >
+> **Revision — Phase 2 is now BUILT, and the slash-command tier exists.** All **seven** Phase 2 artifacts ship together: `solution-architect`, `architecture-reviewer` and `accessibility-auditor` under `subagent-prompts/`; `render-design-diagrams`, `data-model-design` and `api-contract-freeze` under `skill-prompts/`; and **`/adr` — the first slash command in the repo**, which establishes the `command-prompts/` convention two further commands were queued behind. **No prompt was deleted, renamed or rewritten**, so counts are unchanged: still 96 prompts and 34 artifacts, with **25 built rather than 18**. The `software-architect` coordinated edit landed with them. Phase 2 is the first phase to ship all three artifact tiers at once, and the first to **reuse** placeholder names rather than coin new ones. **One premise this document relied on in three places turned out to be false** — see [Phase 2 build — consequences](#phase-2-build--consequences).
+>
 > **Revision — Pulumi removed (framework v2.4), and Phase 6 is now BUILT.** Pulumi leaves the prescribed framework entirely; Terraform becomes the IaC primary with OpenTofu as the CLI-compatible fallback. One prompt is **deleted** (`Pulumi Cost Delta` — Infracost supports Terraform natively, so its own header stated its obsolescence condition), taking the corpus from 97 to **96**, and one is renamed and rewritten (`Pulumi IaC Generation` → `Terraform IaC Generation`, anchor `#pulumi-iac-generation` → `#terraform-iac-generation`). Phase 6's artifacts grow **4 → 8** and move from *proposed* to *shipped*: `pulumi-iac-engineer` becomes **`terraform-iac-engineer`**, the proposed single `iac-foundation-bringup` **splits** into `iac-state-backend-bringup` + `ci-identity-and-secrets-bringup`, and `cost-guardrails-bringup` + `deploy-and-rollback-bringup` are added so no capability removed with Pulumi silently drops. Artifacts 30 → **34**. `observability-bringup` is **unblocked** — the `/docs/runbooks/` conflict is resolved. See [Pulumi removal — consequences](#pulumi-removal--consequences).
 
 ---
@@ -23,7 +25,7 @@
 
 **55 of 96 prompts convert into 34 artifacts** — 20 skills, 11 subagents, 3 slash commands. **41 stay exactly as they are.**
 
-**18 of the 34 are built.** Phase 3's seven specialists shipped first; Phase 6's eight shipped alongside the v2.4 Pulumi removal — see [Pulumi removal — consequences](#pulumi-removal--consequences) for why a vendor migration turned out to be the right moment to build a phase's helpers — and Phase 1's three P0 skills shipped next, as the first artifacts built in this document's own recommended order.
+**25 of the 34 are built.** Phase 3's seven specialists shipped first; Phase 6's eight shipped alongside the v2.4 Pulumi removal — see [Pulumi removal — consequences](#pulumi-removal--consequences) for why a vendor migration turned out to be the right moment to build a phase's helpers — Phase 1's three P0 skills shipped next, as the first artifacts built in this document's own recommended order, and Phase 2's seven shipped as one set. **Nine remain**, all in Phases 4, 5 and 7 plus two Phase 3 commands.
 
 The governing insight came from the adversarial review. [PROCESS.md L376](../aidlc-phases/03-development/PROCESS.md) establishes that a skill's description **is the entire routing surface** — skills *auto-trigger* on user intent, while subagents are *name-invoked*. It follows that any skill whose trigger list reuses a verb one of the seven shipped Phase 3 subagents already claims **wins that route by default and hijacks ordinary work**. That single rule killed or narrowed six proposals that otherwise looked sound, and it is the main reason the conversion rate is 58% rather than 90%.
 
@@ -34,7 +36,7 @@ The second-largest constraint is input availability. Roughly a quarter of the pr
 | Phase | Prompts | → Skill | → Subagent | → Slash cmd | Kept as prompt |
 |---|---|---|---|---|---|
 | 1 — Requirement Gathering | 12 | 9 *(8 of them via 3 shipped skills)* | 0 | 0 | 3 |
-| 2 — System & Architecture Design | 15 | 6 | 4 | 1 | 4 |
+| 2 — System & Architecture Design | 15 | 6 *(via 3 shipped skills)* | 4 *(via 3 shipped subagents)* | 1 *(shipped)* | 4 |
 | 3 — Development | 18 | 6 | 0 *(7 already shipped)* | 2 | 10 |
 | 4 — Testing & QA | 14 | 5 | 4 | 0 | 5 |
 | 5 — Security & Compliance | 13 | 2 | 5 | 0 | 6 |
@@ -44,7 +46,7 @@ The second-largest constraint is input availability. Roughly a quarter of the pr
 
 Grouping is where the value sits: 35 prompts collapse into 20 skills and 17 into 11 subagents. A skill that wraps four prompts is worth far more than four separate skills.
 
-Priority split: **P0 = 4 remaining** (`open-pull-request`, `run-sprint-planning`, `e2e-and-coverage-engineer`, `/adr` — Phase 1's three P0 skills have shipped), **P1 = 15**, **P2 = 8** — plus Phase 6's **8 shipped**, which left the priority queue by shipping out of order (see [Pulumi removal — consequences](#pulumi-removal--consequences)).
+Priority split: **P0 = 3 remaining** (`open-pull-request`, `run-sprint-planning`, `e2e-and-coverage-engineer` — Phase 1's three P0 skills and Phase 2's `/adr` have shipped), **P1 = 9**, **P2 = 6** — plus Phase 6's **8** and Phase 2's **7**, which left the priority queue by shipping as phase sets rather than in priority order.
 
 **Phase 6's skill count is 6, not 2, and only three of the six wrap a prompt at all.** `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `cost-guardrails-bringup` and `deploy-and-rollback-bringup` wrap **prose PROCESS steps**, not `PROMPTS.md` entries — which is why the phase's skill count exceeds what a prompt-by-prompt reading would predict. Worth noting as a limit of this document's method: **a conversion analysis that only reads the prompt library will systematically under-count the skills a phase needs**, because the procedures most worth encoding are often the ones nobody wrote a prompt for.
 
@@ -55,12 +57,12 @@ Siblings to the existing `subagent-prompts/`, per phase:
 ```
 aidlc-phases/<phase>/
   PROCESS.md  PROMPTS.md  QUALITY-GATES.md  FLOWCHART.md
-  subagent-prompts/<name>.md          # Phases 3 and 6
-  skill-prompts/<name>/SKILL.md       # Phases 6 and 1 — folders, not files
-  command-prompts/<name>.md           # still proposed; no slash command has shipped
+  subagent-prompts/<name>.md          # Phases 3, 6 and 2
+  skill-prompts/<name>/SKILL.md       # Phases 6, 1 and 2 — folders, not files
+  command-prompts/<name>.md           # Phase 2 — BUILT; `/adr` established the convention
 ```
 
-Like `subagent-prompts/`, these are **templates, not active artifacts** — Claude Code only auto-discovers `.claude/skills/` and `.claude/agents/`. Each directory gets a README mirroring the Phase 3 one, and templates stay repo-agnostic with `{{UPPER_SNAKE_CASE}}` placeholders so they can be copied into consuming repos.
+Like `subagent-prompts/`, these are **templates, not active artifacts** — Claude Code only auto-discovers `.claude/agents/`, `.claude/skills/` and `.claude/commands/`. Each directory gets a README mirroring the Phase 3 one, and templates stay repo-agnostic with `{{UPPER_SNAKE_CASE}}` placeholders so they can be copied into consuming repos.
 
 ---
 
@@ -122,7 +124,7 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
   - **Duplicates stay visible in the confirmation table.** The source prompt lists them separately and creates the rest; the shipped skill keeps flagged rows in the same table marked as excluded, so the human sees what is being skipped rather than only what is being made. A silently omitted story looks identical to a story nobody wrote.
   - **Deep-links are verified after creation**, against the anchor map read back by `publish-prd-to-linear`. The refusal case is sharpened accordingly: a story with no valid anchor entry is not created, **and does not fall back to linking the Document root** — the fallback is what turns "no citation" into "a citation that resolves and proves nothing", which is worse, because Gate 3's reviewer clicks it and sees a real page.
 
-#### `render-design-diagrams` — P1 · Phase 2
+#### `render-design-diagrams` — **SHIPPED** · Phase 2
 
 - **Wraps:** Eraser Architecture Diagram (via MCP), Eraser ER Diagram (via MCP)
 - **Path:** `aidlc-phases/02-system-design/skill-prompts/render-design-diagrams/SKILL.md`
@@ -130,9 +132,10 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
 - **Description:**
   > Use when a system, cloud, sequence, or entity-relationship diagram needs to be produced and landed in the repo — generates it through the Eraser MCP server, commits the DSL under the repo's diagram directory, exports PNG/SVG, generates the equivalent in-repo Mermaid so it renders in markdown, and records the Eraser editor URL. Triggers on "diagram this schema", "generate the C4 container diagram", "ER diagram for the new tables", "render the sequence diagram for checkout", "update the diagrams to match the new design". Do NOT use for: deleting or reorganising an Eraser workspace, designing the architecture itself, or UI mockups.
 - **Why:** Runs 7+ times per project and is the only concrete mitigation for the diagram-drift risk PROCESS.md names. Generation is one step; the gate-bearing obligation around it is six, across two surfaces and two PROCESS steps.
-- **⚠ Collision:** the trigger "draw the architecture diagram" collides verbatim with a live skill at `roombook/.claude/skills/architecture-diagram`. Deconflict before authoring.
+- **✅ Collision resolved at build, and the resolution is not the one the ⚠ predicted.** Every trigger originally proposed here collided with the project-scope `architecture-diagram` skill — "generate the C4 container diagram", "ER diagram for the new tables", "render the sequence diagram for checkout", "update the diagrams to match the new design" all fall inside its four claimed phrases. **No subset of the proposal survived.** A rename was considered and rejected on a distinction worth keeping: the two *names* never collided, so renaming leaves all four colliding phrases exactly where they were. **Renaming fixes name collisions; this was a trigger collision.** What made narrowing honest is that the artifacts genuinely differ — the incumbent produces in-repo Mermaid only, this skill produces Eraser DSL + PNG/SVG + editor URL + the Mermaid mirror, and the incumbent satisfies exactly one of the four gate lines that count them. Had both produced the same files, no wording would have turned two owners into one.
+- **The residual risk was recorded rather than papered over.** In a repo with both installed, bare "draw the architecture diagram" still routes to the incumbent and produces the mirror only — **one gate line satisfied, three silently not, and it looks like the diagram got done.** That is an install-time decision (uninstall the incumbent, or reserve it for sketches), stated in the phase's Step 0 rather than left to be discovered at the gate.
 
-#### `data-model-design` — P1 · Phase 2
+#### `data-model-design` — **SHIPPED** · Phase 2
 
 - **Wraps:** Entity Extraction, Schema Generation, Migration Generation
 - **Path:** `aidlc-phases/02-system-design/skill-prompts/data-model-design/SKILL.md`
@@ -140,8 +143,11 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
 - **Description:**
   > Use when turning approved PRD requirements into a database schema — extracts entities, ownership and cardinalities from the PRD, generates the schema in the repo's ORM with indexes covering the stated top query patterns, stops for a mandatory backend-developer review, then generates the up/down migration plus seed data and runs it against a local database. Triggers on "design the data model from the PRD", "extract the entities from the PRD", "we need the data model before we build". Do NOT use for: schema changes or migrations inside a story mid-implementation (use `backend-engineer`), denormalising without a measured query and an ADR, running migrations against anything but a local database, or rendering the ER diagram.
 - **Why:** Textbook "first, then, then, finally". **Triggers deliberately narrowed:** the original "write the migration for the new tables" / "generate the schema" collided with `backend-engineer`'s shipped trigger "add the migration for ENG-XXX" — and because skills auto-trigger, the skill would have won and dragged a greenfield PRD chain into an ordinary story turn.
+- **What changed on build:**
+  - **The wrapped `Schema Generation` prompt has a deliverable that belongs to another artifact.** Its item 7 asks for a Mermaid `erDiagram` alongside the schema — but `render-design-diagrams` owns both diagram surfaces and the gate lines that count them. Left in both, the ER diagram is written twice by two procedures and **the second writer wins silently.** The prompt is unchanged; the skill hands the schema over instead. This is the Phase 1 `Gap Analysis` finding in a new shape: **a prompt carrying a deliverable that belongs elsewhere is invisible until you inline it**, because as a paste prompt nobody else was ever going to write that file.
+  - **The mid-procedure review stop is a human, and had to be defended as one.** PROCESS 2.5 says "walk the schema with a backend developer"; nothing in the framework hands that to an agent, and handing it to one would void it exactly as merging `architecture-reviewer` into `solution-architect` would void "not the author". The step carries an explicit *"do not continue because the reviewer is unavailable"* clause — **the failure mode is unavailability, not disagreement**, and only the first one looks like a reason to proceed.
 
-#### `api-contract-freeze` — P2 · Phase 2
+#### `api-contract-freeze` — **SHIPPED** · Phase 2
 
 - **Wraps:** API Contract
 - **Path:** `aidlc-phases/02-system-design/skill-prompts/api-contract-freeze/SKILL.md`
@@ -149,6 +155,9 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
 - **Description:**
   > Use when an API contract needs to be designed, audited, mocked and frozen before frontend work starts — maps PRD user flows to a resource model, generates an OpenAPI 3.1 spec with the team's error envelope, pagination, auth and idempotency conventions, audits every operation mechanically against the API gate checklist, stands up the mock server and records its URL in the README, then records the freeze and the change-request path. Triggers on "design the API contract", "generate the OpenAPI spec", "stand up the mock server", "audit the spec before we freeze it". Do NOT use for: implementing endpoints, changing an already-frozen spec without the documented change request, or designing the data model behind it.
 - **Why:** Wraps one prompt but absorbs four prompt-less PROCESS steps and a real business metric. Deliberately not merged with `data-model-design` — the combined chain is eight steps with two human stops, well past the two-screen limit.
+- **Its drop condition was evaluated on build and did not fire — but only because of a step the spec did not have.** The condition was *"build it if the audit is not genuinely mechanical"*. Audited line by line against Gate 2's eleven API checkboxes: **8 are mechanical outright** (flow coverage, request/success/seven-error responses, single error envelope, pagination on lists, `x-prd-section`, `operationId` + naming, mock URL in README, freeze marker + change-request doc). **1 is not the skill's** — the Tech Lead and backend-developer signature. **And 2 are not mechanical as written:** *"auth on every **protected** endpoint"* and *"Idempotency-Key on POSTs that **require** it"*. Both turn on a product judgement — which endpoints are public, which POSTs are non-idempotent — and **an agent that infers them and then audits its own inference passes every time.**
+  - The fix is a **new step 2** that refuses to proceed until a human declares the public-endpoint list and the non-idempotent-POST list. With both in hand the audit is genuinely mechanical and the artifact earns its keep; **without it, this skill is a fabrication engine wearing a checklist** — which is precisely what the drop condition was pointing at without being able to name it. The two Gate 2 lines were reworded to read against the declared lists, because as written they were unfalsifiable.
+  - **It also grew a seventh step and the gap was real, not cosmetic.** The proposed six ended at the freeze note and came in under band at 27 lines. PROCESS 3.3's human Swagger walkthrough had no home, and the skill was implicitly claiming that a passing mechanical audit means the spec is *right*. It does not — **the audit proves completeness; only a reader proves correctness.** Step 6 now leaves the freeze note **unsigned** and step 7 hands over the audit result, the mock URL and the note.
 
 #### `author-test-plan` — P1 · Phase 4
 
@@ -314,7 +323,7 @@ See the [Subagents](#subagents) section.
 - **Why:** **Narrowed on both reviewers' verdict.** Unit and Integration Test Generation were cut because `backend-engineer`'s shipped description already lists *"write the integration tests"* as a **positive** trigger and `frontend-engineer` lists *"write the component tests"* — a description asserting both "invoke on X" and "do not invoke on X" is not a routing fix. The three surviving prompts fire on intent nothing else claims.
 - **⚠ Renamed** to avoid colliding with the live `roombook/.claude/agents/qa-test-engineer.md`, which carries the opposite scope.
 
-#### `solution-architect` — P1 · Phase 2 · `opus`
+#### `solution-architect` — **SHIPPED** · Phase 2 · `opus`
 
 - **Wraps:** Architecture Proposal, Trade-off Interrogation
 - **Path:** `aidlc-phases/02-system-design/subagent-prompts/solution-architect.md`
@@ -322,8 +331,9 @@ See the [Subagents](#subagents) section.
 - **Description:**
   > Use this agent for the system-level architecture pass at the start of a project or a major new subsystem: produce 2-3 candidate architectures (components, communication, data architecture, infrastructure, bounded contexts, trade-offs at launch and 10x, top risks), stress-test each seriously-considered option at 10x load for first-break point, single points of failure, cost cliffs, state contention and failure isolation, and end with a justified recommendation stopped at an explicit Tech Lead approval gate. Read-only apart from writing the proposal document. Invoke on "propose an architecture for this product", "what are our architecture options", "stress-test option 2 at 10x", "design the system before we pick a stack". Do NOT invoke for: per-story design inside an existing codebase (use `software-architect`), the independent production-readiness review (use `architecture-reviewer`), STRIDE / OWASP threat modelling (use `threat-modeler`), schema work, OpenAPI contracts, or writing the ADR (use `/adr`).
 - **Why:** **Not a duplicate** — `software-architect`'s shipped description explicitly escalates *"system-wide architectural decisions / new tech choices / new service boundaries / new datastores"* **out** of its remit. Trade-off Interrogation folds in because PROCESS.md 1.3 permits it as an in-conversation follow-up.
+- **What changed on build: the Trade-off Interrogation is a mandatory step, not the optional follow-up it folds in as.** It runs on **every seriously-considered option** and **before** the recommendation, for two reasons the spec did not state. A stress test run *after* the recommendation argues against a decision already anchored — the model has committed, and the test becomes a defence rather than a filter. And Gate 1 asks for the interrogation on *"the chosen option"*, which is circular: **the stress test is part of how you choose.** Running it only on the winner tests the one option whose weaknesses are least likely to change the outcome.
 
-#### `architecture-reviewer` — P1 · Phase 2 · `opus`
+#### `architecture-reviewer` — **SHIPPED** · Phase 2 · `opus`
 
 - **Wraps:** Design Review
 - **Path:** `aidlc-phases/02-system-design/subagent-prompts/architecture-reviewer.md`
@@ -331,8 +341,12 @@ See the [Subagents](#subagents) section.
 - **Description:**
   > Use this agent for the independent pre-build production-readiness review of a chosen system architecture: produce a severity-ranked (Critical / High / Medium / Low) issue list across scalability, security, reliability, operability and cost, each with a concrete recommendation and the PRD section affected, ending in a one-line PASS / PASS WITH FIXES / FAIL verdict plus Critical and High counts. Read-only. Invoke on "review this architecture for production readiness", "is this design ready to build", "design review before the architecture gate". Do NOT invoke for: generating the architecture options (use `solution-architect`), STRIDE / OWASP threat modelling (use `threat-modeler`), reviewing a code diff (use `code-reviewer`), per-story design, WCAG audits, or applying the fixes.
 - **Why:** Deliberately **not merged** into `solution-architect` — a same-session follow-up to the proposal cannot honestly satisfy "not the author"; merging would void the gate while appearing to satisfy it. Main failure mode is verdict inflation, so severity must be defined by consequence, not tone.
+- **What changed on build — three, and the first is the one that mattered:**
+  - **"Not merged" was a directory fact, not a behaviour, until the agent could detect the violation.** This document put the independence property in the *why*, and the description says "independent". Neither is enforcement: **the agent has no way to know it is reviewing something the same session produced unless it is told to check and stop.** That check now sits in the operating boundaries and again in the escalation list. Generalises past this pair — *a boundary that depends on session history cannot be expressed in a description, because a description constrains routing and this violation happens after routing succeeded.*
+  - **The verdict is derived from the counts, not chosen.** The source prompt names three verdict words and never says which findings produce which — so verdict inflation was not a risk the prompt failed to *prevent*, it was **undefined, and any verdict was defensible.** Now: PASS = 0 Critical / 0 High; PASS WITH FIXES = 0 Critical and every High has a pre-build fix; FAIL otherwise. Paired with a consequence-based severity table and one demotion rule — *a finding with no attachable consequence is Medium at most.*
+  - **A mandatory `Unevaluated` section.** The source prompt carries *"flag anything you cannot evaluate from the inputs given"* as one sentence among ten. As prose it evaporates under a thin input set — which is exactly when it matters. Promoted to a numbered step and a named report section, the `container-image-engineer` seven-of-nine precedent reached independently.
 
-#### `accessibility-auditor` — P2 · Phase 2 · `opus`
+#### `accessibility-auditor` — **SHIPPED** · Phase 2 · `opus`
 
 - **Wraps:** Accessibility Review (Claude)
 - **Path:** `aidlc-phases/02-system-design/subagent-prompts/accessibility-auditor.md`
@@ -340,6 +354,10 @@ See the [Subagents](#subagents) section.
 - **Description:**
   > Use this agent to audit a component, screen, or page against WCAG 2.1 Level AA: findings as Issue / Severity / Recommendation / WCAG reference across perceivable, operable, understandable, robust and tap-target criteria, ending in a PASS / PASS WITH FIXES / FAIL verdict. Read-only — never patches markup, styles, or ARIA. Invoke on "run an accessibility review on this screen", "is this component WCAG AA", "check keyboard navigation and contrast on the booking flow", "a11y audit before sign-off". Do NOT invoke for: fixing the violations (use `frontend-engineer`), general correctness / security / performance review of a diff (use `code-reviewer`), or visual / brand critique.
 - **Why:** No existing or proposed agent covers WCAG, and its input is fetchable from the repo with no human paste. P2 on an honest limitation: a source-only audit cannot compute rendered contrast, so it must state its limits and require an automated axe run rather than asserting a PASS.
+- **What changed on build — the honesty property needed teeth, and it needed a gate decision:**
+  - **"State its limits and require an axe run" is satisfiable by a template that states its limits and then returns PASS anyway.** Built instead as a **verdict-vocabulary restriction**: from source alone the only reachable verdicts are `FAIL` and `PASS WITH FIXES` — both safe to be wrong about — plus a **fourth token, `PASS WITHHELD`**, when the rendered-page scan or the keyboard pass is missing. PASS is the verdict that stops anyone else looking, so it is the one that must be unreachable without evidence.
+  - **The fourth token is not in the source prompt and was not in the gate.** Gate 3 read *"Accessibility review passes WCAG 2.1 AA (0 Critical, 0 High)"*, under which `PASS WITHHELD` is correctly not a pass — but only by inference, and a reader in a hurry infers the other way. The gate now says so explicitly. **A new verdict token is a gate change, not a template detail**, and shipping one without the matching gate edit would have been the unfalsifiable-checkbox pattern arrived at from a third direction.
+  - **The unmeasurable set is five items larger than this document assumed.** It names contrast. Building the can/cannot table found reflow at 320 CSS px, text resize to 200%, computed tap-target size, focus order against *visual* reading order, and what an assistive technology actually announces — all equally unreachable from source. **An agent told only "you cannot do contrast" will confidently assert the other five.** The table is the enforcement, on the `container-image-engineer` nine-row precedent.
 
 #### `threat-modeler` — P1 · Phase 5 · `opus`
 
@@ -413,14 +431,18 @@ See the [Subagents](#subagents) section.
 
 ### Slash commands
 
-#### `/adr` — **P0** · Phase 2
+#### `/adr` — **SHIPPED** · Phase 2
 
 - **Wraps:** Architecture Decision Record Generation
 - **Path:** `aidlc-phases/02-system-design/command-prompts/adr.md`
 - **Gate:** P2 Gates 1, 3, 4; also consumed by Phases 5 and 6
 - **Description:**
   > Generate an Architecture Decision Record for a decision just made — takes the decision, options considered, constraints and the PRD anchor; reads the repo's ADR directory to allocate the next sequential number; emits Status (always Proposed) / Context / Decision / Consequences (positive, negative, neutral) / Alternatives Considered with a specific rejection reason per alternative / Validation signal; writes it and surfaces the number it picked. Refuses when no alternative was genuinely rejected, and never fabricates a numeric claim in Consequences.
-- **Why:** **Highest leverage-per-unit-of-build-cost on the entire list** — deterministic, one argument, no branching, fired 11+ times per project, cited by three gates. It is also the only artifact that faces no auto-trigger competition at all.
+- **Why:** **Highest leverage-per-unit-of-build-cost on the entire list** — deterministic, one argument, no branching, fired 11+ times per project, cited by three gates.
+- **What changed on build — the premise behind "no auto-trigger competition" was false, and is now true only because the template makes it true.** Verified against the current documentation: **custom commands have been merged into skills.** A file at `.claude/commands/adr.md` and a skill at `.claude/skills/adr/SKILL.md` both create `/adr` and work the same way, and **by default both the user and Claude can invoke either.** A command's description is therefore a routing claim exactly like a skill's. The shipped template sets **`disable-model-invocation: true`**, which is what makes it user-invocable only.
+  - The claim was not softened — it was **made true and the mechanism written down.** But three statements in the repo were inaccurate as written and are corrected: this document's *"the only artifact that faces no auto-trigger competition at all"*, `03-development/PROCESS.md` L324's tier table (which distinguishes a command from a skill on invocation shape alone), and `ROUTING.md`'s framing of commands as inherently explicitly-fired.
+  - **The tier is now a convention held in one frontmatter field, not a property of the directory.** `/load-task-context` and `/write-module-readme` inherit the field, not just the folder — and the `command-prompts/README.md` says so in place, because the next author will otherwise reasonably assume the directory grants it.
+- **Sequential numbering needed a git read, not just a directory listing.** A record added on an unmerged branch is invisible to `ls`, and that is exactly how two ADRs written the same afternoon collide. The command checks `git log --all --diff-filter=A` over the ADR directory, reports the number **and what it allocated from**, and states the resolution rule for the residual two-unpushed-branches case: **rename the new file at merge, never renumber a record someone has already read.**
 
 #### `/load-task-context` — P2 · Phase 3
 
@@ -521,7 +543,9 @@ See the [Subagents](#subagents) section.
 
 Six coordinated edits to already-shipped `subagent-prompts/` templates. Each must land in the **same PR** as the artifact it unblocks, because these files ship into consuming repos.
 
-> **The rule is narrower than it reads, and the repo has already applied it that way twice.** What it forbids is shipping a **pointer to an artifact the consuming repo does not have** — a dangling reference. It does not reach an edit that is a **pure refusal**, which names no artifact, unblocks nothing, and is strictly safer standalone than absent. The `software-architect.md` row was split on exactly this basis in v2.4 (its `pr-reviewer` dangling-slug fix shipped alone while its `solution-architect` exclusion stayed bundled), and the `linear-task-agent.md` row is now split the same way. Stated as a test: **if removing the artifact from the sentence leaves the sentence still true and still useful, the edit can ship alone.**
+> **The rule is narrower than it reads, and the repo has now applied it that way three times.** What it forbids is shipping a **pointer to an artifact the consuming repo does not have** — a dangling reference. It does not reach an edit that is a **pure refusal**, which names no artifact, unblocks nothing, and is strictly safer standalone than absent. The `software-architect.md` row was split on exactly this basis in v2.4 (its `pr-reviewer` dangling-slug fix shipped alone while its `solution-architect` exclusion stayed bundled), the `linear-task-agent.md` row was split the same way, and the **Phase 2 build split the remaining `software-architect` half too** — restating it by work type rather than naming `solution-architect`. Stated as a test: **if removing the artifact from the sentence leaves the sentence still true and still useful, the edit can ship alone.**
+>
+> **Three instances is enough to invert the default.** The "Ships with" column should read *standalone* for any edit that is a pure refusal or a work-type restatement, and bundle only where a slug is genuinely named — which, after Phase 2, is a smaller set than this table originally assumed. The remaining bundled rows are bundled because they name `open-pull-request` by slug in a sentence that stops being useful without it.
 
 | Shipped template | Edit | Ships with |
 |---|---|---|
@@ -529,7 +553,7 @@ Six coordinated edits to already-shipped `subagent-prompts/` templates. Each mus
 | ~~`linear-task-agent.md` **(b)**~~ | ~~Boundaries name Documents / Projects / Milestones as out-of-scope **by design**, not by omission.~~ **LANDED, split from (a).** Shipped as four additive touches — description, request-classification step, operating boundaries, escalation list — plus the reciprocal clause in all three Phase 1 skill descriptions. See [Splitting the `linear-task-agent` row](#splitting-the-linear-task-agent-row). | — (shipped standalone) |
 | `code-reviewer.md` | Do-NOT list gains *"the full pre-PR gate including DoD, rebase and PR open (load `open-pull-request`, which hands the diff review back here as step 1)"*. Its shipped triggers "anything to fix before I PR" / "review my diff before I PR" overlap the skill's "ready to PR" on the same utterance — a second, undetected gate bypass. | `open-pull-request` (P0) |
 | `backend-engineer.md` | Operating boundaries gain the three security-remediation constraints (minimal backward-compatible diff; mandatory regression test failing before and passing after; no tautological symptom-masking fix). **Replaces** the killed `security-fix-engineer`. | — |
-| `software-architect.md` | Mutual *"Do NOT invoke for: system-wide / new-tech / new-service-boundary decisions (use `solution-architect`)"*. **Also fixes a live bug:** its own frontmatter routes *"post-open PR review (use `pr-reviewer`)"* to a slug that exists nowhere in the repo. | `solution-architect` (P1) |
+| ~~`software-architect.md`~~ | ~~Mutual *"Do NOT invoke for: system-wide / new-tech / new-service-boundary decisions (use `solution-architect`)"*.~~ **LANDED with the Phase 2 build — and it does not name `solution-architect`.** A cross-phase slug in a vendored template dangles in a repo that installed Phase 3 but not Phase 2, which is the same defect the v2.4 `pr-reviewer` fix removed from the line immediately before it in the same sentence. Shipped as *"escalate to human architect review, **or to the team's system-level architecture pass where one is set up**"*. **By this table's own narrowing test it therefore passes as standalone** — it names no artifact and unblocks nothing. | — (shipped with Phase 2, but no longer needed bundling) |
 | `refactor-specialist.md` | Description gains the filer's name: route candidate-identification to the `file-followup-bug` skill (canonised at PROCESS.md L336), not to an unnamed actor. **Replaces** the killed `triage-refactor-candidates`. | — |
 | the three Phase 1 skills | Each Do-NOT list gains the **reciprocal** of the `linear-task-agent` (b) edit: no writes around a story already in flight. Required by `ROUTING.md`'s own rule that a shared write object is fenced in **both** descriptions — before this, the boundary lived in `skill-prompts/README.md`, which never vendors, so it was in **zero** shipped descriptions. | landed with `linear-task-agent` (b) |
 | `threat-modeler` ↔ `architecture-reviewer` | Mutual exclusion between the two **new** subagents. Both `opus`, both read-only, both emit severity-ranked design-time findings, and "what are the security risks in this design" vs "what breaks in this design before we code it" are paraphrases. The synthesis pass ran mutual-exclusion against shipped agents but never *between* its own proposals. | both (P1) |
@@ -560,6 +584,13 @@ Independent of any conversion, this analysis surfaced the following. Each is a s
 - ~~**`03-development/subagent-prompts/software-architect.md:3`** — routes users to `pr-reviewer`, a subagent slug that exists nowhere in the repo.~~ **FIXED in v2.4** — now routes to "the team's post-open PR review tooling", matching the convention `code-reviewer.md:3` already used and accurate for a repo that may have chosen CodeRabbit, the Claude bot, or both.
 - ~~**`/docs/runbooks/` ownership is contested** across Phases 3, 6 **and** 7, with three filename schemes.~~ **RESOLVED in v2.4.** The diagnosis was wrong in a useful way: this was never three competing schemes for one artifact, but **two distinct artifact classes collapsed into one flat directory, plus one typo**. Phase 3's `<service>.md` is a *service operational* runbook; Phase 6's `<alert-name>.md` is a *per-alert response* runbook; Phase 7's `<alert>.md` was a shortened token, not a competing claim. Resolution: `/docs/runbooks/alerts/<alert-name>.md` (Phase 6 owns) and `/docs/runbooks/services/<service>.md` (Phase 3 owns), with Phase 7 a **consumer, never an owner**. Subdirectories rather than a filename fix because a flat directory admits a real collision — a service named `checkout` and an alert named `checkout` produce the same path, with different audiences and reviewers. The load-bearing half is the derivation rule: `<alert-name>` is the alert's name **as configured in the backend, lowercased and kebab-cased**, which turns Gate 4's *"every alert links to a runbook"* from an eyeball check into a script. **Unblocks `observability-bringup`.**
 - **`docs/planning/` does not exist** but is referenced by `README.md` and by the `ai-sdlc-framework-architect` agent's mandatory-reading table.
+- ~~**Links into a `templates/` directory are broken framework-wide**~~ — **FIXED. Surfaced by the Phase 2 build as three dead ADR links; the real scope was 23 links across all seven phases and the root `README.md`.** Two distinct defects were tangled together:
+  1. **Wrong relative depth.** `../templates/` from `aidlc-phases/<phase>/` resolves to `aidlc-phases/templates/`, **which has never existed**. That is every link in Phases 1, 3, 4 and 7. The `../../templates/` form used by Phases 5 and 6 resolves correctly to the repo root.
+  2. **The target is gitignored.** Root `templates/` *does* exist locally and holds exactly three files — `code-review-checklist.md`, `prd-template.md`, `user-story-template.md` — but `templates` is in `.gitignore`, so **none of it is tracked**. The other seven referenced files (`adr-template`, `test-plan-template`, `bug-report-template`, `runbook-template`, `post-mortem-template`, `handoff-document-template`, `release-notes-template`) do not exist anywhere.
+  
+  **Why this was invisible:** on the author's machine, six of the links resolve. Depth bugs and gitignored targets both fail only for someone who cloned the repo, which is everyone the framework ships to. All 23 links are removed — bullet entries deleted, inline prose rewritten to keep its meaning, and the three ADR references re-pointed at `/adr`, which now carries the record shape inline. **The directory was deliberately not created:** a template that lives in the framework repo is a template a consuming repo never receives, which is the same reasoning that puts skill procedures inline rather than behind a link.
+- ~~**Four broken `PROMPTS.md` anchors in `02-system-design/PROCESS.md`**~~ — **FIXED with the Phase 2 build.** `#adr-generation` (×2, real heading `#architecture-decision-record-generation`), `#eraser-architecture-diagram` and `#eraser-er-diagram` (both missing the `-via-mcp` suffix), and `#accessibility-review` (real heading `#accessibility-review-claude`). Five instances. All four were pointing at prompts this phase's own build wraps, which is how they surfaced: **verifying a Wraps column is the only routine that reads every inbound anchor.**
+- **`03-development/PROCESS.md` L324's tier table is now inaccurate.** It distinguishes a slash command from a skill on invocation shape alone. Custom commands have been merged into skills — both create `/name` and both are model-invocable by default — so the distinction holds only for a command that sets `disable-model-invocation: true`. See [Phase 2 build — consequences](#phase-2-build--consequences).
 - **Phase 5 Gate 6 scoping inconsistency** — surfaced while evaluating the MCP Enforcement Policy prompt; fix in `QUALITY-GATES.md` before any MCP-policy artifact is considered.
 
 ---
@@ -707,6 +738,62 @@ Every one of the three terminates at a **human gate**, not at the next skill —
 
 ---
 
+## Phase 2 build — consequences
+
+Phase 2 shipped all seven of its artifacts as one set — the first phase to ship **all three tiers** at once, and the first build where the stack did not change underneath it *and* the phase was not the smallest available. Like Phase 1's, it deleted, renamed and rewrote **no prompt**: 15 before, 15 after, every anchor intact, the paste path still valid. Counts are unchanged at 96 prompts and 34 artifacts, with 25 built.
+
+### 1. A premise this document used in three places was false
+
+**Custom commands have been merged into skills.** Verified against the current documentation: a file at `.claude/commands/adr.md` and a skill at `.claude/skills/adr/SKILL.md` both create `/adr` and work the same way, and **by default both the user and Claude can invoke either.** A command's `description` is a routing claim exactly like a skill's.
+
+Three statements were wrong as a result, and all three are corrected: this document's *"the only artifact that faces no auto-trigger competition at all"*; `03-development/PROCESS.md` L324's tier table, which separates a command from a skill on invocation shape alone; and `ROUTING.md`'s framing of commands as inherently explicitly-fired.
+
+**The response was to make the claim true rather than soften it.** `/adr` ships with `disable-model-invocation: true`. But the consequence generalises and is worth stating plainly: **the command tier is a convention held in one frontmatter field, not a property of a directory.** Delete that field and `/adr` re-enters every collision rule in `ROUTING.md`. `/load-task-context` and `/write-module-readme` inherit the field, not just the folder.
+
+This also **re-prices decision #4** (the slash-command tier). Commands were partly killed on "not worth establishing a convention", a cost this build has now paid — but the tier's cheapness is real while its no-competition property costs one deliberate field per command. That is still cheap; it is just not free, and it is not automatic.
+
+### 2. Four artifacts needed a token for "I could not tell"
+
+The strongest pattern in this build, arrived at independently in four places:
+
+- `architecture-reviewer` — a mandatory **`Unevaluated`** section, promoted from one sentence among ten in the source prompt.
+- `accessibility-auditor` — a fourth verdict token, **`PASS WITHHELD`**, plus a can/cannot table covering **six** unmeasurable-from-source criteria where this document named one.
+- `api-contract-freeze` — a **refusal** to audit the two Gate 2 lines that rest on a product judgement, until a human declares the public-endpoint and non-idempotent-POST lists.
+- `render-design-diagrams` — a refusal to substitute the Mermaid mirror when the Eraser MCP server is unreachable, because the mirror satisfies one gate line of four.
+
+Stated as a rule: **an agent that can only return pass-or-fail will manufacture whichever one the room wants.** It is the same property `container-image-engineer` reached with seven-of-nine and `dependency-risk-analyst` with *undetermined* — but this is the first build where it emerged in four artifacts at once without being specified in any of them, which suggests it belongs in the authoring doctrine rather than being rediscovered per artifact.
+
+### 3. Two boundaries could not live in a description
+
+A description is a claim on *routing*. Two of Phase 2's boundaries are violated **after** routing has already succeeded, and no description reaches them:
+
+- **`architecture-reviewer` reviewing a design its own session produced.** Routing was correct; the input is the problem. It has to *check and stop*, which is a step, not a description.
+- **`data-model-design`'s backend-developer review stop.** Nothing downstream refuses to proceed, so the skill must refuse for itself — and specifically against *unavailability*, which is the excuse that reads like a reason.
+
+This is the same lesson as `linear-task-agent` (b)'s classification-step finding, generalised: **if a boundary depends on session history or on a human who is not in the room, it must be a step in the body. The frontmatter cannot hold it.**
+
+### 4. Inlining found a deliverable that belonged to a different artifact
+
+`Schema Generation`'s item 7 asks for a Mermaid `erDiagram` — but `render-design-diagrams` owns both diagram surfaces and the gate lines counting them. Left in both, the file is written twice and the second writer wins silently. **As a paste prompt this was invisible**, because no other procedure was ever going to write that file; it only becomes a conflict once both are artifacts that run.
+
+This is the Phase 1 `Gap Analysis` finding in a second shape, and the pair now supports a stronger claim than either alone: **the conversion pass is where a prompt library's internal overlaps get settled, and they are not visible from reading the library.** Phase 1 found one prompt that was two; Phase 2 found one prompt carrying another artifact's deliverable.
+
+### 5. The placeholder file started paying off
+
+Phase 2 uses **16 placeholders and coined only 8.** Eight are existing names adopted from Phases 3 and 6 — the first time literal overlap between phases exists, which is the intended end state rather than a regression. **The pair count is still six, not fourteen.**
+
+Two near-pairs were caught at authoring time and recorded rather than minted: `{{AUTH_STACK}}` now carries the auth *provider* and the *wire security scheme* under one name, applying the reuse-even-if-you'd-have-named-it-differently rule; and `{{A11Y_SCAN_COMMAND}}` deliberately does **not** reuse `{{TEST_RUNNER}}`, because filling it with a unit-test command makes the accessibility PASS permanently unreachable — and the symptom looks like a pedantic agent rather than a bad fill, so nobody goes looking.
+
+### 6. A collision was closed by declining to claim a verb
+
+`render-design-diagrams` had **no surviving subset** of its proposed triggers — all four collided with a project-scope `architecture-diagram` skill. A rename was considered and rejected on a distinction worth keeping: **renaming fixes name collisions, and this was a trigger collision.** The names never collided.
+
+Narrowing was honest only because the artifacts genuinely differ. The residual risk is recorded rather than dissolved: with both installed, bare "draw the architecture diagram" produces the Mermaid mirror only — **one gate line satisfied, three not, and it looks done.** That is an install-time decision, and it now lives in the phase's Step 0.
+
+`ROUTING.md` gained a row for the **deliberately unclaimed** lane. A lane left to an incumbent on purpose reads identically to an oversight unless it is written down, and the next author who thinks "we should trigger on *draw the diagram*" re-opens a closed collision.
+
+---
+
 ## Build order
 
 ### Phase 0 — prerequisites, zero artifacts (~1-2 days)
@@ -727,7 +814,7 @@ Nothing else ships until these land.
 
 ### Phase 1 — validate the approach at lowest risk (~1 week)
 
-4. **`/adr` (½ day).** Best item on the list: explicitly fired, no auto-trigger competition, no coordinated edit, no unmandated MCP, cited by three gates, fires 11+ times per project. If the command convention works here it works everywhere. **Still unbuilt — `command-prompts/` remains an empty convention.**
+4. ~~**`/adr` (½ day).** Best item on the list: explicitly fired, no auto-trigger competition, no coordinated edit, no unmandated MCP, cited by three gates, fires 11+ times per project. If the command convention works here it works everywhere.~~ **SHIPPED**, with the Phase 2 set rather than ahead of it. The convention works — but *"explicitly fired, no auto-trigger competition"* turned out to be a property of one frontmatter field rather than of the tier, so the convention that now exists is **one field plus a directory**, not a directory. See [Phase 2 build — consequences](#phase-2-build--consequences).
 5. ~~**`publish-prd-to-linear` (2 days).**~~ **SHIPPED.** Two prompts, one gate, one MCP server that Phase 1 already mandates. It came in wrapping three prompts, not two — see its entry.
 
 ### Phase 2 — the P0 tier (~3 weeks)
@@ -741,13 +828,17 @@ One artifact per PR, so the router can be re-tested each time.
 
 ### Phase 3 — P1 (~4-6 weeks)
 
-No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing collisions — the cheapest P1 to land), **`dependency-risk-analyst`** (also collision-free; its only dependency is that Dependabot is switched on), `threat-modeler` + `architecture-reviewer` (as a mutually-excluding pair), `accessibility-auditor`, `secret-leak-response`. Then `solution-architect` with its `software-architect` edit. **`threat-model-verifier` ships after `threat-modeler`, never before it** — it audits that agent's output, so building it first gives it nothing to verify, and the two descriptions must be written as a mutually-excluding pair in the same PR. Then the remaining multi-step skills: `author-test-plan`, `reproduce-and-diagnose-bug`, `data-model-design`, `render-design-diagrams`, `finalise-documentation`.
+No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing collisions — the cheapest P1 to land), **`dependency-risk-analyst`** (also collision-free; its only dependency is that Dependabot is switched on), `threat-modeler`, `secret-leak-response`. **`threat-model-verifier` ships after `threat-modeler`, never before it** — it audits that agent's output, so building it first gives it nothing to verify, and the two descriptions must be written as a mutually-excluding pair in the same PR. Then the remaining multi-step skills: `author-test-plan`, `reproduce-and-diagnose-bug`, `finalise-documentation`.
+
+> **Phase 2's seven are already built and are not in this queue** — `solution-architect`, `architecture-reviewer`, `accessibility-auditor`, `render-design-diagrams`, `data-model-design`, `api-contract-freeze` and `/adr` shipped as one phase set. **The `threat-modeler` ↔ `architecture-reviewer` mutual exclusion is now one-sided and must be completed when `threat-modeler` ships:** the shipped reviewer already excludes threat modelling, but by work type ("the repo's security-review tooling") rather than by slug, because naming an unbuilt artifact is the dangling-pointer defect. `threat-modeler`'s own description must carry the reciprocal, and whoever builds it should decide then whether both sides can safely name each other — they will be in different phases, so the cross-phase rule says probably not.
 
 > **Phase 6's eight helpers are already built and are not in this queue.** They shipped with the v2.4 Pulumi removal rather than in rollout order. The rule that generalises: **when a phase undergoes a stack change, build its helpers then** — not before, when the shape is speculative, and not after, when the losses have already been forgotten.
 
 ### Phase 4 — P2, conditional
 
-Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), `/load-task-context` if tracker hygiene does not supply the deep-links, `api-contract-freeze` if the audit is not genuinely mechanical, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
+Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), `/load-task-context` if tracker hygiene does not supply the deep-links, `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
+
+> **`api-contract-freeze` has left this queue** — it shipped with the Phase 2 set, and its drop condition (*"if the audit is not genuinely mechanical"*) was **evaluated on build and did not fire**, but only after a step was added that the specification did not contain. That is the more useful outcome than either building or dropping it blind: **a drop condition is a question, and building the artifact is how you answer it.** Two of its eleven audit lines were genuinely not mechanical, and the fix was a refusal rather than an abandonment. See its entry.
 
 ---
 
@@ -759,7 +850,8 @@ Build only if the frequency materialises. Several name their own drop condition:
 
 3. ~~**Do the Phase 1 outer-loop skills perform their own Linear writes, or does `linear-task-agent` widen?**~~ **SETTLED by shipping them.** The three skills perform their own writes, each behind its own confirm-then-`go`, and both directions of the boundary are now written down where a maintainer will hit them: `01-requirement-gathering/skill-prompts/README.md` states that these are the outer-loop writers and that the dev-loop agent refuses this work, and Phase 1's PROCESS Step 0 repeats it as "by design, not by omission". **The reciprocal edit to `linear-task-agent.md` is still outstanding** — it ships with `open-pull-request`, and until it lands the guarantee is documented on only one of the two sides. Original resolution, unchanged: `linear-task-agent` stays sole writer for the **inner dev loop** (verified in its own boundary text), and outer-loop writes — Documents, Projects, Milestones, Triage issues, estimates, the test-plan Document — are performed by the phase skills, each borrowing its literal-`go` confirm-before-write protocol. This is correct but non-obvious; if it is not written into that agent's boundaries, a future maintainer will "fix" it and break the dev-loop-only guarantee.
 
-4. **The slash-command tier.** Commands were killed partly on "not worth establishing a convention" — a cost that no longer exists once `/adr` ships. `/write-module-readme` was reinstated; **`/post-mortem` is now settled and stays killed**, on shape rather than convention cost (see the not-converted table). Should the remaining three (`/promote-component`, `/infra-runbook`, `/linear-context-pull`) be re-evaluated on their own merits, or is the smaller command surface itself the goal?
+4. **The slash-command tier.** Commands were killed partly on "not worth establishing a convention" — **a cost `/adr` has now paid.** `/write-module-readme` was reinstated; **`/post-mortem` is now settled and stays killed**, on shape rather than convention cost (see the not-converted table). Should the remaining three (`/promote-component`, `/infra-runbook`, `/linear-context-pull`) be re-evaluated on their own merits, or is the smaller command surface itself the goal?
+   > **Re-priced by the build, in both directions.** The convention cost is genuinely gone — a second command is now a file plus a README row. But the merged-into-skills finding means the tier's defining property is **not free**: each command must carry `disable-model-invocation: true` deliberately, and a command that omits it is a skill with a worse description. So the honest framing of this question changed. It is no longer *"is a command cheap enough to bother with"* — it is **"is this prompt one argument and no branching, given that the tier no longer confers explicit-firing by itself?"** That is a question about shape, which is the same test that settled `/post-mortem`.
 
 5. ~~**Do skill templates inline their procedure, or link it?**~~ **SETTLED by shipping six of them in v2.4.** Resolved as **inline with `{{PLACEHOLDERS}}`**, and the corollary that was still open — where the framework pointer goes — is now answered too: **shipped skill templates carry no framework path in their body; the pointer lives in `skill-prompts/README.md`, which never ships.** The reasoning is that PROCESS.md L380's "open with the role and the source of truth" presupposes the skill was authored *in* the consuming repo, where `aidlc-phases/` exists. So each shipped skill opens by naming a **repo artifact** that does resolve there — the conventions file, the recorded architecture decisions, the existing workflows, the service's exposed metrics. Framework provenance is not lost, it is relocated to the README's Wraps column, which is strictly better placement: the person who needs the provenance is the one instantiating, not the agent executing. **One declared exception:** `cicd-pipeline-bringup` references the four agentic-workflow templates rather than inlining ~65 lines of YAML that would breach the two-screen limit, and the README makes that a one-time human paste at instantiation.
    > The decision also cost what it predicted it would: inlining is what forced the `iac-foundation-bringup` split, exactly as it forced the `build-linear-backlog` one. Two splits from the same rule is enough evidence to call it load-bearing rather than incidental.
@@ -793,21 +885,21 @@ All 97 prompts, in file order. Line numbers refer to each phase's `PROMPTS.md`. 
 
 | Prompt | Line | Verdict | Artifact |
 |---|---|---|---|
-| Architecture Proposal | 7 | subagent | `solution-architect` |
-| Trade-off Interrogation | 54 | subagent | `solution-architect` |
-| Eraser Architecture Diagram (via MCP) | 84 | skill | `render-design-diagrams` |
-| Eraser ER Diagram (via MCP) | 115 | skill | `render-design-diagrams` |
-| Architecture Decision Record Generation | 135 | slash-command | `/adr` |
-| Entity Extraction | 177 | skill | `data-model-design` |
-| Schema Generation | 215 | skill | `data-model-design` |
-| Migration Generation | 250 | skill | `data-model-design` |
-| API Contract | 281 | skill | `api-contract-freeze` |
+| Architecture Proposal | 7 | subagent | `solution-architect` — **shipped** |
+| Trade-off Interrogation | 54 | subagent | `solution-architect` — **shipped** *(folded in as a mandatory step, not the optional follow-up)* |
+| Eraser Architecture Diagram (via MCP) | 84 | skill | `render-design-diagrams` — **shipped** |
+| Eraser ER Diagram (via MCP) | 115 | skill | `render-design-diagrams` — **shipped** |
+| Architecture Decision Record Generation | 135 | slash-command | `/adr` — **shipped**; the repo's first slash command |
+| Entity Extraction | 177 | skill | `data-model-design` — **shipped** |
+| Schema Generation | 215 | skill | `data-model-design` — **shipped** *(its item 7 Mermaid deliverable belongs to `render-design-diagrams`; prompt unchanged, skill hands over)* |
+| Migration Generation | 250 | skill | `data-model-design` — **shipped** |
+| API Contract | 281 | skill | `api-contract-freeze` — **shipped** *(gained a refusal step the spec did not have)* |
 | Tech Stack Comparison | 315 | keep-as-prompt | — |
-| Design Review | 348 | subagent | `architecture-reviewer` |
+| Design Review | 348 | subagent | `architecture-reviewer` — **shipped** |
 | Design System Bootstrap | 384 | keep-as-prompt | — |
 | UI Wireframe | 413 | keep-as-prompt | `wireframe-flow` killed |
 | Production Component | 446 | keep-as-prompt | `/promote-component` killed |
-| Accessibility Review (Claude) | 474 | subagent | `accessibility-auditor` |
+| Accessibility Review (Claude) | 474 | subagent | `accessibility-auditor` — **shipped** |
 
 ### Phase 3 — Development
 

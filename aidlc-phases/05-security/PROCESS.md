@@ -457,7 +457,7 @@ When Security & Compliance is complete, the following artefacts hand off to **Ph
 
 | Risk | Mitigation |
 |------|------------|
-| **AI-generated code ships with 1.7× the vulnerability density of human code** (CodeRabbit / academic data, 2026) | CodeQL + `/security-review` on every PR; Code Review Checklist's AI-extra-scrutiny section ([`templates/code-review-checklist.md`](../../templates/code-review-checklist.md)) is mandatory for AI-noted PRs. |
+| **AI-generated code ships with 1.7× the vulnerability density of human code** (CodeRabbit / academic data, 2026) | CodeQL + `/security-review` on every PR; the code review checklist's AI-extra-scrutiny section is mandatory for AI-noted PRs. |
 | **Alert fatigue — 70% of security alerts go un-actioned once volume outruns triage capacity** | One detector per capability, so there are no duplicate findings to reconcile; CodeQL runs its precision-tuned query suites rather than every available query; `/security-review` is diff-aware; a repeating false positive is fixed by tightening a custom CodeQL query (Step 2.3), not by learning to ignore the detector. |
 | **No automated container / IaC policy enforcement in this phase** — a misconfiguration reaches deploy unless a human catches it | Step 4 is explicitly framed as human review, not tooling; the required-controls list is fixed and lives in `AGENTS.md` so it is the same checklist every time; digest-pinned base images remove the largest silent-drift source; Phase 6 pipeline controls are the backstop. Do not let a green pipeline imply this surface was scanned. |
 | **Prompt injection against AI features in the product (>85% adaptive-attack success rate)** | Anthropic Claude Opus 4.7 model-layer defences (1.4% baseline ASR for Opus 4.5 vs 10.8% prior gen) + output validation + rate limits + cost caps + audit logs; assume model defences are not enough alone. |
@@ -516,7 +516,6 @@ Incident (secret / vulnerability disclosed):
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
 - [Security & Compliance Tools Evaluation →](../../docs/tools-evaluation/5.Security_Compliance_Phase_Tools.md)
-- [Code Review Checklist (AI-extra-scrutiny section) →](../../templates/code-review-checklist.md)
 - [Phase 3 Linear MCP setup (carries over) →](../03-development/PROCESS.md#step-0-one-time-setup--connect-claude-code-to-linear-via-mcp)
 
 ## External References

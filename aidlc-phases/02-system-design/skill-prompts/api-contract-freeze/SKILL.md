@@ -1,0 +1,29 @@
+---
+name: api-contract-freeze
+description: Use when the API contract must be designed, audited, mocked and frozen before frontend work starts against it — mapping the requirements document's user flows to a resource model, generating an OpenAPI 3.1 specification with the team's error envelope, pagination, auth and idempotency conventions, auditing every operation mechanically against the contract gate's checklist, standing up the mock server and recording its URL in the project README, then writing the freeze note and the change-request path. Triggers on "design the API contract", "generate the OpenAPI spec", "stand up the mock server", "audit the spec before we freeze it", "can the frontend start against this yet", "what's our change-request process for the API". Do NOT use for: implementing endpoints or API clients against the spec; editing an already-frozen spec without the documented change request attached; designing the data model the spec sits over (use data-model-design); rendering diagrams from the spec; or declaring the spec frozen — that is the Tech Lead's signature, not yours.
+---
+
+# Design, audit and freeze the API contract
+
+You are producing the contract that backend, frontend and any external integrator all hold to. The source of truth is the **approved requirements document's user flows** and the **committed schema**. The freeze at the end is the point of the whole procedure: the number this skill exists to protect is **zero contract change-requests after frontend work has started**.
+
+## Procedure
+
+1. **Map flows to resources before writing any spec.** Read every user flow in the requirements and propose the resource model plus the operations each flow needs. Settle naming and verb questions here — REST mistakes calcify the moment a client is written against them. Emit a flow → operation table; it is what the first audit check runs against.
+2. **Collect the two judgements the audit cannot make, and refuse to proceed without them:** which endpoints are **public** (everything else is treated as protected), and which POSTs are **non-idempotent** and therefore need an `Idempotency-Key`. Both are product decisions. Guess either and the audit is grading its own invention.
+3. Generate the OpenAPI 3.1 YAML at `docs/api/openapi.yaml`: `info`, `servers` on base path `{{API_BASE_PATH}}`, and a security scheme for `{{AUTH_STACK}}`; every operation from step 1 with a request schema, a success response, and the full `400 401 403 404 409 422 500` set; the error envelope `{ "error": { "code": "", "message": "", "details": [] } }` as one reusable component referenced by every error response; cursor pagination on every list operation; filter and sort parameters; `Idempotency-Key` on the step-2 POSTs; reusable schemas, parameters and responses; tags per resource; an `operationId` on every operation; and an `x-prd-section` extension on each operation linking to the requirement anchor that justifies it. Naming: plural lowercase resources, kebab-case for multi-word.
+4. **Audit the spec mechanically — one pass per line, reporting either a pass or the exact operation that fails:** every step-1 flow has at least one operation · every operation has a request schema, a success response and all seven error responses · every error response references the single envelope component · every list operation defines pagination · every endpoint absent from the step-2 public list defines security · every step-2 non-idempotent POST declares `Idempotency-Key` · every operation carries `x-prd-section` · every operation carries an `operationId` and every resource name follows the convention · the document parses as valid OpenAPI 3.1. **Report failures. Do not silently repair one and then report a pass.**
+5. Stand up the mock server — `{{MOCK_SERVER}}` against `docs/api/openapi.yaml` — confirm it actually answers a request, and **record its URL in the project README**. Frontend integration starts from that URL, not from the spec file.
+6. Write the freeze note into the spec's `info.description` and the README: the version being frozen, the date, and the change-request path — what a requester must supply (the flow that broke, the operations affected, the impact on already-mocked frontend work) and who approves it. Leave the note **unsigned**.
+7. **Stop.** Hand over three things: the step-4 audit result line by line, the mock URL, and the unsigned freeze note. A human walks every operation, example and error response in a spec viewer — the audit proves the spec is *complete*, only a reader can tell whether it is *right* — and then the Tech Lead and a backend developer sign the freeze. → the data-model and API-contract gate.
+
+## Refusal cases
+
+- **Never mark the spec frozen yourself**, and never edit a spec already marked frozen unless the documented change request is attached. The freeze is a signature, not a status field.
+- **Never guess which endpoints are public or which POSTs need idempotency.** Refuse and ask. An audit that grades its own guesses always passes.
+- **Never report the audit as passing while any line fails**, and never soften a failing line into a suggestion.
+- Never invent an operation no user flow asks for. If a flow cannot be expressed cleanly in REST — long-lived workflows, real-time subscriptions — say so and stop rather than bending REST until it breaks; the alternative needs its own recorded decision.
+- Never record a mock URL you did not watch answer a request.
+- **Never edit the spec to match an implementation that drifted from it.** The spec is the contract; a drifted endpoint is a defect in the endpoint. Report the divergence.
+- Implementing the endpoints or the API client is not yours — that is the repo's implementation specialists' work, against this frozen spec.
+- Designing the schema underneath the spec is not yours either — that is `data-model-design`.

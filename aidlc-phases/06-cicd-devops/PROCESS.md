@@ -174,7 +174,7 @@ Whichever is chosen, the ADR must state: which licence, who reviewed it, which p
 
 **1.4 — Observability platform decision.** Two viable defaults: **Datadog + Bits AI SRE** (best autonomous incident triage, 90% faster restoration in Datadog's published benchmarks; cost scales with hosts/usage — model the bill carefully) or **Grafana Cloud + Grafana Assistant + Sift** (free tier is generous, Grafana Assistant went free in April 2026, OSS-friendly, full data ownership when self-hosted). Either stack carries application errors on the same OpenTelemetry signal as everything else — errors surface as the error-rate SLO and its burn-rate alert (Step 6.4), not through a separate error-tracking product.
 
-**1.5 — Document each decision as an ADR.** Use [`/templates/adr-template.md`](../../templates/adr-template.md). One ADR per pillar (cloud provider, IaC tool & licence, **state backend**, orchestration, observability, secrets, deployment strategy). Cite the Phase 1 NFR ID each decision satisfies. **State backend is an ADR pillar in its own right** — it used to be a managed-control-plane default, and now it is a thing the team builds.
+**1.5 — Document each decision as an ADR.** Run [`/adr <the decision>`](../02-system-design/command-prompts/adr.md), which allocates the next sequential number and carries the record shape inline. One ADR per pillar (cloud provider, IaC tool & licence, **state backend**, orchestration, observability, secrets, deployment strategy). Cite the Phase 1 NFR ID each decision satisfies. **State backend is an ADR pillar in its own right** — it used to be a managed-control-plane default, and now it is a thing the team builds.
 
 **Escalation:** If the stack requires technology nobody on the team has touched, time-box a one-week spike before committing. Point the `terraform-iac-engineer` subagent at the proposed architecture and let it generate a throwaway root module to review — a spike artefact, never a merge candidate.
 
@@ -566,9 +566,7 @@ Incident:
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
 - [CI/CD & DevOps Tools Evaluation →](../../docs/tools-evaluation/6.AIDLC_CICD_DevOps_Phase_Tools.md)
-- [Runbook Template →](../../templates/runbook-template.md)
-- [Post-Mortem Template →](../../templates/post-mortem-template.md)
-- [ADR Template →](../../templates/adr-template.md)
+- [ADR Command Template →](../02-system-design/command-prompts/adr.md) (`/adr` — carries the record shape inline)
 - [Phase 3 Linear MCP setup (carries over) →](../03-development/PROCESS.md#step-0-one-time-setup--connect-claude-code-to-linear-via-mcp)
 
 ## External References

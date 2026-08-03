@@ -4,13 +4,15 @@
 >
 > **Why it is not per-phase.** Artifacts are **not scoped to the phase that ships them.** `linear-task-agent` is used whenever someone works a story, in month one or month nine. `publish-prd-to-linear` is used whenever requirements are written, including a mid-project change request. A boundary between two artifacts used across phases cannot be expressed inside either phase's README — which is exactly why this file exists.
 >
-> **Scope: 18 shipped artifacts** — 7 development subagents, 2 DevOps subagents, 6 DevOps skills, 3 requirement skills. Proposed-but-unbuilt artifacts are listed in [PROMPT-CONVERSION-ANALYSIS.md](./PROMPT-CONVERSION-ANALYSIS.md) and enter this map when they ship, not before.
+> **Scope: 25 shipped artifacts** — 7 development subagents, 2 DevOps subagents, 3 design subagents, 6 DevOps skills, 3 requirement skills, 3 design skills, 1 command. Proposed-but-unbuilt artifacts are listed in [PROMPT-CONVERSION-ANALYSIS.md](./PROMPT-CONVERSION-ANALYSIS.md) and enter this map when they ship, not before.
 
 ---
 
 ## The one rule
 
 **Skills auto-trigger from their description; subagents are name-invoked but can still be auto-selected.** So the `description:` field is a claim on user utterances, and two artifacts claiming the same utterance is a defect — the router picks one, silently, and the loser's guarantees never run.
+
+**Commands are not a third mechanism.** Custom commands have been merged into skills: a file at `.claude/commands/adr.md` and a skill at `.claude/skills/adr/SKILL.md` both create `/adr` and work the same way, and **by default both you and Claude can invoke either**. What makes a command explicitly-fired is the frontmatter field `disable-model-invocation: true`, not the directory it sits in. Remove that field and the command's description becomes a claim on user utterances exactly like a skill's, and it inherits every rule below. Any command shipped from this repo carries it; the tier is a convention held in frontmatter.
 
 Boundaries are therefore drawn on **three axes, in this order**:
 
@@ -56,6 +58,22 @@ The **Provenance** column records which phase ships the template. It is a lookup
 
 **Test-writing is deliberately not a separate owner.** The implementation specialists claim unit and integration tests by **positive** trigger, because the test ships in the same commit as the code. An artifact that claimed "write the tests" generally would take that work away from them mid-story.
 
+### Design-time artifacts
+
+| Artifact | Type | Owns | Never owns | Provenance |
+|---|---|---|---|---|
+| `solution-architect` | Subagent | System-level architecture options, the 10x stress test on each, the recommendation, the proposal document | Per-story design, reviewing its own proposal, decision records, the schema, the API contract, diagrams | P2 |
+| `architecture-reviewer` | Subagent | The independent production-readiness verdict on a design it did **not** author | Producing or revising the design, code diffs, WCAG, applying any fix it recommends | P2 |
+| `accessibility-auditor` | Subagent | The WCAG 2.1 AA verdict on one rendered surface | Fixing violations, diff review, brand critique, **PASS without a rendered-page scan** | P2 |
+| `render-design-diagrams` | Skill | The Eraser DSL, the PNG/SVG exports, the recorded editor URL, and the in-repo Mermaid mirror | The architecture decision itself, the schema, wireframes, Eraser workspace admin | P2 |
+| `data-model-design` | Skill | Greenfield schema, its indexes, the migrations and the seed data | The ER diagram, the API contract, any schema work inside a story already in flight | P2 |
+| `api-contract-freeze` | Skill | The OpenAPI spec, the mechanical audit, the mock URL, the **unsigned** freeze note | The schema underneath it, implementation, the freeze signature | P2 |
+| `/adr` | Command | One decision record, with the next sequential number allocated and reported | Choosing between options, accepting a decision (Status is always `Proposed`) | P2 |
+
+**`solution-architect` and `architecture-reviewer` split on direction of travel, not on topic, and the split is a gate requirement.** One produces the design; the other judges it. Merging them would void Gate 1's *"reviewed by ≥ 1 senior engineer who is not the author"* while appearing to satisfy it. Both descriptions exclude the other, and **`architecture-reviewer` additionally detects and refuses a same-session self-review** — because a description constrains routing, and once an agent is loaded no description constrains what it agrees to do.
+
+**Three artifacts here own a *verdict*, and a verdict is a write.** `architecture-reviewer` and `accessibility-auditor` return one, and `api-contract-freeze` deliberately does not — it leaves the freeze note unsigned. The pattern worth keeping: an agent may compute a verdict from evidence it can actually obtain, and must have a token for "I could not obtain it" (`Unevaluated`, `PASS WITHHELD`). An agent that can only return pass-or-fail will manufacture whichever the room wants.
+
 ### Infrastructure and pipelines
 
 | Artifact | Type | Owns | Never owns | Provenance |
@@ -87,6 +105,13 @@ Where two artifacts could plausibly take the same sentence. These are the rows w
 | "add the S3 bucket module" | `terraform-iac-engineer` | `iac-state-backend-bringup` | Resource HCL, not backend bring-up |
 | "write the runbook" | `observability-bringup` **if alert-triggered** | — | Alert runbooks live under `alerts/`; service runbooks under `services/` are Phase 3-owned and are a different artifact class |
 | "how many CVEs in this image" | *nothing* | `container-image-engineer` | **No scanner exists in this stack.** The agent must refuse rather than answer; nothing downstream would contradict a fabricated figure |
+| "design the architecture for ENG-247" | the per-story design specialist | `solution-architect` | A story identifier against an existing codebase. The seam is **scope**, not the word "design" |
+| "is this design ready to build" | `architecture-reviewer` | `solution-architect` | A proposal cannot review itself and still satisfy "not the author" |
+| "add the migration for ENG-412" | `backend-engineer` | `data-model-design` | In-story schema work, shipped in the story's own commit. The design skill claims **greenfield only**, which is why its triggers name the requirements document |
+| "review this screen" | `accessibility-auditor` **if against WCAG** | `code-reviewer` | Split on what is reviewed: a rendered interface against a published standard, never a diff |
+| "is the contrast OK here" | `accessibility-auditor` — **answered as unmeasured** | — | No agent can compute rendered contrast from source. The honest answer names the colour pair and asks for the scan |
+| "draw the architecture diagram" | a project-scope `architecture-diagram` skill where installed | `render-design-diagrams` | Deliberately left with the incumbent — see the collision table below. The framework skill claims the Eraser round-trip, not the bare phrasing |
+| "freeze the API contract" | `api-contract-freeze` | a project-scope `system-design-architect` agent | Skill beats agent on auto-trigger; decide at install which one the repo keeps |
 
 ---
 
@@ -103,6 +128,10 @@ A verb in this list is spoken for. **Never add it to a new artifact's trigger ph
 | my next task, move ENG-XXX to, comment progress, open the PR | `linear-task-agent` |
 | file a bug, log a follow-up, track this for later | `linear-task-agent` (and `file-followup-bug` where built) |
 | apply, destroy, terraform state | **nobody** — no agent holds an apply credential by design |
+| commit the DSL, the editor URL, the PNG/SVG export | `render-design-diagrams` |
+| freeze the spec, stand up the mock server | `api-contract-freeze` |
+| write the ADR, record the decision, document why we chose X | `/adr` |
+| draw the architecture diagram, diagram this flow, generate a C4 diagram | **deliberately unclaimed** — left to a project-scope diagram skill. Claiming it is what re-opens the collision above |
 
 Two naming patterns keep the surface small and are worth preserving:
 
@@ -119,7 +148,9 @@ Predicted, not observed — both trees below are gitignored, so these are what h
 |---|---|---|
 | the three requirement skills | a project-scope `requirement-gathering` skill | Unverified — run the negative-routing check after install |
 | `cicd-pipeline-bringup` | a project-scope `cicd-devops` skill | Mitigated at build: its triggers deliberately do **not** lead with "CI/CD". Any edit reintroducing "set up CI/CD for this repo" re-opens it |
-| `render-design-diagrams` *(unbuilt)* | a project-scope `architecture-diagram` skill | Verbatim trigger collision — deconflict before authoring |
+| `render-design-diagrams` | a project-scope `architecture-diagram` skill | **Mitigated at build, with a residual risk that is an install-time decision.** Every trigger now names the Eraser round-trip or the two-surface obligation; bare "draw the architecture diagram", "diagram this flow", "generate a C4 diagram" and "update the diagram for X" are left with the incumbent. **Residual:** in a repo with both, that bare phrasing produces the Mermaid mirror only — one gate line satisfied, three (DSL, editor URL, exports) silently not, and it looks done. Either uninstall the incumbent or reserve it for sketches. **Re-opened by** adding any of those four phrases, or stripping the Eraser/DSL/export qualifier off a trigger that has one |
+| `data-model-design`, `api-contract-freeze` | a project-scope `system-design-architect` agent | **Newly recorded.** That agent claims "produce the data model / OpenAPI contract / ADRs" and "freeze the API contract" as invocation phrases. Skills beat agents on auto-trigger, so the skills take those utterances — the gate-favourable outcome — but the agent's own boundaries stop running for that work. A silent behaviour change in any repo with both; decide at install |
+| `solution-architect` | a project-scope `system-design-architect` agent | Same agent, third overlap — it also claims system-level option generation. Its scope is the union of three framework artifacts, so a repo keeping it should retire it rather than run both |
 | `e2e-and-coverage-engineer` *(unbuilt)* | a project-scope `qa-test-engineer` agent | Renamed pre-emptively; the existing agent carries the opposite scope |
 
 ---
@@ -129,7 +160,9 @@ Predicted, not observed — both trees below are gitignored, so these are what h
 1. Write the description first. If you cannot state what it owns **and** what it must never take, it is not one artifact.
 2. Grep this file's reserved-verb table for every trigger phrase you drafted.
 3. Check the write-type axis: does anything already write the same object? If yes, the boundary goes in **both** descriptions, in the same PR.
-4. Run the negative-routing check — ask for ordinary work in plain language and confirm the new artifact does not load.
+4. Run the negative-routing check — ask for ordinary work in plain language and confirm the new artifact does not load. **For a command this check does not apply** — but only because `disable-model-invocation: true` is set; verify the field is present rather than assuming the directory grants it.
 5. Add a row here. **An artifact that ships without a row in this file has no recorded boundary**, which means the next author cannot avoid colliding with it.
+
+> **A deliberately unclaimed lane is a routing decision and belongs in the tables above.** Phase 2 left bare diagram phrasing to a project-scope incumbent rather than fighting for it. Recorded in the reserved-verb table as unclaimed-on-purpose, it survives the next author; recorded nowhere, the first person who thinks "we should trigger on *draw the diagram*" re-opens a collision that was closed on purpose.
 
 > **Maintenance rule.** This file is only worth what its last update is worth. Any PR that ships, renames, or retires an artifact edits this file in the same PR — the same rule the per-phase READMEs' Wraps columns already carry.

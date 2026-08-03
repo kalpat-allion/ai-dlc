@@ -341,8 +341,6 @@ The deliverable structure (carries over from existing PROCESS):
 
 > **Time benchmark.** With the multi-repo `--add-dir` ingestion + the handoff-agent subagent, end-to-end synthesis is ~30 minutes of Claude time + ~1 hour of human review for a typical 6-month engagement. Without the AI loop the same artefact takes 2–3 days of focused human work.
 
-> **Reference template:** [`templates/handoff-document-template.md`](../templates/handoff-document-template.md).
-
 ---
 
 ### Step 4: Knowledge Transfer (KT) Sessions
@@ -757,9 +755,7 @@ Day 90:
 - [Prompt Templates →](./PROMPTS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Process Flowchart →](./FLOWCHART.md)
-- [Handoff Document Template →](../templates/handoff-document-template.md)
-- [Release Notes Template →](../templates/release-notes-template.md)
-- [ADR Template →](../templates/adr-template.md)
+- [ADR Command Template →](../02-system-design/command-prompts/adr.md) (`/adr` — carries the record shape inline)
 - [Phase 3 Linear MCP setup (carries over) →](../03-development/PROCESS.md#step-0-one-time-setup--connect-claude-code-to-linear-via-mcp)
 - [Phase 6 GitHub / observability MCP setup (carries over) →](../06-cicd-devops/PROCESS.md#step-0-one-time-setup--wire-ai-tools-into-the-devops-loop)
 - [Delivery & Handoff Tools Evaluation →](../../docs/tools-evaluation/7.Delivery_Handoff_Phase_Tools.md)

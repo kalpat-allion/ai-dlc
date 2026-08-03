@@ -218,5 +218,3 @@ The flow has three explicit human gates so that no Claude-authored Linear item r
 - [Process Definition →](./PROCESS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
-- [PRD Template →](../templates/prd-template.md)
-- [User Story Template →](../templates/user-story-template.md)

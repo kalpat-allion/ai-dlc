@@ -400,7 +400,5 @@ Linear's git integration handles the auto-transitions; humans validate, prioriti
 - [Process Definition →](./PROCESS.md)
 - [Quality Gates →](./QUALITY-GATES.md)
 - [Prompt Templates →](./PROMPTS.md)
-- [Test Plan Template →](../templates/test-plan-template.md)
-- [Bug Report Template →](../templates/bug-report-template.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
 - [Phase 3 Development PROCESS →](../03-development/PROCESS.md)

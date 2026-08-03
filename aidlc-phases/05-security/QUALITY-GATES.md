@@ -47,7 +47,7 @@ Runs on every pull request. Blocks merge if failed.
 ### Human
 - [ ] Security-sensitive PRs (auth, crypto, data handling, AI features) reviewed by Security Champion
 - [ ] Any dismissed Critical / High finding has documented justification in PR comments
-- [ ] AI-noted PRs received the extra-scrutiny review per [`code-review-checklist.md`](../../templates/code-review-checklist.md)
+- [ ] AI-noted PRs received the extra-scrutiny review per the team's code review checklist
 
 **Pass:** All items green. Merge allowed.
 

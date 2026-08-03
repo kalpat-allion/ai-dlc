@@ -763,7 +763,7 @@ Whichever is configured, the same rules apply:
 
 **4.6 — Verify Linear auto-transition.** After merge, the Linear issue should be **Done** within ~30 seconds (Linear's webhook). If not, the developer manually closes it and files an issue against the Linear ↔ git integration.
 
-**Code Review Checklist:** [../templates/code-review-checklist.md](../templates/code-review-checklist.md) — the human-reviewer checklist. Its machine-enforced counterpart is the repo-committed `.claude/prompts/pr-review-checklist.md` read by both the Claude PR review bot and the local [`code-reviewer`](#code-reviewer) subagent; see [PR-REVIEW-BOT.md § The three artifacts](./PR-REVIEW-BOT.md#2-the-three-artifacts).
+**Code Review Checklist:** the human-reviewer checklist, maintained by the team in its own repo. Its machine-enforced counterpart is the repo-committed `.claude/prompts/pr-review-checklist.md` read by both the Claude PR review bot and the local [`code-reviewer`](#code-reviewer) subagent; see [PR-REVIEW-BOT.md § The three artifacts](./PR-REVIEW-BOT.md#2-the-three-artifacts).
 
 **PR requirements (enforced by template):**
 - Title contains the Linear identifier in `[ENG-XXX]` form
@@ -967,7 +967,6 @@ Three explicit gates ensure that **no code reaches main without CI + AI review +
 - [Process Flowchart →](./FLOWCHART.md)
 - [Claude PR Review Bot — CI integration →](./PR-REVIEW-BOT.md)
 - [Specialist Subagent Prompts →](./subagent-prompts/README.md)
-- [Code Review Checklist →](../templates/code-review-checklist.md)
 - [Phase 1 Linear MCP setup (Step 0) →](../01-requirement-gathering/PROCESS.md#step-0-one-time-setup--connect-claude-to-linear-via-mcp)
 
 ## External References

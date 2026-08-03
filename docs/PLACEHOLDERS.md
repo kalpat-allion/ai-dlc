@@ -2,7 +2,9 @@
 
 > **What this is.** One row per **repository fact**, listing every placeholder name the shipped templates use for it. Its job is not to hold your values — the per-directory READMEs do that, and they are what an operator has open while instantiating. Its job is to stop the same fact being asked for twice under two names.
 >
-> **The problem it solves.** The three shipped phases carry **36 distinct placeholders** across 18 templates, and **literal overlap between the phases is zero** — no placeholder name appears in more than one phase. That sounds clean and is not: what exists instead is **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
+> **The problem it solves.** The four shipped phases carry **44 distinct placeholders** across 25 templates. Before Phase 2, **literal overlap between phases was zero** — no placeholder name appeared in more than one phase — and what existed instead was **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
+>
+> **Phase 2 is the first phase to reuse rather than re-coin, and that is this file working.** It uses **16** placeholders, of which **8 are existing names adopted from Phases 3 and 6** — `{{ORM}}`, `{{DATASTORE}}`, `{{MIGRATIONS_PATH}}`, `{{AUTH_STACK}}`, `{{TEAM_STACK}}`, `{{CLOUD_PROVIDER}}`, `{{FRONTEND_FRAMEWORK}}`, `{{FRONTEND_ROOT}}` — and only 8 are new. **The pair count is still six, not fourteen.** Two near-pairs were caught at authoring time and are recorded below rather than minted. Phase 2 is also the first phase whose placeholders literally overlap another phase's, which is the intended end state, not a regression.
 
 ---
 
@@ -27,11 +29,18 @@ These are the rows that matter. Each is one fact about the repository, asked for
 
 **Fill the left column once, then propagate.** Working fact-first rather than file-first is the whole point; going template-by-template is what produces the inconsistent fill.
 
+### Two near-pairs, caught before they were minted
+
+Neither is a reconciliation row, because in both cases the second name was **not created**. They are recorded because the reasoning is the thing worth reusing.
+
+- **`{{AUTH_STACK}}` now carries two related but distinct facts.** `software-architect` means the auth *provider* (`Clerk`); `api-contract-freeze` needs the *wire security scheme* for the OpenAPI `securitySchemes` block. Coining `{{AUTH_SCHEME}}` would have been the seventh pair, so the naming rule was applied as written — *reuse the existing name even if you would have named it differently* — and the skill is phrased as "a security scheme for `{{AUTH_STACK}}`". **If a repo ever has a provider and a scheme that genuinely disagree, this is the row that splits**, under converge-on-next-touch.
+- **`{{A11Y_SCAN_COMMAND}}` deliberately does *not* reuse `{{TEST_RUNNER}}` or `{{TEST_COMMAND}}`.** Adjacent, but a different fact: the auditor's PASS condition requires a command that renders the page. Filling it with the unit-test command makes PASS permanently unreachable, and the failure looks like a strict agent rather than a bad fill.
+
 ---
 
 ## Full inventory
 
-All 36, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
+All 45, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
 
 ### Tracker and conventions
 
@@ -50,11 +59,11 @@ All 36, grouped by what they describe. **Where each is consumed** is authoritati
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{TEAM_STACK}}` | `Next.js 14 + TypeScript` | `frontend-engineer`, `backend-engineer`, `software-architect` |
-| `{{FRONTEND_FRAMEWORK}}` | `React 18` | `software-architect` |
+| `{{TEAM_STACK}}` | `Next.js 14 + TypeScript` | `frontend-engineer`, `backend-engineer`, `software-architect`, `solution-architect` |
+| `{{FRONTEND_FRAMEWORK}}` | `React 18` | `software-architect`, `accessibility-auditor` |
 | `{{BACKEND_FRAMEWORK}}` | `NestJS` | `software-architect` |
 | `{{RUNTIME}}` | `Node 22` | `container-image-engineer` |
-| `{{AUTH_STACK}}` | `Clerk` | `software-architect` |
+| `{{AUTH_STACK}}` | `Clerk` — the auth **provider** for the architect, and the **wire security scheme** the OpenAPI spec declares. See the near-pair note above | `software-architect`, `api-contract-freeze` |
 | `{{REALTIME_STACK}}` | `Socket.IO`, or `none` | `software-architect` |
 | `{{ASYNC_JOB_STACK}}` | `BullMQ`, or `none` | `software-architect` |
 
@@ -62,22 +71,35 @@ All 36, grouped by what they describe. **Where each is consumed** is authoritati
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{FRONTEND_ROOT}}` | `apps/web` | `frontend-engineer` |
+| `{{FRONTEND_ROOT}}` | `apps/web` | `frontend-engineer`, `accessibility-auditor` |
 | `{{BACKEND_ROOT}}` | `services/api` | `backend-engineer` |
 | `{{SERVICE_ROOT}}` | `services/api`, or `.` | `container-image-engineer` |
 | `{{COMPONENT_LIBRARY_PATH}}` | `apps/web/src/components/ui` | `frontend-engineer`, `software-architect` |
 | `{{API_CLIENT_PATH}}` | `apps/web/src/lib/api` | `frontend-engineer` |
-| `{{MIGRATIONS_PATH}}` | `services/api/migrations` | `backend-engineer` |
+| `{{MIGRATIONS_PATH}}` | `services/api/migrations` | `backend-engineer`, `data-model-design` |
 | `{{IAC_DIR}}` | `infra/` | `terraform-iac-engineer`, `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `cost-guardrails-bringup` |
+| `{{SCHEMA_PATH}}` | `prisma/schema.prisma` | `data-model-design` |
+| `{{ADR_DIR}}` | `docs/adrs/` | `/adr`, `solution-architect`, `architecture-reviewer` |
+| `{{ARCHITECTURE_DIR}}` | `docs/architecture/` | `solution-architect`, `architecture-reviewer` |
+| `{{A11Y_REPORT_PATH}}` | `docs/accessibility/wcag-aa-report.md` | `accessibility-auditor` |
 
 ### Data and testing
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{ORM}}` | `Prisma` | `backend-engineer`, `software-architect` |
-| `{{DATASTORE}}` | `PostgreSQL 16` | `backend-engineer`, `software-architect` |
+| `{{ORM}}` | `Prisma` | `backend-engineer`, `software-architect`, `data-model-design` |
+| `{{DATASTORE}}` | `PostgreSQL 16` — **include the version**, it changes the available DDL | `backend-engineer`, `software-architect`, `data-model-design` |
 | `{{TEST_RUNNER}}` | `vitest` | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect` |
 | `{{TEST_COMMAND}}` | `pnpm test -- --coverage` | `cicd-pipeline-bringup` |
+| `{{A11Y_SCAN_COMMAND}}` | `pnpm dlx @axe-core/cli http://localhost:3000` — must run against a **rendered** page. Not the unit-test command; see the near-pair note above | `accessibility-auditor` |
+
+### Design tooling and contracts
+
+| Placeholder | Example | Consumed by |
+|---|---|---|
+| `{{ERASER_MCP_SERVER}}` | `eraser`, or a distinct per-project name such as `eraser-acmeco` — must match the name registered in the repo's committed `.mcp.json` | `render-design-diagrams` |
+| `{{API_BASE_PATH}}` | `/api/v1` | `api-contract-freeze` |
+| `{{MOCK_SERVER}}` | `Prism`, or `Mockoon` for Windows-heavy teams | `api-contract-freeze` |
 
 ### Infrastructure
 
@@ -107,6 +129,7 @@ Both are already stated in the per-directory READMEs and are repeated here becau
 
 - **`{{CLOUD_PROVIDER}}` and `{{TF_CLI}}` must be filled before any infrastructure helper runs.** A guessed infrastructure setting is the one mistake in this framework with no cheap undo.
 - **`{{CLAUDE_ACTION_VERSION}}` must be an exact released version.** A floating tag makes the CI behaviour of every repo change without a commit.
+- **`{{A11Y_SCAN_COMMAND}}` must render the page.** Filled with a unit-test command, the accessibility auditor can never reach PASS — and the symptom is an agent that looks pedantic rather than a placeholder that is wrong, so nobody goes looking for the real cause.
 
 ---
 
