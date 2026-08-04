@@ -176,7 +176,7 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
   - The fix is a **new step 2** that refuses to proceed until a human declares the public-endpoint list and the non-idempotent-POST list. With both in hand the audit is genuinely mechanical and the artifact earns its keep; **without it, this skill is a fabrication engine wearing a checklist** — which is precisely what the drop condition was pointing at without being able to name it. The two Gate 2 lines were reworded to read against the declared lists, because as written they were unfalsifiable.
   - **It also grew a seventh step and the gap was real, not cosmetic.** The proposed six ended at the freeze note and came in under band at 27 lines. PROCESS 3.3's human Swagger walkthrough had no home, and the skill was implicitly claiming that a passing mechanical audit means the spec is *right*. It does not — **the audit proves completeness; only a reader proves correctness.** Step 6 now leaves the freeze note **unsigned** and step 7 hands over the audit result, the mock URL and the note.
 
-#### `author-test-plan` — P1 · Phase 4
+#### `author-test-plan` — **SHIPPED** · Phase 4
 
 - **Wraps:** Test Plan Generation, test-plan-gap-analysis, test-plan-to-linear-document
 - **Path:** `aidlc-phases/04-testing-and-qa/skill-prompts/author-test-plan/SKILL.md`
@@ -185,7 +185,7 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
   > Use when a QA Lead or Tech Lead needs the test plan for a project or release produced and published. One procedure: fetch the PRD and architecture via Linear MCP rather than pasting, draft the plan with an AC-to-test map, gap-check it against the source ACs and NFRs, resolve every Critical/High, then publish it as a Linear Document with stable section anchors. Entering at "check the test plan for gaps" or "publish the test plan to Linear" resumes the procedure at that step; publication is gated on the gap check clearing. Triggers on "write the test plan", "what's our test strategy", "do we have a test for every AC". Do NOT use for: writing test code, auditing coverage of an existing suite, or silently revising an already-published plan.
 - **Why:** The third prompt refuses to run without the second's clearance — hard-gated steps must not be advertised as alternatives (PROCESS.md L429). The "fetch via MCP rather than paste" instruction is what defeats the context-hungry objection.
 
-#### `reproduce-and-diagnose-bug` — P1 · Phase 4
+#### `reproduce-and-diagnose-bug` — **SHIPPED** · Phase 4
 
 > Replaces the retired `diagnose-production-bug`. `sentry-context-pull` is deleted; the two remaining prompts are retooled to anchor on the Linear bug report.
 
@@ -198,7 +198,7 @@ Like `subagent-prompts/`, these are **templates, not active artifacts** — Clau
 - **Mandatory edit when built:** the source prompt refuses when "affected-user segmentation" is missing (`PROMPTS.md:403`). That is unobtainable post-Sentry, so it would refuse on most real bugs. Relax to "stack trace **or** a deterministic reproduction"; demote segmentation to optional.
 - **Its own drop condition:** post-Sentry this is 100% procedural discipline and 0% context fetch. If the team already ships regression tests in the fix diff unprompted, do not build it.
 
-#### `load-test-engineer` — P1 · Phase 4 · `sonnet` *(subagent — listed here for adjacency; see Subagents)*
+#### `load-test-engineer` — **SHIPPED** · Phase 4 · `sonnet` *(subagent — listed here for adjacency; see Subagents)*
 
 See the [Subagents](#subagents) section.
 
@@ -319,7 +319,7 @@ See the [Subagents](#subagents) section.
 
 ### Subagents
 
-#### `load-test-engineer` — P1 · Phase 4 · `sonnet`
+#### `load-test-engineer` — **SHIPPED** · Phase 4 · `sonnet`
 
 - **Wraps:** k6 Load Test Generation
 - **Path:** `aidlc-phases/04-testing-and-qa/subagent-prompts/load-test-engineer.md`
@@ -328,9 +328,10 @@ See the [Subagents](#subagents) section.
   > Use this agent to build and run the performance test for one service or user journey: turns the stated non-functional requirements plus a supplied traffic model into a k6 script that exercises a full journey rather than hammering one endpoint, wires thresholds directly to the NFR numbers, runs it, reads p95/p99 and error rate against those thresholds, and tunes until the run is clean. Refuses to run without NFR targets cited to their source, refuses to invent a traffic model, and refuses to report a PASS against an environment not declared performance-matched to production. Invoke on "write the load test for checkout", "can we handle 10k concurrent users", "run the k6 script and tune the thresholds", "are we meeting our p95 target". Do NOT invoke for: unit, integration or E2E tests (the implementation specialists and `e2e-and-coverage-engineer` own those), profiling or optimising the code that fails the test, capacity planning or cost modelling, or defining the SLOs themselves (use `observability-bringup`).
 - **Why:** The "traffic model is business judgement" objection holds for only **one of four** input blocks — endpoints come from the Phase 2 frozen OpenAPI, performance targets are Phase 1 NFRs, auth is repo-knowable. The deciding argument is shape: as a subagent it is name-invoked and faces **zero** auto-trigger competition, and its author → run → read p95 → tune → re-run loop is the same voluminous multi-turn shape that carried `terraform-iac-engineer`.
 - **Routing:** no collision among the other 36. `e2e-and-coverage-engineer` already excludes "load or performance tests" — pre-deconflicted, no coordinated edit needed.
-- **Two hard boundaries, or the objection wins:** (1) refuse without both NFR numbers cited to their Phase 1 source and a human-supplied traffic profile; (2) **refuse to report a PASS against staging not declared performance-matched** — this closes the risk `04-testing-and-qa/PROCESS.md:451` names verbatim: *"Load tests pass against an under-provisioned staging environment — green tests, red production."*
+- **Two hard boundaries, or the objection wins:** (1) refuse without both NFR numbers cited to their Phase 1 source and a human-supplied traffic profile; (2) **refuse to report a PASS against staging not declared performance-matched** — this closes the risk `04-testing-and-qa/PROCESS.md` names verbatim in its risk table: *"Load tests pass against an under-provisioned staging environment — green tests, red production."* *(Cited as `:451` in this document until the build; the row is now at `:431`. The shipped template cites it by **anchor**, not by line — a line number in a template that ships into other repos is a reference that rots on the next edit to the source.)*
+- **What the build found that the spec did not: the boundary is only as strong as one placeholder fill.** The agent is *told* which environment is performance-matched — it cannot measure the claim. An operator who fills `{{PERF_TEST_ENV}}` with the ordinary staging URL has disabled rule (2) **by configuring it**, and every artifact downstream still looks correct. That is the inverse of `accessibility-auditor`'s failure mode, where a bad `{{A11Y_SCAN_COMMAND}}` makes PASS *unreachable* and someone eventually investigates. Recorded as a hard requirement in [PLACEHOLDERS.md](./PLACEHOLDERS.md#the-hard-requirements); the fill instruction is the only defence there is.
 
-#### `e2e-and-coverage-engineer` — **P0** · Phase 4 · `sonnet`
+#### `e2e-and-coverage-engineer` — **SHIPPED** · Phase 4 · `sonnet`
 
 - **Wraps:** Playwright E2E Test Generation, playwright-failure-debug, Test Coverage Gap Analysis
 - **Path:** `aidlc-phases/04-testing-and-qa/subagent-prompts/e2e-and-coverage-engineer.md`
@@ -959,11 +960,13 @@ One artifact per PR, so the router can be re-tested each time.
 6. ~~`scaffold-linear-milestones` + `push-linear-stories` (3 days — ship together; the second consumes the anchor map)~~ **SHIPPED**, together, as predicted — the second refuses to run without the first's anchor map, so shipping them apart would have shipped one skill that could not execute its own procedure.
 7. ~~`open-pull-request` + the `linear-task-agent` and `code-reviewer` edits (3 days — three files, one PR)~~ **SHIPPED**, as one PR with **four** shipped-template edits rather than two — `refactor-specialist` and `subagent-prompts/README.md` came with it — and both prescribed edits turned out to be in the wrong place or the wrong shape. See [Phase 3 build — consequences](#phase-3-build--consequences) §5 and §7.
 8. ~~`run-sprint-planning` (2 days)~~ **SHIPPED**, in the same PR as item 7 rather than after it. Bundling was right for a reason the queue did not anticipate: the two skills share a directory README whose routing section is the only place `open-pull-request`'s collision is explained, and splitting them would have shipped that README twice.
-9. `e2e-and-coverage-engineer` (2 days — the rename resolves the roombook collision; no shipped-template edit needed after the narrowing) — **the last remaining P0.**
+9. ~~`e2e-and-coverage-engineer` (2 days — the rename resolves the roombook collision; no shipped-template edit needed after the narrowing) — **the last remaining P0.**~~ **SHIPPED**, and **not alone: the whole Phase 4 set of four shipped together**, mixing this P0 with three P1s. Both predictions held — the rename closed the collision and no shipped-template edit was needed — but the sequencing did not. Splitting the set would have shipped a coverage auditor before the test plan it audits against, and a bug procedure whose terminal hand-off had no owner. **The queue is ordered by artifact priority; the phases are ordered by which artifacts complete each other's inputs, and where those disagree the second one wins.** Same lesson as items 6 and 8, now on a set of four.
 
 ### Phase 3 — P1 (~4-6 weeks)
 
-No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing collisions — the cheapest P1 to land), **`dependency-risk-analyst`** (also collision-free; its only dependency is that Dependabot is switched on), `threat-modeler`, `secret-leak-response`. **`threat-model-verifier` ships after `threat-modeler`, never before it** — it audits that agent's output, so building it first gives it nothing to verify, and the two descriptions must be written as a mutually-excluding pair in the same PR. Then the remaining multi-step skills: `author-test-plan`, `reproduce-and-diagnose-bug`, `finalise-documentation`.
+No-coordinated-edit artifacts first: ~~**`load-test-engineer`** (zero routing collisions — the cheapest P1 to land)~~ **SHIPPED with the Phase 4 set**, **`dependency-risk-analyst`** (also collision-free; its only dependency is that Dependabot is switched on), `threat-modeler`, `secret-leak-response`. **`threat-model-verifier` ships after `threat-modeler`, never before it** — it audits that agent's output, so building it first gives it nothing to verify, and the two descriptions must be written as a mutually-excluding pair in the same PR. Then the remaining multi-step skills: ~~`author-test-plan`, `reproduce-and-diagnose-bug`~~ **both SHIPPED with the Phase 4 set**, and `finalise-documentation`.
+
+> **What is actually left in this queue is Phase 5 and Phase 7.** Of the 41 helpers, **33 are built**; the outstanding 8 are Phase 5's five, Phase 7's two, and `sweep-requirements-gaps`. The queue's tier ordering has now been overridden by phase-set bundling four separate times (items 6, 7, 8 and 9), which is enough repetitions to state the rule plainly rather than as a series of exceptions: **artifacts that consume each other's outputs ship together, whatever tier each carries individually.**
 
 > **Phase 2's seven are already built and are not in this queue** — `solution-architect`, `architecture-reviewer`, `accessibility-auditor`, `render-design-diagrams`, `data-model-design`, `api-contract-freeze` and `/adr` shipped as one phase set. **The `threat-modeler` ↔ `architecture-reviewer` mutual exclusion is now one-sided and must be completed when `threat-modeler` ships:** the shipped reviewer already excludes threat modelling, but by work type ("the repo's security-review tooling") rather than by slug, because naming an unbuilt artifact is the dangling-pointer defect. `threat-modeler`'s own description must carry the reciprocal, and whoever builds it should decide then whether both sides can safely name each other — they will be in different phases, so the cross-phase rule says probably not.
 
@@ -971,7 +974,9 @@ No-coordinated-edit artifacts first: **`load-test-engineer`** (zero routing coll
 
 ### Phase 4 — P2, conditional
 
-Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), `handoff-agent` after the first real engagement close, `reproduce-and-diagnose-bug` if teams already ship regression tests in the fix diff unprompted.
+Build only if the frequency materialises. Several name their own drop condition: `sweep-requirements-gaps` now carries a **falsifiable release trigger and a numeric drop condition** rather than a felt one (see its entry), and `handoff-agent` waits for the first real engagement close.
+
+> **`reproduce-and-diagnose-bug` has left this queue, and its drop condition moved rather than fired.** The condition was *"do not build it if teams already ship regression tests in the fix diff unprompted"* — which is a fact about **a team**, not about the artifact, and no build-time evidence could settle it for every consuming repo. So it shipped, carrying its own drop condition as an **uninstall** instruction in the directory README: a team that already does this should remove the skill rather than keep it for tidiness. **A drop condition that varies per consuming repo cannot be evaluated once at build time**; the honest place for it is the install step, phrased so that keeping the artifact is the decision requiring justification. Compare `api-contract-freeze` and `/load-task-context`, whose conditions were genuinely answerable by building.
 
 > **Both Phase 3 commands have left this queue** — `/load-task-context` and `/write-module-readme` shipped with the Phase 3 set. `/load-task-context`'s condition was *"build it if tracker hygiene does not supply the deep-links"*, and building it settled the question in the opposite direction from the one the condition anticipated: **the deep-links are not the hard part — dereferencing them is.** The Phase 1 skills do supply and verify them, and the command still earns its keep, because a pointer that resolves and a source that was actually read are different facts and only one of them is checkable at the gate. That is why it ships a third conflict value. **A drop condition phrased against an input can be satisfied and still miss why the artifact exists.**
 
