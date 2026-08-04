@@ -2,11 +2,13 @@
 
 > **What this is.** One row per **repository fact**, listing every placeholder name the shipped templates use for it. Its job is not to hold your values — the per-directory READMEs do that, and they are what an operator has open while instantiating. Its job is to stop the same fact being asked for twice under two names.
 >
-> **The problem it solves.** The four shipped phases carry **47 distinct placeholders** across **29 templates**. Before Phase 2, **literal overlap between phases was zero** — no placeholder name appeared in more than one phase — and what existed instead was **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
+> **The problem it solves.** The five shipped phases carry **55 distinct placeholders** across **33 templates**. Before Phase 2, **literal overlap between phases was zero** — no placeholder name appeared in more than one phase — and what existed instead was **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
 >
 > **Phase 2 is the first phase to reuse rather than re-coin, and that is this file working.** It uses **16** placeholders, of which **8 are existing names adopted from Phases 3 and 6** — `{{ORM}}`, `{{DATASTORE}}`, `{{MIGRATIONS_PATH}}`, `{{AUTH_STACK}}`, `{{TEAM_STACK}}`, `{{CLOUD_PROVIDER}}`, `{{FRONTEND_FRAMEWORK}}`, `{{FRONTEND_ROOT}}` — and only 8 are new. **The pair count is still six, not fourteen.** Two near-pairs were caught at authoring time and are recorded below rather than minted. Phase 2 is also the first phase whose placeholders literally overlap another phase's, which is the intended end state, not a regression.
 >
 > **Phase 3's four new artifacts carry 10 placeholders and coined only 3** — `{{DEFAULT_BRANCH}}`, `{{REQUIREMENTS_DIR}}`, `{{API_SPEC_PATH}}`. Seven are reused: `{{TEST_RUNNER}}`, `{{PR_TITLE_FORMAT}}`, `{{LINEAR_PROJECT}}`, `{{TEAM_PREFIX}}`, `{{TEAM_STACK}}`, `{{ADR_DIR}}`, `{{TECH_DEBT_LABEL}}`. **The pair count is still six**, but the build added a **seventh row of a different kind** — not a synonym, but one fact two templates both act on. See below.
+>
+> **Phase 4's four artifacts carry 17 placeholders and coined 8** — `{{E2E_TEST_DIR}}`, `{{E2E_COMMAND}}`, `{{STAGING_BASE_URL}}`, `{{COVERAGE_REPORT_PATH}}`, `{{FLAKY_TEST_LABEL}}`, `{{COVERAGE_GAP_LABEL}}`, `{{LOAD_TEST_DIR}}`, `{{PERF_TEST_ENV}}` — reusing 9. **The pair count is still six**, and two more near-pairs were caught at authoring time. The build's real contribution to this file is a third kind of case: **two names were drafted, then withdrawn before they shipped**, because the fact they named is written as a literal in the sibling templates. That is rule 4 firing during authoring rather than in a post-hoc sweep — see [the withdrawn pair](#a-third-kind-of-case--two-names-drafted-then-withdrawn).
 >
 > *(The counts above were also recounted rather than incremented. The header said 44 and the inventory said "All 45"; the templates carried **44**, so the inventory heading was one over before this build and is corrected to **47** now.)*
 
@@ -22,8 +24,9 @@ These are the rows that matter. Each is one fact about the repository, asked for
 | | `{{SECRETS_MANAGER}}` | `terraform-iac-engineer`, `ci-identity-and-secrets-bringup` | |
 | **Metrics / traces / logs backend** | `{{OBSERVABILITY_STACK}}` | `software-architect` | The dashboards and SLOs are built on the same backend the design assumes instrumentation reports to |
 | | `{{OBS_BACKEND}}` | `observability-bringup`, `deploy-and-rollback-bringup` | |
-| **How tests are run** | `{{TEST_RUNNER}}` | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme` | CI runs the command; the specialists run the runner. If they disagree, tests pass locally and the pipeline runs nothing |
+| **How tests are run** | `{{TEST_RUNNER}}` | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme`, `e2e-and-coverage-engineer`, `author-test-plan`, `reproduce-and-diagnose-bug` | CI runs the command; the specialists run the runner. If they disagree, tests pass locally and the pipeline runs nothing |
 | | `{{TEST_COMMAND}}` | `cicd-pipeline-bringup` | |
+| | `{{E2E_COMMAND}}` | `e2e-and-coverage-engineer` | A third name for a related but **different** fact — see the near-pair note below. Recorded here so nobody reconciles the three into one |
 | **The service's directory** | `{{FRONTEND_ROOT}}` / `{{BACKEND_ROOT}}` | `frontend-engineer`, `backend-engineer` | The Docker build context must be a directory the code actually lives in. In a multi-service repo these are genuinely different values — **check, do not assume** |
 | | `{{SERVICE_ROOT}}` | `container-image-engineer` | |
 | **The Linear team** | `{{TEAM_PREFIX}}` — its *key*, e.g. `ENG` | `linear-task-agent`, `run-sprint-planning`, `/load-task-context` | Two representations of one object. A prefix from a different team than the one the Project sits under produces issues nobody's saved view shows |
@@ -40,7 +43,7 @@ These are the rows that matter. Each is one fact about the repository, asked for
 | Repo fact | Asked for as | In | Must agree because |
 |---|---|---|---|
 | **The PR title convention** | `{{PR_TITLE_FORMAT}}` — one name, **two composers** | `linear-task-agent`, `open-pull-request` | Filled inconsistently, the skill composes one title while the agent's own convention says another. **The mismatch surfaces as a de-linked PR, not as a bad fill** — the tracker's git integration matches on the identifier in the title, so the symptom is an issue that never moves to In Review and a PR nobody can trace back |
-| **How tests are run** | `{{TEST_RUNNER}}` — one name, **five consumers**, three of which run it and two of which read its file convention | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme` | Already a reconciliation row against `{{TEST_COMMAND}}`. The Phase 3 additions make it the same shape as the row above: `/load-task-context` needs the runner's **test-file convention** to locate tests and `/write-module-readme` needs an invocation it can **scope to one module and actually run**. **Filled with the whole-suite CI command, both degrade silently** — one finds no tests, the other documents a command that does not test the module |
+| **How tests are run** | `{{TEST_RUNNER}}` — one name, **ten consumers**, which run it, read its file convention, read its reports, and publish its name | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme`, `e2e-and-coverage-engineer`, `author-test-plan`, `reproduce-and-diagnose-bug` | Already a reconciliation row against `{{TEST_COMMAND}}`. The Phase 3 additions make it the same shape as the row above: `/load-task-context` needs the runner's **test-file convention** to locate tests and `/write-module-readme` needs an invocation it can **scope to one module and actually run**. **Filled with the whole-suite CI command, both degrade silently** — one finds no tests, the other documents a command that does not test the module. **Phase 4 adds two more failure directions**: `e2e-and-coverage-engineer` uses the runner identity to recognise the tests that are **not its own** — filled wrong, it starts writing at a layer it is forbidden to touch — and `author-test-plan` writes the name into a **published** plan, where a wrong value is quoted for the rest of the release |
 
 **This argues the table's framing should widen** from *"synonym pairs"* to *"any repo fact that two or more templates both act on"*. The original framing caught the case where one fact has two names; it does not catch the case where one name has two actors whose behaviour must agree. **Both fail the same way — an inconsistent fill that surfaces as a behaviour bug rather than as a configuration error** — and only the first kind was getting a row. The widening is recorded here rather than applied as a restructure: the six existing rows are still correct as synonym pairs, and re-cutting the whole table is a change to make when a third row of this kind appears, not on the second.
 
@@ -51,27 +54,39 @@ Neither is a reconciliation row, because in both cases the second name was **not
 - **`{{AUTH_STACK}}` now carries two related but distinct facts.** `software-architect` means the auth *provider* (`Clerk`); `api-contract-freeze` needs the *wire security scheme* for the OpenAPI `securitySchemes` block. Coining `{{AUTH_SCHEME}}` would have been the seventh pair, so the naming rule was applied as written — *reuse the existing name even if you would have named it differently* — and the skill is phrased as "a security scheme for `{{AUTH_STACK}}`". **If a repo ever has a provider and a scheme that genuinely disagree, this is the row that splits**, under converge-on-next-touch.
 - **`{{A11Y_SCAN_COMMAND}}` deliberately does *not* reuse `{{TEST_RUNNER}}` or `{{TEST_COMMAND}}`.** Adjacent, but a different fact: the auditor's PASS condition requires a command that renders the page. Filling it with the unit-test command makes PASS permanently unreachable, and the failure looks like a strict agent rather than a bad fill.
 - **`{{DEFAULT_BRANCH}}` deliberately does *not* adopt the spelling `__BASE_BRANCH__`.** The near-hit is in [`03-development/PR-REVIEW-BOT.md`](../aidlc-phases/03-development/PR-REVIEW-BOT.md), and it is **not a template placeholder at all** — it is a GitHub Actions **runtime** substitution, filled by the workflow from `github.event.pull_request.base.ref` at each run. **An operator never fills it and must never try.** Adopting its spelling would imply the two are the same mechanism, and the first person to "reconcile" them would either hard-code a branch name into a workflow or leave a template placeholder unfilled on the assumption that something substitutes it. Different lifetime, different filler, different name.
+- **`{{E2E_COMMAND}}` deliberately does *not* reuse `{{TEST_RUNNER}}` or `{{TEST_COMMAND}}`** — the same reasoning as `{{A11Y_SCAN_COMMAND}}`, one row further down the pyramid. It drives a browser against a **deployed** environment. Filled with the unit-test command, `e2e-and-coverage-engineer` runs the wrong suite, passes, and reports it as an end-to-end result — a green gate line measuring nothing it claims to.
+- **`{{PERF_TEST_ENV}}` deliberately does *not* reuse `{{STAGING_BASE_URL}}`, and this is the sharpest fill in the phase.** They are the same shape and **must never hold the same value**: `load-test-engineer`'s entire `PASS WITHHELD` rule exists to stop a load test being read as production evidence when it ran against ordinary staging, and an operator who fills both from one value has disabled that rule *by configuring it*. Nothing in the template can detect it — the agent is told which environment is performance-matched, it cannot measure whether that is true. **The only defence is the fill instruction**, which is why both READMEs carry it in bold.
 - **`{{API_SPEC_PATH}}` deliberately does *not* reuse `{{API_BASE_PATH}}`.** A file path (`docs/api/openapi.yaml`) and a URL prefix (`/api/v1`) are different facts that happen to share three letters. Reusing the name would produce a spec written to `/api/v1` and a mock server pointed at a directory.
+
+### A third kind of case — two names drafted, then withdrawn
+
+`{{E2E_FRAMEWORK}}` (`Playwright`) and `{{LOAD_TEST_TOOL}}` (`k6`) were drafted into the two Phase 4 skills and **withdrawn before they shipped**. The two Phase 4 subagents write both tools as **literals**, because their rules are true of those tools and of nothing else — trace-file diagnosis, role-based locators and `waitForTimeout` for one; `thresholds`, `check()` and a virtual-user ramp for the other. Parameterising a body like that produces a template that *claims* to work with any tool while enforcing rules only one of them has.
+
+Shipping the names anyway would have created the **one fact, one literal and one name** case this file already calls its blindest spot — with the additional property that the inconsistent fill **looks correct on both sides**. An operator filling `Cypress` gets a published test plan naming Cypress and an installed agent writing Playwright, each internally consistent, with no surface anywhere showing the two disagree.
+
+**Resolved by removing the names, not by adding rows.** The skills now write `Playwright` and `k6` as literals, matching their siblings, and [`04-testing-and-qa/skill-prompts/README.md`](../aidlc-phases/04-testing-and-qa/skill-prompts/README.md) records that a team on a different tool **edits these templates rather than filling a value** — which is the honest description of what the phase actually requires. This is the first build where **rule 4 fired during authoring instead of in a sweep afterwards**, which is the cheap moment: withdrawing a name costs one edit, while retiring a shipped one breaks every repo that already instantiated it.
 
 ---
 
 ## Full inventory
 
-All 47, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
+All 55, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
 
 ### Tracker and conventions
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{TEAM_PREFIX}}` | `ENG` | `linear-task-agent`, `run-sprint-planning`, `/load-task-context` |
+| `{{TEAM_PREFIX}}` | `ENG` | `linear-task-agent`, `run-sprint-planning`, `/load-task-context`, `reproduce-and-diagnose-bug` |
 | `{{LINEAR_TEAM}}` | `Engineering` | `publish-prd-to-linear` |
-| `{{LINEAR_PROJECT}}` | `TimeSync v2 — Scheduling` | `linear-task-agent`, `run-sprint-planning` |
+| `{{LINEAR_PROJECT}}` | `TimeSync v2 — Scheduling` | `linear-task-agent`, `run-sprint-planning`, `author-test-plan` |
 | `{{LINEAR_INITIATIVE}}` | `TimeSync v2` | `publish-prd-to-linear` |
 | `{{LABEL_CONVENTIONS}}` | `feature, bug, tech-debt, chore` | `linear-task-agent` |
-| `{{TECH_DEBT_LABEL}}` | `tech-debt` | `linear-task-agent`, `/write-module-readme` |
-| `{{BUG_LABEL}}` | `bug` | `linear-task-agent` |
+| `{{TECH_DEBT_LABEL}}` | `tech-debt` | `linear-task-agent`, `/write-module-readme`, `reproduce-and-diagnose-bug` |
+| `{{BUG_LABEL}}` | `bug` | `linear-task-agent`, `reproduce-and-diagnose-bug` — the second consumer **reads** it as an entry condition rather than writing it; a value that does not match what triage actually applies makes the skill refuse every real bug |
+| `{{FLAKY_TEST_LABEL}}` | `flaky-test` — the label a quarantined flaky spec carries | `e2e-and-coverage-engineer` |
+| `{{COVERAGE_GAP_LABEL}}` | `coverage-gap` — suggested on each audit entry; the agent **never files it** | `e2e-and-coverage-engineer` |
 | `{{PR_TITLE_FORMAT}}` | `[ENG-XXX] <imperative summary>` — **two composers; see the reconciliation note above** | `linear-task-agent`, `open-pull-request` |
-| `{{DEFAULT_BRANCH}}` | `main` — the branch PRs target *and* the branch you rebase onto. **Not** `__BASE_BRANCH__`, which is a workflow runtime substitution and not an operator-filled value | `open-pull-request` |
+| `{{DEFAULT_BRANCH}}` | `main` — the branch PRs target, the branch you rebase onto, *and* the branch a regression test must be proven to fail on. **Not** `__BASE_BRANCH__`, which is a workflow runtime substitution and not an operator-filled value | `open-pull-request`, `reproduce-and-diagnose-bug` |
 
 ### Stack and runtime
 
@@ -89,7 +104,7 @@ All 47, grouped by what they describe. **Where each is consumed** is authoritati
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{FRONTEND_ROOT}}` | `apps/web` | `frontend-engineer`, `accessibility-auditor` |
+| `{{FRONTEND_ROOT}}` | `apps/web` | `frontend-engineer`, `accessibility-auditor`, `e2e-and-coverage-engineer` |
 | `{{BACKEND_ROOT}}` | `services/api` | `backend-engineer` |
 | `{{SERVICE_ROOT}}` | `services/api`, or `.` | `container-image-engineer` |
 | `{{COMPONENT_LIBRARY_PATH}}` | `apps/web/src/components/ui` | `frontend-engineer`, `software-architect` |
@@ -100,8 +115,11 @@ All 47, grouped by what they describe. **Where each is consumed** is authoritati
 | `{{ADR_DIR}}` | `docs/adrs/` — **the first name to span Phases 2 and 3**; the value `/adr` writes into is the value `/load-task-context` reads back out | `/adr`, `solution-architect`, `architecture-reviewer`, `/load-task-context` |
 | `{{ARCHITECTURE_DIR}}` | `docs/architecture/` | `solution-architect`, `architecture-reviewer` |
 | `{{A11Y_REPORT_PATH}}` | `docs/accessibility/wcag-aa-report.md` | `accessibility-auditor` |
-| `{{REQUIREMENTS_DIR}}` | `docs/prd/` — if requirements live in the tracker rather than the repo, point it at the tracker Document set and say so in the fill | `/load-task-context` |
-| `{{API_SPEC_PATH}}` | `docs/api/openapi.yaml` — the spec **file**. Deliberately **not** `{{API_BASE_PATH}}`, which is a URL prefix and a different fact. Both Phase 3 commands consume it for opposite reasons: one reads a section from it, the other refuses to hand-copy anything that renders from it | `/load-task-context`, `/write-module-readme` |
+| `{{REQUIREMENTS_DIR}}` | `docs/prd/` — if requirements live in the tracker rather than the repo, point it at the tracker Document set and say so in the fill. **`load-test-engineer` needs the NFR numbers to be *citable* here**, so a fill pointing at a directory that does not hold them makes it refuse — visibly, which is the good failure | `/load-task-context`, `load-test-engineer` |
+| `{{E2E_TEST_DIR}}` | `tests/e2e` — the agent's entire write scope | `e2e-and-coverage-engineer` |
+| `{{LOAD_TEST_DIR}}` | `tests/load` — the agent's entire write scope | `load-test-engineer` |
+| `{{COVERAGE_REPORT_PATH}}` | `coverage/coverage-summary.json` — the audit refuses to report any number it did not read from this file | `e2e-and-coverage-engineer` |
+| `{{API_SPEC_PATH}}` | `docs/api/openapi.yaml` — the spec **file**. Deliberately **not** `{{API_BASE_PATH}}`, which is a URL prefix and a different fact. Both Phase 3 commands consume it for opposite reasons: one reads a section from it, the other refuses to hand-copy anything that renders from it; `load-test-engineer` takes endpoints, payloads and auth from it and invents none of the three | `/load-task-context`, `/write-module-readme`, `load-test-engineer` |
 
 ### Data and testing
 
@@ -109,8 +127,11 @@ All 47, grouped by what they describe. **Where each is consumed** is authoritati
 |---|---|---|
 | `{{ORM}}` | `Prisma` | `backend-engineer`, `software-architect`, `data-model-design` |
 | `{{DATASTORE}}` | `PostgreSQL 16` — **include the version**, it changes the available DDL | `backend-engineer`, `software-architect`, `data-model-design` |
-| `{{TEST_RUNNER}}` | `vitest` — **the runner, never the CI command with coverage flags.** `/load-task-context` needs its test-file convention to locate tests; `/write-module-readme` needs an invocation it can scope to one module and actually run | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme` |
+| `{{TEST_RUNNER}}` | `vitest` — **the runner, never the CI command with coverage flags.** `/load-task-context` needs its test-file convention to locate tests; `/write-module-readme` needs an invocation it can scope to one module and actually run; `e2e-and-coverage-engineer` reads its reports and uses its identity to recognise the tests it must **not** write; `author-test-plan` publishes its name | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme`, `e2e-and-coverage-engineer`, `author-test-plan`, `reproduce-and-diagnose-bug` |
 | `{{TEST_COMMAND}}` | `pnpm test -- --coverage` | `cicd-pipeline-bringup` |
+| `{{E2E_COMMAND}}` | `npx playwright test` — drives a browser against a deployed environment. **Not the unit-test command**; see the near-pair note above | `e2e-and-coverage-engineer` |
+| `{{STAGING_BASE_URL}}` | `https://staging.example.com` — what the E2E suite targets. **Never a production URL** | `e2e-and-coverage-engineer` |
+| `{{PERF_TEST_ENV}}` | `perf.example.com (provisioned per run)` — the **performance-matched** environment. **Must never hold the same value as `{{STAGING_BASE_URL}}`**; filling both alike disables the `PASS WITHHELD` rule by configuration, and nothing in the template can detect it | `load-test-engineer` |
 | `{{A11Y_SCAN_COMMAND}}` | `pnpm dlx @axe-core/cli http://localhost:3000` — must run against a **rendered** page. Not the unit-test command; see the near-pair note above | `accessibility-auditor` |
 
 ### Design tooling and contracts
@@ -143,13 +164,14 @@ All 47, grouped by what they describe. **Where each is consumed** is authoritati
 
 ---
 
-## Two hard requirements
+## The hard requirements
 
-Both are already stated in the per-directory READMEs and are repeated here because they are the only two whose cost is not recoverable:
+Each is already stated in the per-directory READMEs and repeated here because its cost is not recoverable. *(This section was headed "Two" while listing three; it now lists four and is headed for the list rather than the count.)*
 
 - **`{{CLOUD_PROVIDER}}` and `{{TF_CLI}}` must be filled before any infrastructure helper runs.** A guessed infrastructure setting is the one mistake in this framework with no cheap undo.
 - **`{{CLAUDE_ACTION_VERSION}}` must be an exact released version.** A floating tag makes the CI behaviour of every repo change without a commit.
 - **`{{A11Y_SCAN_COMMAND}}` must render the page.** Filled with a unit-test command, the accessibility auditor can never reach PASS — and the symptom is an agent that looks pedantic rather than a placeholder that is wrong, so nobody goes looking for the real cause.
+- **`{{PERF_TEST_ENV}}` must not be the ordinary staging environment.** This is the mirror image of the row above and the more dangerous direction: a bad `{{A11Y_SCAN_COMMAND}}` makes a verdict **unreachable**, which someone eventually investigates, while a `{{PERF_TEST_ENV}}` pointed at staging makes a PASS **reachable that should not be** — and a PASS is the verdict that stops anyone else looking. The agent is *told* which environment is performance-matched; it cannot measure whether that is true.
 
 ---
 
