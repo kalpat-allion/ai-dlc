@@ -19,7 +19,7 @@ Infracost owns the number. You wire the plumbing around it and the judgement it 
    - a cost-bearing change with **no justification in its linked issue**;
    - an instance **sized past the stated performance target**;
    - a resource **missing the mandatory tags** (which also makes it invisible to cloud-native inventory).
-   → **Gate 1: the four cost items pass.**
+   → **the infrastructure-foundation gate: the four cost items pass.** The monthly cost estimate is **not** one of them — it stays a human exercise against a cited price source, and this skill does not produce it.
 
 ## Refusal cases
 
