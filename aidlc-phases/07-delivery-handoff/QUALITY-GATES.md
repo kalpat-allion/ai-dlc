@@ -35,12 +35,14 @@ Before declaring the project delivered.
 - [ ] Glossary of domain terms
 
 ### Quality Checks
-- [ ] Claude doc completeness prompt run; no Critical gaps
+- [ ] Claude doc completeness prompt run; **no Critical gaps and no undecided rows** — a row the run marked `[INSUFFICIENT INPUT: …]` is not a clean row, and this box stays unticked until a human has decided it
 - [ ] All auto-generated content reviewed by a human
 - [ ] Screenshots and diagrams accurate and current
 - [ ] Code examples are working (not pseudocode)
-- [ ] Links work (no 404s)
+- [ ] Links work (no 404s) — evidenced by a real link-check run, not by inspection. If the repo configures no link checker, this item is **unverified**, not passed
 - [ ] Documentation site deployed and searchable
+
+> **Four of these nineteen items cannot be certified by any automated documentation run, and the [`finalise-documentation`](./skill-prompts/finalise-documentation/SKILL.md) skill is required to hand them back by name rather than report them.** *Runbook per alert* needs the live alert list — an alert configured in the observability backend but never committed as code is invisible to a repository read, and belongs to whoever owns the alert inventory. *All auto-generated content reviewed by a human* cannot be ticked by the thing that generated it. *Screenshots and diagrams accurate and current* requires seeing a rendered screen. *Documentation site deployed and searchable* is a property of the deployed site, and the skill stops before publish by design. All four are the Tech Lead's or the publisher's. A run reporting all nineteen has fabricated four of them.
 
 **Pass:** All items checked. Documentation is complete.
 
@@ -51,12 +53,15 @@ Before declaring the project delivered.
 Before knowledge transfer begins (Step 4) — the handoff document itself is complete, fact-checked, and shared with the recipient. KT-, credential-, and infrastructure-preparation checks now live under Gate 4 alongside their execution counterparts so prep + execution are validated together.
 
 ### Handoff Document
-- [ ] Generated using Claude with all Phase 1–6 inputs
+- [ ] Generated using Claude with all Phase 1–6 inputs — checked against the **artefact manifest** the run prints (read / named but unreadable / not supplied), not against an assertion that everything was read
 - [ ] Reviewed by Delivery Lead + Tech Lead
-- [ ] All sections complete (Executive Summary through Appendices)
+- [ ] All sections complete (Executive Summary through Appendices) — **and zero `[VERIFY: …]` markers left unresolved.** A section that is present but carries open verification markers is present, not complete, and this box must not be ticked over one
+- [ ] Every `[REDACT-BEFORE-SHARE]` marker resolved by the Tech Lead **before the draft leaves the delivery team** — the marker exists so the decision is made, and an unresolved one shared with the recipient is the customer-facing/internal leak this phase names as a top risk
 - [ ] Known limitations section is honest and complete
 - [ ] Recommended next steps are specific and actionable
 - [ ] Draft shared with recipient and feedback iterated on
+
+> **This gate is a set of human signatures.** The [`handoff-agent`](./subagent-prompts/handoff-agent.md) can self-certify exactly one of these seven lines — *all sections complete*, evidenced by per-section marker counts — and is required to name the rest by owner: the review signatures and the recipient iteration are human acts; the redaction resolution is the Tech Lead's, and **a zero marker count from the agent is only zero *found***; *honest and complete* and *specific and actionable* are judgements against artefacts the agent never saw; and *all inputs* is judged by the Delivery Lead against the printed manifest. The agent's contribution here is the evidence underneath the signatures, never the pass.
 
 **Pass:** All items checked. Handoff document is complete and recipient-aligned; KT can begin.
 
@@ -136,8 +141,8 @@ At the end of the agreed support period (typically 30 days).
 - [ ] Runbooks updated based on any incidents that occurred
 
 ### Retrospective
-- [ ] Post-handoff retrospective document generated
-- [ ] Lessons learned documented for future engagements
+- [ ] Post-handoff retrospective document generated — **every finding anchored to a named data point** (issue count, satisfaction score, named doc gap, dated incident) and **zero `[VERIFY: …]` markers left unresolved.** An unanchored retrospective is sentiment, and sentiment is what this document is generated to replace
+- [ ] Lessons learned documented for future engagements — **kept in a separate section from the engagement-specific recommendations**, because they go to different readers and merging them buries the one the recipient must act on
 - [ ] Feedback from recipient captured
 
 **Pass:** All items checked. Support period officially closed. Delivery team transitions to on-demand availability only.

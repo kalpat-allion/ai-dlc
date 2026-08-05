@@ -168,29 +168,29 @@ The `AGENTS.md` already committed in Phase 6 covers stack naming, region default
 
 The Phase 6 entry pointer carries over as `AGENTS.md` at the repo root; no new wiring is needed. Be aware of the honest difference from earlier versions: Terraform has no project manifest with a description field to point at `AGENTS.md`, so discovery relies on the agents' own root-level `AGENTS.md` convention rather than an explicit reference.
 
-#### 0.7 — (Recommended) Bundle the recurring handoff workflow into a Claude Code subagent
+#### 0.7 — Install the Phase 7 skill and subagent
 
-The handoff document, KT summaries, KB seeding, and post-handoff retrospective all share the same multi-step shape: ingest a heterogeneous bundle of artefacts (PRD, ADRs, code, runbooks, transcripts, dashboards), respect the AGENTS.md split, and emit a structured Markdown deliverable. This is exactly the shape a Claude Code subagent solves — same pattern Phase 3 uses for `linear-task-agent.md` and the four specialist subagents.
+Phase 7 ships one skill and one subagent as templates. Copy them into the consuming repo, fill the placeholders, and commit — they are project artefacts, not personal config, and the repo is about to change hands. This sub-step is last because both read `AGENTS.md`, so it must exist first.
 
-Recommend committing a single subagent at `.claude/agents/handoff-agent.md`. **Do not create the file in this task** — the team commits it when they are ready and aligned on the role's boundaries. The expected starter shape:
-
-```yaml
----
-name: "handoff-agent"
-description: "Use for any handoff synthesis: handoff-document generation from Phase 1-6 artefacts, KT-session summary from a Fathom/Loom transcript, KB seeding (FAQ/glossary/troubleshooting) from PRD + Linear bug history, post-handoff retrospective. Embeds PROMPTS.md handoff-document, knowledge-base-seeding, kt-session-script, and post-handoff-retrospective prompts."
-model: opus
----
+```bash
+# From the consuming repo root
+mkdir -p .claude/agents .claude/skills
+cp    <ai-dlc>/aidlc-phases/07-delivery-handoff/subagent-prompts/handoff-agent.md .claude/agents/
+cp -r <ai-dlc>/aidlc-phases/07-delivery-handoff/skill-prompts/*/                  .claude/skills/
 ```
 
-Operating boundaries the system-prompt body should encode:
+Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, where the folder name must equal the `name:` field. A mismatch means the skill silently never loads, so copy the directories with `cp -r` rather than globbing the Markdown.
 
-- **Read-only across all source artefacts** (PRD repo, code repo, IaC repo, docs site MCP, KB MCP, Linear MCP). Writes only the deliverable Markdown into `/handoff/` or the explicit destination the developer names.
-- **Must consult `AGENTS.md` Delivery & Handoff section** before generating any customer-facing content; flag and stop when an artefact would breach the customer-facing/internal split.
-- **Must cite sources inline** — every claim in the handoff document carries a link to the PRD section, ADR, runbook, or commit it came from. No source = the claim is removed.
-- **Must never call `update_issue`, post Linear comments, transition state, push to GitHub, or publish to the docs site** — those writes belong to humans (or to `linear-task-agent` for the Phase 3-style flows that may still run during the support period).
-- **Must escalate** when an artefact is missing or contradictory — surface the gap rather than fabricating bridging content.
+| Helper | Type | Owns | Gate |
+|--------|------|------|------|
+| `finalise-documentation` | Skill | Step 2 — section structure, per-page generation, spec-rendered API reference, completeness audit, gap loop, link check, stop before publish | Gate 2 — **15 of its 19 items**; the other 4 are named by owner |
+| `handoff-agent` | Subagent · `opus` | Step 3 — the handoff document; Step 8.6 — the post-handoff retrospective. **One deliverable per invocation** | Gate 3 — **1 of its 7 items**; feeds Gate 5 |
 
-Verify with `/agents` once committed; smoke-test by asking the subagent to dry-run a handoff document over a small subset of artefacts.
+Fill every placeholder before committing. Verify the subagent with `/agents` and the skill by confirming it appears in the available-skills list under its slug. Per-placeholder guidance and the full instantiation and verification steps live in [`subagent-prompts/README.md`](./subagent-prompts/README.md) and [`skill-prompts/README.md`](./skill-prompts/README.md) — including the negative-routing checks, which matter more here than in any earlier phase because *"document this"* is the most overloaded verb in the framework.
+
+> **The subagent covers two deliverables, not four, and the narrowing is deliberate.** An earlier version of this step recommended one agent spanning the handoff document, KT summaries, KB seeding **and** the retrospective, on the grounds that all four share a multi-step ingest-and-emit shape. They share a *shape*, not a *responsibility*: KB seeding writes into a live knowledge base the agent must never write to, and a KT script prepares a human presenter for a meeting that has not happened. **Four deliverables behind an "or" is four jobs wearing one description, and the first thing a four-job agent loses is the boundary that makes it trustworthy.** KB seeding and the KT script stay paste prompts. Do not re-widen the shipped template.
+
+> **Both helpers report a partial gate verdict, and that is the design.** `finalise-documentation` self-checks 15 of Gate 2's 19 items; `handoff-agent` self-checks 1 of Gate 3's 7. Delivery is the phase where most gate items are **human signatures** — reviewed by the Delivery Lead, known limitations honest and complete, the draft shared and iterated on — and no agent can make those claims truthfully. **The honest contribution here is the evidence underneath a signature, never the signature.** A report claiming a full pass has fabricated the difference; treat one as a defect in the install, not a convenience.
 
 #### 0.8 — Verification checklist
 
@@ -199,7 +199,9 @@ Verify with `/agents` once committed; smoke-test by asking the subagent to dry-r
 - [ ] `op signin` works for every delivery-team developer; `op run -- claude` resolves vault references without plaintext leakage
 - [ ] `AGENTS.md` updated with the Delivery & Handoff section (release-note tone, customer-vs-internal split, glossary URL, support-period defaults, recipient context, forbidden content)
 - [ ] Audit log on in the docs platform (Mintlify org settings or GitBook organization audit) and the KB (Confluence audit log or Notion workspace activity)
-- [ ] (If adopted) `.claude/agents/handoff-agent.md` committed; `/agents` lists `handoff-agent`; subagent smoke test produces a handoff-document outline without writing any state
+- [ ] `.claude/agents/handoff-agent.md` and `.claude/skills/finalise-documentation/SKILL.md` committed with every placeholder filled; `/agents` lists `handoff-agent` and the skill appears under its slug
+- [ ] Subagent smoke test produces a handoff-document outline **that prints its artefact manifest first**, cites inline, and writes no other state; skill smoke test stops at the human accuracy review **before** anything publishes
+- [ ] Negative-routing check run for both (per the directory READMEs) — in particular, *"document this module"* must not load `finalise-documentation`, and *"write the post-mortem"* must not load `handoff-agent`
 - [ ] Recipient counterparts have been told which MCP servers they will inherit and have requested matching OAuth grants on their side (so the day-1 transition is live, not deferred)
 
 > **Permission inheritance.** Every MCP-driven action runs as the connecting developer — the docs MCP, KB MCP, and 1Password CLI cannot escalate beyond the connecting account's scopes. Off-board by revoking the OAuth grants in Mintlify/GitBook/Notion/Atlassian/1Password; the agent loses access automatically.
@@ -263,6 +265,8 @@ Verify with `/agents` once committed; smoke-test by asking the subagent to dry-r
 7. **Troubleshooting** — FAQ, known issues, diagnostics.
 8. **Glossary** — domain terms.
 
+> **Sub-steps 2.2 through 2.6 are one procedure, and the [`finalise-documentation`](./skill-prompts/finalise-documentation/SKILL.md) skill installed in Step 0.7 runs them as one.** Generation and the completeness audit are almost always run as two jobs — generate a batch of pages, declare the docs done, and run the audit later or never. **The audit's findings *are* the next generation pass's input**, which is what 2.6's loop back to 2.3 says and what Gate 2 actually measures. Invoke the skill and it will not terminate before the publish stop, whichever end you enter it at. The prompts below remain the paste path and stay valid.
+
 **2.3 — Generate page content with Claude Code.** For each section, run the [`Documentation Generation`](./PROMPTS.md#documentation-generation-per-page) prompt, with these inputs depending on the page:
 
 ```bash
@@ -316,7 +320,7 @@ claude --add-dir ../prd-repo --add-dir ../iac-repo --add-dir ../docs-repo
 
 The `--add-dir` flag lets Claude Code read across the engagement's separate repos in a single session — this is the equivalent of a multi-source Claude Project but kept in the developer's own session. For very large corpora (recordings, slide decks, multi-hour transcripts) consider exporting to **NotebookLM Enterprise** instead — its 300-source / 500K-words-per-source ceiling absorbs almost any handoff payload.
 
-**3.2 — Run the handoff-document synthesis.** Either invoke the [`Handoff Document Generation`](./PROMPTS.md#handoff-document-generation) prompt directly, or invoke the `handoff-agent` subagent from Step 0.7 if the team committed it. The subagent encapsulates the multi-step ingestion + AGENTS.md respect + source-citation discipline; the bare prompt is the fallback for one-off invocations.
+**3.2 — Run the handoff-document synthesis.** Invoke the `handoff-agent` subagent installed in Step 0.7; the [`Handoff Document Generation`](./PROMPTS.md#handoff-document-generation) prompt is the fallback if the team has not installed it. The subagent encapsulates the multi-step ingestion + AGENTS.md respect + source-citation discipline, and adds three things the bare prompt has no way to carry: it **prints its artefact manifest before writing** (read / named but unreadable / not supplied), it **reports `[VERIFY: …]` and `[REDACT-BEFORE-SHARE]` counts per section at the top**, and it reports **1 of Gate 3's 7 items** rather than implying the gate passes. Ask for one deliverable per run — it refuses to produce the document and the retrospective together, since the retrospective reports a support period that has not happened yet.
 
 The deliverable structure (carries over from existing PROCESS):
 
@@ -528,7 +532,7 @@ Verify with `claude mcp list` on the recipient's machine — every server connec
 
 **7.1 — Use the recipient's existing KB platform — don't introduce a new one.** Most recipients already run Confluence or Notion (Confluence for enterprises, Notion for younger orgs). Both have official remote MCP servers as of 2026 — Atlassian Rovo MCP went GA in February 2026 with 72+ tools across Jira/Confluence/Compass; Notion's MCP is published by makenotion and ships as the official `mcp.notion.com/mcp` endpoint. Connect Claude Code per Step 0.2 if you haven't already.
 
-**7.2 — Seed the four core content types via Claude Code MCP writes.** Run the [`Knowledge Base Seeding`](./PROMPTS.md#knowledge-base-seeding-faq-glossary-troubleshooting) prompt for each:
+**7.2 — Seed the four core content types via Claude Code MCP writes.** Run the [`Knowledge Base Seeding`](./PROMPTS.md#knowledge-base-seeding-faq--glossary--troubleshooting) prompt for each:
 
 - **FAQ** — 15–20 questions derived from KT-session Q&A transcripts + anticipated PRD questions. Group by Getting Started / Billing / Features / Technical / Troubleshooting.
 - **Glossary** — domain terms from PRD + technical terms from architecture docs + internal naming from the codebase.
