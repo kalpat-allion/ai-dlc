@@ -27,7 +27,7 @@ These are the rows that matter. Each is one fact about the repository, asked for
 | **Metrics / traces / logs backend** | `{{OBSERVABILITY_STACK}}` | `software-architect` | The dashboards and SLOs are built on the same backend the design assumes instrumentation reports to |
 | | `{{OBS_BACKEND}}` | `observability-bringup`, `deploy-and-rollback-bringup` | |
 | **How tests are run** | `{{TEST_RUNNER}}` | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme`, `e2e-and-coverage-engineer`, `author-test-plan`, `reproduce-and-diagnose-bug` | CI runs the command; the specialists run the runner. If they disagree, tests pass locally and the pipeline runs nothing |
-| | `{{TEST_COMMAND}}` | `cicd-pipeline-bringup` | |
+| | `{{TEST_COMMAND}}` | `cicd-pipeline-bringup` | **This one carries the coverage gate, and the bad fill is silent in the good-looking direction.** Filled without its coverage flag — `pnpm test` rather than `pnpm test -- --coverage` — the job passes every PR and the pipeline's coverage checkbox reports green over a threshold that never ran. Same failure direction as `{{PERF_TEST_ENV}}`: a pass made *reachable* that should not be, so nobody investigates. The skill is now required to observe one **failing** run rather than trust the fill |
 | | `{{E2E_COMMAND}}` | `e2e-and-coverage-engineer` | A third name for a related but **different** fact — see the near-pair note below. Recorded here so nobody reconciles the three into one |
 | **The service's directory** | `{{FRONTEND_ROOT}}` / `{{BACKEND_ROOT}}` | `frontend-engineer`, `backend-engineer` | The Docker build context must be a directory the code actually lives in. In a multi-service repo these are genuinely different values — **check, do not assume** |
 | | `{{SERVICE_ROOT}}` | `container-image-engineer` | |
@@ -162,12 +162,14 @@ All 58, grouped by what they describe. **Where each is consumed** is authoritati
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{TF_CLI}}` | `terraform` or `tofu` | `terraform-iac-engineer`, `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `deploy-and-rollback-bringup` |
+| `{{TF_CLI}}` | `terraform` or `tofu` | `terraform-iac-engineer`, `ci-identity-and-secrets-bringup`, `deploy-and-rollback-bringup`. **Deliberately not `iac-state-backend-bringup`** — see the note below the table |
 | `{{CLOUD_PROVIDER}}` | `AWS` | `terraform-iac-engineer`, `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `cost-guardrails-bringup` |
 | `{{DEPLOY_TARGET}}` | `ECS Fargate` | `cicd-pipeline-bringup`, `deploy-and-rollback-bringup` |
 | `{{SECRETS_MECHANISM}}` | `AWS Secrets Manager` | `software-architect` |
 | `{{SECRETS_MANAGER}}` | `AWS Secrets Manager` | `terraform-iac-engineer`, `ci-identity-and-secrets-bringup` |
 | `{{CLAUDE_ACTION_VERSION}}` | `v1.0.158` — **exact, never a floating `@v1`** | `cicd-pipeline-bringup` |
+
+> **`{{TF_CLI}}` was withdrawn from `iac-state-backend-bringup` on the Phase 6 re-check, and the reason is the Phase 5 rule reaching a fourth name.** That skill's step 1 **refuses** until the cloud and CLI choices are *recorded decisions with a named reviewer* — the licence rationale is a Gate 1 line in its own right. `{{TF_CLI}}` appeared nowhere else in its body, so the name existed **only inside the guard it disabled**: instantiated, the agent reads `terraform` and never asks whether anyone chose it. Same shape as `{{ENTRY_POINTS}}`, `{{DATA_CLASSIFICATION}}` and `{{COMPLIANCE_SCOPE}}` — **a stop-and-ask guard and a placeholder over the same fact cannot coexist; the placeholder wins, silently, on the first run and every run after.** `{{CLOUD_PROVIDER}}` stays in that skill because steps 3 and 4 genuinely vary on it (lock table vs native lockfile vs blob lease), and step 1 now says in words that a configured value is not a recorded decision.
 
 ### Observability and alerting
 

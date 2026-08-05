@@ -16,7 +16,7 @@ The source of truth is the service's **actually exposed metrics** and the **reco
 3. Generate the three dashboards as code for `{{OBS_BACKEND}}` **only** (never both backends), committed under `/observability/dashboards/`. The step-2 SLO targets populate the SLO Tracking dashboard.
 4. Generate burn-rate alerts from the step-2 SLOs — fast burn (2% of budget in 1h → page) and slow burn (10% in 6h → ticket) — committed under `/observability/slos/`.
 5. Wire routing to `{{ALERT_ROUTER}}`.
-6. Draft one runbook per alert at `/docs/runbooks/alerts/<alert-name>.md`, where `<alert-name>` is the alert's name **exactly as configured in `{{OBS_BACKEND}}`, lowercased and kebab-cased**, and set each alert's runbook link to that path. The derivation rule is what makes "every alert links to a runbook" checkable by script instead of by eye. Mark unverifiable steps as to-verify. → **Gate 4: the dashboard and alert blocks pass.**
+6. Draft one runbook per alert at `/docs/runbooks/alerts/<alert-name>.md`, where `<alert-name>` is the alert's name **exactly as configured in `{{OBS_BACKEND}}`, lowercased and kebab-cased**, and set each alert's runbook link to that path. The derivation rule is what makes "every alert links to a runbook" checkable by script instead of by eye. Mark unverifiable steps as to-verify. → **the observability gate: the dashboard and alert blocks pass.**
 7. Test each alert: verify it fires and verify it resolves. An untested alert is an assumption.
 
 ## Refusal cases
@@ -27,4 +27,4 @@ The source of truth is the service's **actually exposed metrics** and the **reco
 - **Never mark a runbook final.** Every generated runbook is a draft pending SRE review before its alert is wired.
 - **The instrumentation block is not yours.** OpenTelemetry SDK integration, auto-instrumentation, structured logging and trace propagation are application code — say so rather than reporting that block as passing.
 - Never create an alert that does not require human action. If it needs no action, it is a metric.
-- Never write outside `/observability/` and `/docs/runbooks/alerts/`. Service operational runbooks live under `/docs/runbooks/services/` and belong to a different phase.
+- Never write outside `/observability/` and `/docs/runbooks/alerts/`. Service operational runbooks live under `/docs/runbooks/services/`, are a different artifact class, and are not yours.

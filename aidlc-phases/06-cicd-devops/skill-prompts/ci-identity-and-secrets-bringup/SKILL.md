@@ -17,7 +17,7 @@ This is the compensating control for having no managed apply runner: the only th
 4. Create the trust policy — scoped to this repository, **to specific branches, and to the deployment environment**. Two roles: `plan` assumes read-only, `apply` assumes read-write. → **Confirm before writing.**
 5. Wire `{{SECRETS_MANAGER}}` as the single run-time source for every other pipeline secret, and **record where a rotation actually happens**. There is no versioned indirection layer in this stack; rotation is per-store, so write down the surface or nobody will find it in six months.
 6. Verify: a PR-triggered `plan` authenticates and succeeds with **no static secret present**, and **cannot write state**. Then verify the negative — an apply attempt from a developer machine fails on authorisation.
-7. Commit the scheduled drift-detection workflow — `{{TF_CLI}} plan -detailed-exitcode` under `{{IAC_DIR}}` on a timer, exit code 2 meaning drift. Production drift **pages**; it never auto-remediates. This run is also the end-to-end proof of steps 3–6. → **Gate 1: the CI-authentication, secrets and drift items pass.** Hand resource authoring to `terraform-iac-engineer`.
+7. Commit the scheduled drift-detection workflow — `{{TF_CLI}} plan -detailed-exitcode` under `{{IAC_DIR}}` on a timer, exit code 2 meaning drift. Production drift **pages**; it never auto-remediates. This run is also the end-to-end proof of steps 3–6. → **the infrastructure-foundation gate: the CI-authentication, secrets and drift items pass.** Hand resource authoring to `terraform-iac-engineer`.
 
 ## Confirm-before-write
 

@@ -76,6 +76,8 @@ Per release.
 Before any deploy.
 
 > **This gate is verified by human review. No scanner, policy engine, or admission controller enforces it.** Both items below are confirmed by a named reviewer in the PR. If nobody signed off, the gate has not passed — a green pipeline says nothing about this surface.
+>
+> **An agent's self-check is not the named reviewer.** Phase 6's `container-image-engineer` self-certifies seven of nine container standards and `terraform-iac-engineer` self-checks its own conventions — both against their *own* output, both by construction unable to state a scan verdict. Neither run satisfies a line below. The reviewer named here reads the diff having not written it.
 
 - [ ] Dockerfile / K8s manifests reviewed against AGENTS.md security conventions by a named reviewer (non-root user, no secrets in build args or layers, minimal installed surface, security context and resource limits set)
 - [ ] Required-controls list confirmed for every IaC change in the release — **required tags**, **encryption at rest**, **no public storage**, **IAM least privilege**, **region allow-list**, **instance-size caps**, **no root containers**, **resource limits**, **network policies** — each one either satisfied or explicitly excepted with a written reason in the PR

@@ -139,7 +139,7 @@ The sharpest collision in this repo so far. `open-pull-request` auto-triggers, a
 | `ci-identity-and-secrets-bringup` | Skill | OIDC provider and trust policy, secret-manager wiring, the drift workflow | The state store, build workflows, the Infracost workflow, resource HCL | P6 |
 | `cost-guardrails-bringup` | Skill | The Infracost workflow, budget alerts, the unit-economics metric, the cost reviewer checklist | The cost estimate itself, any other workflow, approving a costly PR | P6 |
 | `cicd-pipeline-bringup` | Skill | Build / test / deploy-to-staging workflows, `@claude` wiring, agentic workflows, branch protection | The drift workflow, the Infracost workflow, the production gate | P6 |
-| `deploy-and-rollback-bringup` | Skill | The production approval gate, deploy strategy, rollback trigger, the drill | The build pipeline, SLO definitions | P6 |
+| `deploy-and-rollback-bringup` | Skill | The production approval gate, deploy strategy, rollback trigger, the drill | The build pipeline, **the staging-deploy workflow** — it confirms one exists because the drill runs through it, but `cicd-pipeline-bringup` authors it — SLO definitions | P6 |
 | `container-image-engineer` | Subagent | One service's Dockerfile and `.dockerignore`; self-certifies 7 of 9 standards, names the other 2 | CVE counts, scan verdicts, image-size comparisons — **under any circumstances** | P6 |
 | `observability-bringup` | Skill | Dashboards, SLOs, alerts, alert runbooks under `/docs/runbooks/alerts/` | Instrumentation code, service runbooks under `/docs/runbooks/services/`, incident work | P6 |
 

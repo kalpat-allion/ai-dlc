@@ -23,7 +23,7 @@ The **Wraps** column is this directory's purpose. Because shipped templates must
 
 1. Copy the chosen **folder** into `.claude/skills/<skill-name>/` at the consuming repo root, preserving the folder name. **The folder name must equal the `name:` field** — Claude Code uses the folder name as the invocation slug, and a mismatch means the skill silently never loads. Use `cp -r`; globbing the Markdown files flattens the structure and produces zero working skills.
 2. Replace the placeholders with the repo's values:
-   - `{{TF_CLI}}` — `terraform` or `tofu`, per the project's IaC licensing decision (iac-state-backend-bringup, ci-identity-and-secrets-bringup, deploy-and-rollback-bringup)
+   - `{{TF_CLI}}` — `terraform` or `tofu`, per the project's IaC licensing decision (ci-identity-and-secrets-bringup, deploy-and-rollback-bringup). **Not used by `iac-state-backend-bringup`**, deliberately: its step 1 refuses until the CLI choice is a *recorded* decision, and a placeholder filled at install time answers that question before it is asked. A stop-and-ask guard and a placeholder over the same fact cannot coexist — the placeholder wins, silently, on the first run and every run after
    - `{{CLOUD_PROVIDER}}` — e.g. `AWS`, `GCP`, `Azure` (iac-state-backend-bringup, ci-identity-and-secrets-bringup, cost-guardrails-bringup)
    - `{{IAC_DIR}}` — e.g. `infra/`, `terraform/` (iac-state-backend-bringup, ci-identity-and-secrets-bringup, cost-guardrails-bringup)
    - `{{SECRETS_MANAGER}}` — e.g. `AWS Secrets Manager`, `GCP Secret Manager`, `Azure Key Vault`, `HashiCorp Vault`, `1Password`, `Doppler` (ci-identity-and-secrets-bringup)
@@ -33,6 +33,8 @@ The **Wraps** column is this directory's purpose. Because shipped templates must
    - `{{CLAUDE_ACTION_VERSION}}` — an **exact** released version, e.g. `v1.0.158`, never a floating `@v1` (cicd-pipeline-bringup)
    - `{{OBS_BACKEND}}` — `Datadog` or `Grafana`, one only (observability-bringup, deploy-and-rollback-bringup)
    - `{{ALERT_ROUTER}}` — e.g. `PagerDuty`, `Opsgenie`, `incident.io` (observability-bringup)
+
+   **GitHub Actions, Infracost, OIDC and Terraform/OpenTofu are written as literals across these six, deliberately, and are not fills.** `cicd-pipeline-bringup` encodes rules true of GitHub Actions and nothing else — `pull_request_target`, `issue_comment` triggers, required status checks, GitHub Environments — which is why it excludes GitLab CI projects by name in its own description rather than parameterising the CI provider. `cost-guardrails-bringup` is written around `infracost breakdown` / `infracost diff` specifically. A team on a different CI provider or a different cost tool **edits these templates; it does not fill a value** — and should expect the gate checklists to move with them.
 3. **`cicd-pipeline-bringup` needs one extra paste.** Its step 4 commits four starter agentic workflows held in [`../PROMPTS.md#agentic-workflow-templates`](../PROMPTS.md#agentic-workflow-templates) rather than inlined — inlining them would put the skill body past the two-screen limit. Copy those four Markdown files into `.github/agentic-workflows/` during instantiation, adjusting only cron, limits and project phrasing.
 4. Commit `.claude/skills/<skill-name>/SKILL.md` to the repo — skills at project scope are shared team infrastructure; treat edits as code changes requiring review.
 5. **Verify. `/agents` does not list skills** — skills are a different surface and are verified differently. Run all four checks:
@@ -68,7 +70,7 @@ Skills auto-trigger; subagents do not. A skill whose trigger phrases reuse a ver
 | `cost-guardrails-bringup` | the Infracost workflow, budget alerts, the unit-economics metric | the cost estimate itself, any other workflow |
 | `cicd-pipeline-bringup` | build/test/deploy-to-staging workflows, `@claude`, agentic workflows, branch protection | the drift workflow, the Infracost workflow, the production gate |
 | `observability-bringup` | dashboards, SLOs, alerts, alert runbooks | instrumentation code, service runbooks, incident work |
-| `deploy-and-rollback-bringup` | the production gate, strategy, rollback trigger, the drill | the build pipeline, the SLO definition |
+| `deploy-and-rollback-bringup` | the production gate, strategy, rollback trigger, the drill | the build pipeline, **the staging-deploy workflow** (it confirms one exists; it does not author it), the SLO definition |
 
 The cross-phase version of this table — every shipped subagent and skill, mapped by the work it owns rather than the phase that ships it — lives in [`docs/ROUTING.md`](../../../docs/ROUTING.md). Placeholders below that recur under different spellings in other phases are reconciled in [`docs/PLACEHOLDERS.md`](../../../docs/PLACEHOLDERS.md).
 

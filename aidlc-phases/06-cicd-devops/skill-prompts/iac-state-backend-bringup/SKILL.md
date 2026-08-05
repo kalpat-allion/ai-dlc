@@ -9,7 +9,7 @@ You are guiding the team through a one-time, high-blast-radius bring-up. The sou
 
 ## Procedure
 
-1. Read the recorded decisions for cloud provider and `{{TF_CLI}}`. **Refuse if either is unrecorded** — guessing the CLI commits the team to a licence, and guessing the cloud commits them to a backend.
+1. Confirm the cloud-provider and IaC-CLI choices are **recorded as decisions with a named reviewer**, the CLI's licence rationale included. **Refuse if either is only implied by this skill's configured values** — a tool name filled into a template at install time is an installation detail, not a recorded decision. Guessing the CLI commits the team to a licence; guessing the cloud commits them to a backend.
 2. Decide and **write down** how the backend storage itself gets created: a committed one-time bootstrap script, or an explicitly documented manual prerequisite. This is step 2 because it is the step everyone skips, and the result is a team that cannot rebuild its own backend.
 3. Create the state store for `{{CLOUD_PROVIDER}}` with **object versioning on**, **encryption at rest with a customer-managed key**, **public access denied**, and a version lifecycle policy so the versioned bucket does not grow without bound.
 4. Enable **native state locking** — the lock table, the native lockfile, or the blob lease, per `{{CLOUD_PROVIDER}}`. Verify it by attempting two concurrent applies and observing the second block. An unverified lock is an assumption.
@@ -17,7 +17,7 @@ You are guiding the team through a one-time, high-blast-radius bring-up. The sou
 6. Write the `backend` block under `{{IAC_DIR}}`. → **Confirm before writing** (see below).
 7. Establish one root module per environment with per-environment state keys. Verify no environment can read another's state.
 8. Assert `*.tfstate`, `*.tfstate.backup`, `.terraform/` and `*.tfvars` in `.gitignore`, then run `git ls-files` to verify none is **already tracked**. A tracked state file is a credential leak, not a hygiene issue — if you find one, say so plainly and stop for the human.
-9. Confirm the cloud audit log covers the state store. → **Gate 1: the state and repo-layout items pass.** Hand CI authentication and secrets to `ci-identity-and-secrets-bringup`.
+9. Confirm the cloud audit log covers the state store. → **the infrastructure-foundation gate: the state and repo-layout items pass.** Hand CI authentication and secrets to `ci-identity-and-secrets-bringup`.
 
 ## Confirm-before-write
 
@@ -33,3 +33,4 @@ Echo the before and after, and require a literal `go`, for:
 - **Never enable a backend without object versioning.** Versioning is the entire state-recovery story, and retrofitting it does not recover the history already lost.
 - A state file is already tracked in git → stop for the human. Removing it from the index does not remove it from history, and the credentials in it are already exposed.
 - Asked to run `apply`, `destroy`, or state surgery → refuse; this skill builds the backend, it does not use it.
+- A working backend already exists and the real complaint is that people apply from their laptops → **stop and redirect to `ci-identity-and-secrets-bringup`.** That is an identity problem, not a storage one: what stops a laptop apply is CI holding a role no laptop can assume. Do not re-run the backend steps against a backend that is already green.

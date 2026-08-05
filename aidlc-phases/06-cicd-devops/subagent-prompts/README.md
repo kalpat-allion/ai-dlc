@@ -6,10 +6,12 @@ Both agents here are **name-invoked**, so they face no auto-trigger competition.
 
 ## Files
 
-| File | Role |
-|------|------|
-| [`terraform-iac-engineer.md`](./terraform-iac-engineer.md) | Authors and extends Terraform / OpenTofu modules for one project — module decomposition, root module per environment, secret references as data sources, pinned providers with a committed lock, plan-only native tests with mocked providers, declared outputs; iterates until the plan is clean. **Plan-only by construction:** never runs `apply`, `destroy`, `import`, or any state-mutating command, and never writes an apply-mode test. It assumes the state backend already exists — see [`../skill-prompts/iac-state-backend-bringup/`](../skill-prompts/iac-state-backend-bringup/SKILL.md) |
-| [`container-image-engineer.md`](./container-image-engineer.md) | Produces the container image definition for one service — multi-stage Dockerfile with a digest-pinned minimal runtime base, non-root user, `HEALTHCHECK`, BuildKit cache mounts, matching `.dockerignore` — and self-checks the seven container standards it can verify while naming the two it cannot. States no CVE count, scan verdict, or image-size comparison under any circumstances |
+| File | Role | Wraps |
+|------|------|-------|
+| [`terraform-iac-engineer.md`](./terraform-iac-engineer.md) | Authors and extends Terraform / OpenTofu modules for one project — module decomposition, root module per environment, secret references as data sources, pinned providers with a committed lock, plan-only native tests with mocked providers, declared outputs; iterates until the plan is clean. **Plan-only by construction:** never runs `apply`, `destroy`, `import`, or any state-mutating command, and never writes an apply-mode test. It assumes the state backend already exists — see [`../skill-prompts/iac-state-backend-bringup/`](../skill-prompts/iac-state-backend-bringup/SKILL.md) | [`terraform-iac-generation`](../PROMPTS.md#terraform-iac-generation) |
+| [`container-image-engineer.md`](./container-image-engineer.md) | Produces the container image definition for one service — multi-stage Dockerfile with a digest-pinned minimal runtime base, non-root user, `HEALTHCHECK`, BuildKit cache mounts, matching `.dockerignore` — and self-checks the seven container standards it can verify while naming the two it cannot. States no CVE count, scan verdict, or image-size comparison under any circumstances | [`dockerfile-generation`](../PROMPTS.md#dockerfile-generation) |
+
+The **Wraps** column is this directory's purpose. Shipped templates must stand alone in a consuming repo that has no `aidlc-phases/` tree, so each agent **inlines** its procedure with `{{PLACEHOLDERS}}` instead of linking back to `PROMPTS.md` — this table is the only record of where each procedure came from. Keep it current, or the round-trip is lost.
 
 ## How to instantiate per repo
 
@@ -21,6 +23,8 @@ Both agents here are **name-invoked**, so they face no auto-trigger competition.
    - `{{SECRETS_MANAGER}}` — how secrets are referenced from HCL, e.g. `AWS Secrets Manager`, `HashiCorp Vault`, `Azure Key Vault`, `1Password`, `Doppler` (terraform-iac-engineer)
    - `{{RUNTIME}}` — language and version, e.g. `Node 22`, `Python 3.13`, `Go 1.23`, `.NET 9`, `Java 21` (container-image-engineer)
    - `{{SERVICE_ROOT}}` — the service's directory and Docker build context, e.g. `services/api`, or `.` for a single-service repo (container-image-engineer)
+
+   **`{{TF_CLI}}` varies over exactly two values — `terraform` and `tofu` — and nothing else.** The rules around it (`.tftest.hcl` with `mock_provider`, `command = plan`, `.terraform.lock.hcl`, `state mv` / `force-unlock` as forbidden verbs) are true of Terraform and OpenTofu and of no other IaC tool. **Docker, distroless and Alpine are written as literals in `container-image-engineer` for the same reason** and are not fills. A team on CDK, Pulumi, CloudFormation, or a non-Docker image builder **edits these templates; it does not fill a value.** A name over a fact the body cannot vary produces a template that claims portability while enforcing one tool's rules, and the inconsistent fill looks correct on both sides.
 3. Adjust the `model:` frontmatter if the team's default differs. Both ship as `sonnet` — the work is high-throughput authoring inside a tool-calling loop rather than analysis. **Override `terraform-iac-engineer` to `opus` when the project carries a compliance scope** (HIPAA / PCI / FedRAMP-adjacent): IAM, network and encryption diffs in a regulated environment reward deeper reasoning per resource.
 4. **Do not trim `terraform-iac-engineer`'s `## Hard rules` section when adapting the template.** Nothing outside the agent enforces its plan-only boundary — there is no managed apply runner in this stack, so that section is the enforcement rather than a restatement of one. If the file must shrink, shorten the module-conventions section instead.
 5. Commit `.claude/agents/<role>.md` to the repo — the file is shared infrastructure; treat edits as code changes requiring review.

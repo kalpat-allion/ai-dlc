@@ -127,7 +127,7 @@ Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, wh
 | `cost-guardrails-bringup` | Skill | Step 2 — Infracost on PR, budget alerts, unit-economics metric | Gate 1 (cost items) |
 | `cicd-pipeline-bringup` | Skill | Step 4 — pipeline stages, `@claude` wiring, branch protection | Gate 2 |
 | `observability-bringup` | Skill | Step 6 — dashboards → SLOs → burn-rate alerts → runbook per alert | Gate 4 |
-| `deploy-and-rollback-bringup` | Skill | Step 7 — staging auto-deploy, prod approval gate, auto-rollback, the drill | Gate 5 |
+| `deploy-and-rollback-bringup` | Skill | Step 7 — prod approval gate, strategy, auto-rollback, the drill (it *confirms* the staging auto-deploy of 4.1 stage 6; `cicd-pipeline-bringup` authors it) | Gate 5 |
 
 Fill every placeholder before committing — an unfilled `{{CLOUD_PROVIDER}}` or `{{TF_CLI}}` makes the agent guess, and guessing about infrastructure is the one mistake in this phase with no cheap undo. Verify subagents with `/agents`; verify skills by confirming each appears in the available-skills list under its slug. Smoke-test one of each: `Use the terraform-iac-engineer to run terraform validate and summarise the current plan — do not apply.`
 
@@ -440,7 +440,7 @@ For multi-service repos use Claude Code with the [`dockerfile-generation`](./PRO
 
 **Workflow:**
 
-**7.1 — Auto-deploy to staging.** Every merge to `main` deploys to staging with no human in the loop. The same workflow that ran `plan` on the PR now applies the saved plan against staging under the CI OIDC role.
+**7.1 — Auto-deploy to staging.** Every merge to `main` deploys to staging with no human in the loop. The same workflow that ran `plan` on the PR now applies the saved plan against staging under the CI OIDC role. **This workflow is authored once, in Step 4.1 stage 6, by `cicd-pipeline-bringup`** — `deploy-and-rollback-bringup` only confirms it exists, because the drill in 7.7 runs through it. Two skills authoring the same file is how a working staging deploy gets silently replaced by a generated one.
 
 **7.2 — Manual approval gate for production.** GitHub Environment `production` has required reviewers — a human clicks "deploy" or schedules to a release window. The approval is the human checkpoint; everything before and after is automated.
 
