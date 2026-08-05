@@ -145,6 +145,35 @@ Set the `.github/dependabot.yml` schedule to **weekly for version updates** and 
 
 The `AGENTS.md` already committed for Phase 6 (and Phase 3) is the canonical project context file — Claude Code reads it on every session. Add a **Security conventions** section: forbidden APIs (e.g., raw SQL string concatenation), required input validators, auth middleware that must wrap every endpoint, secret-handling rules ("never call `console.log` on objects that may contain credentials"), the **required-controls list from Step 4**, the **MCP server allow-list from Step 6.4**, and the Phase 3 / 5 AI-generated-code review escalation path. Without this, every prompt drifts; with it, each agent fences itself within team standards.
 
+#### 0.6 — Install the Phase 5 subagents and skills
+
+Phase 5 ships three subagents and two skills as templates. Copy them into the consuming repo, fill the placeholders, and commit — they are project artefacts, not personal config. This sub-step is last because `threat-modeler` and `dependency-risk-analyst` both read the `AGENTS.md` security-conventions section from 0.5, so it must exist first.
+
+```bash
+# From the consuming repo root
+mkdir -p .claude/agents .claude/skills
+cp    <ai-dlc>/aidlc-phases/05-security/subagent-prompts/threat-modeler.md           .claude/agents/
+cp    <ai-dlc>/aidlc-phases/05-security/subagent-prompts/dependency-risk-analyst.md  .claude/agents/
+cp    <ai-dlc>/aidlc-phases/05-security/subagent-prompts/threat-model-verifier.md    .claude/agents/
+cp -r <ai-dlc>/aidlc-phases/05-security/skill-prompts/*/                             .claude/skills/
+```
+
+Skills are **folders**, not files — `.claude/skills/<skill-name>/SKILL.md`, where the folder name must equal the `name:` field. A mismatch means the skill silently never loads, so copy the directories with `cp -r` rather than globbing the Markdown.
+
+| Helper | Type | Owns | Gate |
+|--------|------|------|------|
+| `threat-modeler` | Subagent | Steps 1.1-1.3 — the STRIDE walk, the OWASP cross-references, the AI/agentic pass, the P0/P1 mitigation list | Gate 1 (threat model block), Gate 6 (threat surface) |
+| `codeql-query-author` | Skill | Step 2.3 — the custom query, its two fixtures, its pack and suite wiring | Gate 2 (custom-query line + escalation clause) |
+| `dependency-risk-analyst` | Subagent | Steps 3.3-3.4 — reachability triage over the alert list, major-bump impact analysis | Gate 3 |
+| `secret-leak-response` | Skill | Step 5.5 — the rotation runbook, revocation proof, blast radius, post-mortem seed | Gate 5 |
+| `threat-model-verifier` | Subagent | Step 1.5 — the per-mitigation `file:line` evidence table and its verdict | Gate 7, Phase Handoff |
+
+**Install `threat-modeler` and `threat-model-verifier` together, and run them in separate sessions.** The verifier audits the modeller's output, so a repo with only the verifier has nothing to verify and a repo with only the modeller re-opens the unverified-mitigation gap the pair exists to close. The verifier refuses to audit a list produced in its own session — that independence is what the Gate 7 and handoff checkboxes rest on.
+
+> **Step 4 gets no helper, deliberately.** Container and IaC review has no scanner, policy engine or admission controller behind it, and all three subagents above refuse to give a verdict on that surface. **Do not install a helper here to make the gate feel covered** — a confident wrong answer about an unscanned surface is worse than the absence the gate already states plainly.
+
+Fill every placeholder before committing, and read the two directory READMEs first — [`subagent-prompts/README.md`](./subagent-prompts/README.md) and [`skill-prompts/README.md`](./skill-prompts/README.md) — for the per-fill risk notes. Verify subagents with `/agents`; verify skills by confirming each appears in the available-skills list under its slug. Smoke-test the one that matters most: `Use the dependency-risk-analyst to triage the open Dependabot alerts.` A correct run asks you to confirm the entry-point list **before** classifying anything.
+
 #### Verification checklist
 
 - [ ] `claude /security-review` runs locally and posts findings on a synthetic vulnerable diff
@@ -155,6 +184,7 @@ The `AGENTS.md` already committed for Phase 6 (and Phase 3) is the canonical pro
 - [ ] Dependabot active on every repo; auto-merge configured for patch-level CVE fixes
 - [ ] Copilot Autofix on for the languages in scope
 - [ ] `AGENTS.md` updated with **Security conventions** section
+- [ ] Phase 5 subagents in `.claude/agents/` and skills in `.claude/skills/`, placeholders filled, committed; `threat-modeler` and `threat-model-verifier` installed **together**
 - [ ] Anthropic admin policies expanded: `/security-review` may post comments and create issues; `delete` operations remain disabled
 
 > **Permission inheritance.** Every agent-driven action runs as the connecting developer — the agent cannot escalate beyond their GitHub / GitGuardian scopes. Off-board by revoking the OAuth grant in each provider; the agent loses access automatically.
@@ -439,7 +469,7 @@ When Security & Compliance is complete, the following artefacts hand off to **Ph
 **Handoff Checklist:**
 
 - [ ] All seven gates (1–7) passed (Gate 6 only if AI is in the product)
-- [ ] Threat model committed; every P0 mitigation verified landed **in code** by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) with a `file:line` citation — anything still **not landed** carries a dated Tech Lead deferral
+- [ ] Threat model committed; every P0 mitigation verified landed **in code** by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) with a `file:line` citation — anything still **not landed** or **unevaluated** carries a dated Tech Lead deferral, and a `PASS WITHHELD` verdict does not satisfy this line
 - [ ] 0 Critical / 0 High SAST findings on `main` (CodeQL + `/security-review`)
 - [ ] 0 Critical CVEs in production dependencies (Dependabot); High CVEs carry documented Tech Lead risk acceptance
 - [ ] Container & IaC review recorded per PR: base images digest-pinned; required-controls list confirmed or exceptions written down

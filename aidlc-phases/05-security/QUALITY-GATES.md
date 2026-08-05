@@ -146,7 +146,7 @@ Only applicable if the project has formal compliance requirements.
 - [ ] Audit-ready document generated via [`evidence-compilation`](./PROMPTS.md#evidence-compilation)
 - [ ] Legal review completed (for regulatory compliance)
 - [ ] If AI is in the product and compliance scope includes AI: NIST AI RMF + ISO/IEC 42001 crosswalk applied; 8–12 month combined implementation plan documented
-- [ ] Threat-model P0 mitigations verified **in code** by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) (Step 1.5) — the per-mitigation table with `file:line` evidence is archived with the release; **0 not landed**, or each remaining item carries a dated Tech Lead deferral
+- [ ] Threat-model P0 mitigations verified **in code** by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) (Step 1.5) — the per-mitigation table with `file:line` evidence is archived with the release; **0 not landed and 0 unevaluated**, or each remaining item carries a dated Tech Lead deferral. A verdict of `PASS WITHHELD — N unevaluated` **is not a pass**: it means part of the affected surface was never read, and the modules named as unreachable must be supplied and the check re-run
 - [ ] [`pre-release-self-review`](./PROMPTS.md#pre-release-self-review) passes for the release candidate
 - [ ] Security posture report ([`security-posture-report`](./PROMPTS.md#security-posture-report)) for the quarter shared with leadership
 
@@ -159,7 +159,7 @@ Only applicable if the project has formal compliance requirements.
 Before handing off to **Phase 6: CI/CD & DevOps** (concurrent) and **Phase 7: Delivery & Handoff**.
 
 - [ ] All Gate 1–5 items complete; Gate 6 if AI is in product; Gate 7 if certifying
-- [ ] Threat model archived; P0 mitigations verified landed in code by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) — `file:line` per mitigation, **0 not landed**
+- [ ] Threat model archived; P0 mitigations verified landed in code by [`threat-model-mitigation-verification`](./PROMPTS.md#threat-model-mitigation-verification) — `file:line` per mitigation, **0 not landed and 0 unevaluated**. `PASS WITHHELD` is a withheld verdict, not a pass
 - [ ] Security posture report current
 - [ ] Compliance artefacts archived (if applicable)
 - [ ] Known security issues log updated (open vs closed)

@@ -2,7 +2,7 @@
 
 > **What this is.** One row per **repository fact**, listing every placeholder name the shipped templates use for it. Its job is not to hold your values — the per-directory READMEs do that, and they are what an operator has open while instantiating. Its job is to stop the same fact being asked for twice under two names.
 >
-> **The problem it solves.** The five shipped phases carry **55 distinct placeholders** across **33 templates**. Before Phase 2, **literal overlap between phases was zero** — no placeholder name appeared in more than one phase — and what existed instead was **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
+> **The problem it solves.** The six shipped phases carry **58 distinct placeholders** across **38 templates**. Before Phase 2, **literal overlap between phases was zero** — no placeholder name appeared in more than one phase — and what existed instead was **six pairs that name the same repo fact differently**. An operator instantiating two phases fills the same value twice under two names, and nothing catches an inconsistent fill. That defect is invisible from inside any single README, which is why this file is central.
 >
 > **Phase 2 is the first phase to reuse rather than re-coin, and that is this file working.** It uses **16** placeholders, of which **8 are existing names adopted from Phases 3 and 6** — `{{ORM}}`, `{{DATASTORE}}`, `{{MIGRATIONS_PATH}}`, `{{AUTH_STACK}}`, `{{TEAM_STACK}}`, `{{CLOUD_PROVIDER}}`, `{{FRONTEND_FRAMEWORK}}`, `{{FRONTEND_ROOT}}` — and only 8 are new. **The pair count is still six, not fourteen.** Two near-pairs were caught at authoring time and are recorded below rather than minted. Phase 2 is also the first phase whose placeholders literally overlap another phase's, which is the intended end state, not a regression.
 >
@@ -10,7 +10,9 @@
 >
 > **Phase 4's four artifacts carry 17 placeholders and coined 8** — `{{E2E_TEST_DIR}}`, `{{E2E_COMMAND}}`, `{{STAGING_BASE_URL}}`, `{{COVERAGE_REPORT_PATH}}`, `{{FLAKY_TEST_LABEL}}`, `{{COVERAGE_GAP_LABEL}}`, `{{LOAD_TEST_DIR}}`, `{{PERF_TEST_ENV}}` — reusing 9. **The pair count is still six**, and two more near-pairs were caught at authoring time. The build's real contribution to this file is a third kind of case: **two names were drafted, then withdrawn before they shipped**, because the fact they named is written as a literal in the sibling templates. That is rule 4 firing during authoring rather than in a post-hoc sweep — see [the withdrawn pair](#a-third-kind-of-case--two-names-drafted-then-withdrawn).
 >
-> *(The counts above were also recounted rather than incremented. The header said 44 and the inventory said "All 45"; the templates carried **44**, so the inventory heading was one over before this build and is corrected to **47** now.)*
+> **Phase 5's five artifacts carry 8 placeholders and coined only 3** — `{{SECURITY_DOCS_DIR}}`, `{{DEPENDENCY_MANIFESTS}}`, `{{CODEQL_LANGUAGES}}` — reusing 5: `{{ARCHITECTURE_DIR}}`, `{{ADR_DIR}}`, `{{DEFAULT_BRANCH}}`, `{{TEAM_STACK}}`, `{{SECRETS_MANAGER}}`. **The best reuse ratio of any phase so far, and the pair count is still six.** Its contribution to this file is a **fourth kind of case**: three names were drafted and withdrawn not because the fact is a literal elsewhere, but because **filling the value disables a stop-and-ask guard** — see [the pre-fillable guards](#a-fourth-kind-of-case--names-that-would-disable-a-guard-by-being-filled).
+>
+> *(The counts above were also recounted rather than incremented. The header said 44 and the inventory said "All 45"; the templates carried **44**, so the inventory heading was one over before this build and is corrected to **58** now, across **38** templates.)*
 
 ---
 
@@ -21,7 +23,7 @@ These are the rows that matter. Each is one fact about the repository, asked for
 | Repo fact | Asked for as | In | Must agree because |
 |---|---|---|---|
 | **How secrets reach the runtime** | `{{SECRETS_MECHANISM}}` | `software-architect` | The architect designs against the mechanism the IaC actually references. Two answers means designs that cite a secret store the infrastructure does not use |
-| | `{{SECRETS_MANAGER}}` | `terraform-iac-engineer`, `ci-identity-and-secrets-bringup` | |
+| | `{{SECRETS_MANAGER}}` | `terraform-iac-engineer`, `ci-identity-and-secrets-bringup`, `secret-leak-response` | **Phase 5 adds an incident-time consumer to a bring-up-time name.** The rotated replacement is created in whatever this names; filled with a store the runtime does not read, the rotation "succeeds" and the service keeps authenticating with the credential you were trying to kill |
 | **Metrics / traces / logs backend** | `{{OBSERVABILITY_STACK}}` | `software-architect` | The dashboards and SLOs are built on the same backend the design assumes instrumentation reports to |
 | | `{{OBS_BACKEND}}` | `observability-bringup`, `deploy-and-rollback-bringup` | |
 | **How tests are run** | `{{TEST_RUNNER}}` | `frontend-engineer`, `backend-engineer`, `refactor-specialist`, `software-architect`, `open-pull-request`, `/load-task-context`, `/write-module-readme`, `e2e-and-coverage-engineer`, `author-test-plan`, `reproduce-and-diagnose-bug` | CI runs the command; the specialists run the runner. If they disagree, tests pass locally and the pipeline runs nothing |
@@ -66,11 +68,22 @@ Shipping the names anyway would have created the **one fact, one literal and one
 
 **Resolved by removing the names, not by adding rows.** The skills now write `Playwright` and `k6` as literals, matching their siblings, and [`04-testing-and-qa/skill-prompts/README.md`](../aidlc-phases/04-testing-and-qa/skill-prompts/README.md) records that a team on a different tool **edits these templates rather than filling a value** — which is the honest description of what the phase actually requires. This is the first build where **rule 4 fired during authoring instead of in a sweep afterwards**, which is the cheap moment: withdrawing a name costs one edit, while retiring a shipped one breaks every repo that already instantiated it.
 
+**Phase 5 applied the same test to `CodeQL` and `Dependabot` and reached the same answer.** `.github/codeql/`, the `qlpack.yml` and `.qls` wiring, `@problem.severity`, dataflow classes over AST matching, the two-fixture run, and *"the Dependabot alerts view is the single source of truth for what CVEs are open"* are rules that are true of those two tools and of nothing else. Both are written as literals across all five templates, and both directory READMEs say a different tool means editing the template. **Three consecutive builds have now reached this verdict on a prescribed tool — the test is stable enough to state as a rule:** if the body's rules would be false under a different fill, the name is a claim of portability the template cannot honour.
+
+### A fourth kind of case — names that would disable a guard by being filled
+
+Phase 5 drafted and withdrew three names for a reason unlike any above. `{{DATA_CLASSIFICATION}}` and `{{COMPLIANCE_SCOPE}}` (for `threat-modeler`) and `{{ENTRY_POINTS}}` (for `dependency-risk-analyst`) all name real, stable-looking repository facts. Each was withdrawn because **the template's value comes from stopping to ask for that exact input, and a placeholder is a way to pre-answer it once and never be asked again.**
+
+- `threat-modeler` refuses to start until data sensitivity, user base, compliance scope and threat actors are answered, because **severity is computed from those four**. An operator who fills them at install time gets a model rated against whatever was true in month one — internally consistent, confidently prioritised, and wrong about which findings block a launch.
+- `dependency-risk-analyst` confirms its entry-point list with a human **per run**. A list filled at install omits every route added since, and the CVEs reachable only from those routes come back `not reachable` carrying real import evidence. **That is a Gate 3 pass made reachable that should not be** — the `{{PERF_TEST_ENV}}` failure shape, arriving through staleness rather than through a wrong value.
+
+The general form: **a stop-and-ask guard and a placeholder for the same fact cannot both exist.** The placeholder wins, silently, on the first run and every run after. Where the guard is what the artifact is for, the name does not get minted — and where the fact genuinely is stable repo configuration, the guard was never load-bearing and should be deleted rather than duplicated. **This is a different test from rules 1-4**, which all ask *what is the fact called elsewhere*; this one asks *what happens to the template's own refusals once the fact has a value*.
+
 ---
 
 ## Full inventory
 
-All 55, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
+All 58, grouped by what they describe. **Where each is consumed** is authoritative — it is generated from the templates, not remembered.
 
 ### Tracker and conventions
 
@@ -86,13 +99,14 @@ All 55, grouped by what they describe. **Where each is consumed** is authoritati
 | `{{FLAKY_TEST_LABEL}}` | `flaky-test` — the label a quarantined flaky spec carries | `e2e-and-coverage-engineer` |
 | `{{COVERAGE_GAP_LABEL}}` | `coverage-gap` — suggested on each audit entry; the agent **never files it** | `e2e-and-coverage-engineer` |
 | `{{PR_TITLE_FORMAT}}` | `[ENG-XXX] <imperative summary>` — **two composers; see the reconciliation note above** | `linear-task-agent`, `open-pull-request` |
-| `{{DEFAULT_BRANCH}}` | `main` — the branch PRs target, the branch you rebase onto, *and* the branch a regression test must be proven to fail on. **Not** `__BASE_BRANCH__`, which is a workflow runtime substitution and not an operator-filled value | `open-pull-request`, `reproduce-and-diagnose-bug` |
+| `{{DEFAULT_BRANCH}}` | `main` — the branch PRs target, the branch you rebase onto, the branch a regression test must be proven to fail on, *and* the branch a release candidate's mitigations are verified against. **Not** `__BASE_BRANCH__`, which is a workflow runtime substitution and not an operator-filled value | `open-pull-request`, `reproduce-and-diagnose-bug`, `threat-model-verifier` |
 
 ### Stack and runtime
 
 | Placeholder | Example | Consumed by |
 |---|---|---|
-| `{{TEAM_STACK}}` | `Next.js 14 + TypeScript` | `frontend-engineer`, `backend-engineer`, `software-architect`, `solution-architect`, `run-sprint-planning` — **estimates sized against the wrong stack are confidently wrong** |
+| `{{TEAM_STACK}}` | `Next.js 14 + TypeScript` | `frontend-engineer`, `backend-engineer`, `software-architect`, `solution-architect`, `run-sprint-planning` — **estimates sized against the wrong stack are confidently wrong** — and `dependency-risk-analyst`, for which the stack decides *what counts as an unfollowable call path*: reflection, dynamic dispatch and plugin loading are the reasons a verdict comes back `undetermined` rather than `not reachable` |
+| `{{CODEQL_LANGUAGES}}` | `javascript-typescript, python` — must match what `.github/workflows/codeql.yml` actually builds. **A query written for a language the workflow does not build produces no results and no error** | `codeql-query-author` |
 | `{{FRONTEND_FRAMEWORK}}` | `React 18` | `software-architect`, `accessibility-auditor` |
 | `{{BACKEND_FRAMEWORK}}` | `NestJS` | `software-architect` |
 | `{{RUNTIME}}` | `Node 22` | `container-image-engineer` |
@@ -112,8 +126,10 @@ All 55, grouped by what they describe. **Where each is consumed** is authoritati
 | `{{MIGRATIONS_PATH}}` | `services/api/migrations` | `backend-engineer`, `data-model-design` |
 | `{{IAC_DIR}}` | `infra/` | `terraform-iac-engineer`, `iac-state-backend-bringup`, `ci-identity-and-secrets-bringup`, `cost-guardrails-bringup` |
 | `{{SCHEMA_PATH}}` | `prisma/schema.prisma` | `data-model-design` |
-| `{{ADR_DIR}}` | `docs/adrs/` — **the first name to span Phases 2 and 3**; the value `/adr` writes into is the value `/load-task-context` reads back out | `/adr`, `solution-architect`, `architecture-reviewer`, `/load-task-context` |
-| `{{ARCHITECTURE_DIR}}` | `docs/architecture/` | `solution-architect`, `architecture-reviewer` |
+| `{{ADR_DIR}}` | `docs/adrs/` — **the first name to span Phases 2 and 3**, and now three phases; the value `/adr` writes into is the value `/load-task-context` reads back out and the value `threat-model-verifier` reads to tell Landed from Partial | `/adr`, `solution-architect`, `architecture-reviewer`, `/load-task-context`, `threat-modeler`, `threat-model-verifier` |
+| `{{ARCHITECTURE_DIR}}` | `docs/architecture/` | `solution-architect`, `architecture-reviewer`, `threat-modeler` |
+| `{{SECURITY_DOCS_DIR}}` | `docs/security/` — the **directory** only. The filenames inside it stay literals in the templates (`threat-model.md`, `ai-threat-review.md`, `mitigation-verification-<release>.md`, the post-mortem seed) because the phase's gates and handoff read those exact names; a repo that renames them has edited the templates, not filled a value | `threat-modeler`, `threat-model-verifier`, `secret-leak-response` |
+| `{{DEPENDENCY_MANIFESTS}}` | `services/api/package.json + pnpm-lock.yaml` — the manifest and lockfile pairs defining the **shipped** dependency tree. In a monorepo, every workspace that reaches production. **See the hard requirements below** | `dependency-risk-analyst` |
 | `{{A11Y_REPORT_PATH}}` | `docs/accessibility/wcag-aa-report.md` | `accessibility-auditor` |
 | `{{REQUIREMENTS_DIR}}` | `docs/prd/` — if requirements live in the tracker rather than the repo, point it at the tracker Document set and say so in the fill. **`load-test-engineer` needs the NFR numbers to be *citable* here**, so a fill pointing at a directory that does not hold them makes it refuse — visibly, which is the good failure | `/load-task-context`, `load-test-engineer` |
 | `{{E2E_TEST_DIR}}` | `tests/e2e` — the agent's entire write scope | `e2e-and-coverage-engineer` |
@@ -166,12 +182,13 @@ All 55, grouped by what they describe. **Where each is consumed** is authoritati
 
 ## The hard requirements
 
-Each is already stated in the per-directory READMEs and repeated here because its cost is not recoverable. *(This section was headed "Two" while listing three; it now lists four and is headed for the list rather than the count.)*
+Each is already stated in the per-directory READMEs and repeated here because its cost is not recoverable. *(This section was headed "Two" while listing three; it is now headed for the list rather than the count, which is why adding a fifth needed no edit to the heading.)*
 
 - **`{{CLOUD_PROVIDER}}` and `{{TF_CLI}}` must be filled before any infrastructure helper runs.** A guessed infrastructure setting is the one mistake in this framework with no cheap undo.
 - **`{{CLAUDE_ACTION_VERSION}}` must be an exact released version.** A floating tag makes the CI behaviour of every repo change without a commit.
 - **`{{A11Y_SCAN_COMMAND}}` must render the page.** Filled with a unit-test command, the accessibility auditor can never reach PASS — and the symptom is an agent that looks pedantic rather than a placeholder that is wrong, so nobody goes looking for the real cause.
 - **`{{PERF_TEST_ENV}}` must not be the ordinary staging environment.** This is the mirror image of the row above and the more dangerous direction: a bad `{{A11Y_SCAN_COMMAND}}` makes a verdict **unreachable**, which someone eventually investigates, while a `{{PERF_TEST_ENV}}` pointed at staging makes a PASS **reachable that should not be** — and a PASS is the verdict that stops anyone else looking. The agent is *told* which environment is performance-matched; it cannot measure whether that is true.
+- **`{{DEPENDENCY_MANIFESTS}}` must list every workspace that ships.** Same direction as `{{PERF_TEST_ENV}}`, arriving by omission rather than by a wrong value: a monorepo fill naming only the primary service leaves the other workspaces' CVEs outside the triage entirely, so **Gate 3's "0 Critical CVEs in production dependencies" passes against a tree nobody counted.** There is no failure, no warning and no empty section — the omitted packages simply never appear, and a short clean report is exactly what the reader was hoping for. The one defence is re-reading this fill whenever a workspace is added, which is why it names workspaces rather than a directory.
 
 ---
 
@@ -194,5 +211,6 @@ Each is already stated in the per-directory READMEs and repeated here because it
 3. Add the row here in the same PR as the template. A placeholder that ships without a row is how the seventh synonym pair gets created.
 4. **Check whether the fact is already written as a literal somewhere.** A name that duplicates an existing hardcoded path is not a synonym pair and gets no row from rules 1-3 — see the hardcoded-counterpart section above. **A literal is invisible to a grep for `{{...}}`**, which is how every other check in this file works.
 5. **If two templates will both *act* on the fact, say so in the row** — not just where it is consumed. `{{PR_TITLE_FORMAT}}` and `{{TEST_RUNNER}}` both have consumers whose behaviour must agree, and an inconsistent fill surfaces as a de-linked PR or a test suite that finds nothing, not as a configuration error anyone traces back.
+6. **Check whether the template stops to ask for this fact.** If it does, do not mint the name — a placeholder pre-answers the question the guard exists to force, and it wins on every run thereafter. See [the pre-fillable guards](#a-fourth-kind-of-case--names-that-would-disable-a-guard-by-being-filled). Rules 1-4 all ask what the fact is called elsewhere; this one asks what happens to the template's own refusals once the fact has a value.
 
 > **On renaming to converge.** The six pairs above are *not* being renamed today, deliberately. These templates are vendored by copy into consuming repos, so a rename sweep breaks every repo that already instantiated them and buys nothing an operator using this table does not already get. **Converge on next touch:** when a template is edited for another reason, adopt the canonical name then, and update this file's row in the same commit. Revisit a coordinated rename only if the pair count grows past what one table comfortably holds.
